@@ -1008,6 +1008,10 @@ export type Database = {
         }
         Returns: string
       }
+      decide_leave_cancellation: {
+        Args: { p_decision: string; p_note?: string; p_request_id: string }
+        Returns: Database["public"]["Enums"]["leave_request_status"]
+      }
       decide_leave_request: {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
@@ -1015,6 +1019,10 @@ export type Database = {
       prepare_employee_access_invitation: {
         Args: { p_employee_id: string; p_grant_manager_role?: boolean }
         Returns: string
+      }
+      request_leave_cancellation: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: Database["public"]["Enums"]["leave_request_status"]
       }
       submit_leave_request: {
         Args: {
@@ -1025,6 +1033,10 @@ export type Database = {
         }
         Returns: string
       }
+      withdraw_leave_request: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: Database["public"]["Enums"]["leave_request_status"]
+      }
     }
     Enums: {
       approval_action_type:
@@ -1034,6 +1046,7 @@ export type Database = {
         | "withdrawn"
         | "cancel_requested"
         | "cancel_approved"
+        | "cancel_declined"
       employment_status: "active" | "exited" | "suspended"
       leave_request_status:
         | "draft"
@@ -1197,6 +1210,7 @@ export const Constants = {
         "withdrawn",
         "cancel_requested",
         "cancel_approved",
+        "cancel_declined",
       ],
       employment_status: ["active", "exited", "suspended"],
       leave_request_status: [
