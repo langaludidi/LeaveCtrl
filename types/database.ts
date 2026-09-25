@@ -152,6 +152,7 @@ export type Database = {
           created_by: string | null
           department_id: string | null
           email: string
+          employee_id: string | null
           employee_number: string | null
           expires_at: string
           first_name: string
@@ -170,6 +171,7 @@ export type Database = {
           created_by?: string | null
           department_id?: string | null
           email: string
+          employee_id?: string | null
           employee_number?: string | null
           expires_at?: string
           first_name: string
@@ -188,6 +190,7 @@ export type Database = {
           created_by?: string | null
           department_id?: string | null
           email?: string
+          employee_id?: string | null
           employee_number?: string | null
           expires_at?: string
           first_name?: string
@@ -206,6 +209,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -946,6 +956,21 @@ export type Database = {
       }
     }
     Functions: {
+      add_employee_record: {
+        Args: {
+          p_department_id?: string
+          p_email: string
+          p_employee_number?: string
+          p_first_name: string
+          p_grant_manager_role?: boolean
+          p_last_name: string
+          p_manager_employee_id?: string
+          p_prepare_invitation?: boolean
+          p_start_date: string
+          p_work_schedule_id?: string
+        }
+        Returns: Json
+      }
       assign_employee_manager: {
         Args: { p_employee_id: string; p_manager_employee_id: string }
         Returns: undefined
@@ -986,6 +1011,10 @@ export type Database = {
       decide_leave_request: {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
+      }
+      prepare_employee_access_invitation: {
+        Args: { p_employee_id: string; p_grant_manager_role?: boolean }
+        Returns: string
       }
       submit_leave_request: {
         Args: {
