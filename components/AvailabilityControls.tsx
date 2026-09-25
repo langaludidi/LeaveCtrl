@@ -75,10 +75,10 @@ export function AvailabilityControls({
 
     const { error: rpcError } = await createClient().rpc("create_coverage_rule", {
       p_name: String(form.get("name") ?? "").trim(),
-      p_department_id: departmentId || undefined,
+      p_department_id: departmentId || null,
       p_minimum_available: Number(form.get("minimum") ?? 0),
       p_severity: String(form.get("severity") ?? "warning"),
-    });
+    } as never);
 
     setSaving("");
     if (rpcError) {
