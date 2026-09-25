@@ -16,7 +16,9 @@ export async function claimInvitation(formData: FormData) {
         ? "This invitation belongs to a different email address."
         : error.message === "invitation_invalid_or_expired"
           ? "This invitation is invalid or has expired."
-          : "We could not accept this invitation.";
+          : error.message === "account_already_linked_to_organisation"
+            ? "This login is already linked to another active LeaveCtrl organisation."
+            : "We could not accept this invitation.";
     redirect(`/join?token=${encodeURIComponent(token)}&error=${encodeURIComponent(message)}`);
   }
 
