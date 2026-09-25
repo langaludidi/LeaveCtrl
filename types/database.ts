@@ -879,6 +879,13 @@ export type Database = {
             foreignKeyName: "leave_ledger_entries_entitlement_id_fkey"
             columns: ["entitlement_id"]
             isOneToOne: false
+            referencedRelation: "leave_balances"
+            referencedColumns: ["entitlement_id"]
+          },
+          {
+            foreignKeyName: "leave_ledger_entries_entitlement_id_fkey"
+            columns: ["entitlement_id"]
+            isOneToOne: false
             referencedRelation: "leave_entitlements"
             referencedColumns: ["id"]
           },
@@ -1916,27 +1923,30 @@ export type Database = {
       leave_balances: {
         Row: {
           available_balance: number | null
+          cycle_end: string | null
+          cycle_start: string | null
           employee_id: string | null
+          entitlement_id: string | null
           leave_type_id: string | null
           organisation_id: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "leave_ledger_entries_employee_id_fkey"
+            foreignKeyName: "leave_entitlements_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leave_ledger_entries_leave_type_id_fkey"
+            foreignKeyName: "leave_entitlements_leave_type_id_fkey"
             columns: ["leave_type_id"]
             isOneToOne: false
             referencedRelation: "leave_types"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "leave_ledger_entries_organisation_id_fkey"
+            foreignKeyName: "leave_entitlements_organisation_id_fkey"
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
