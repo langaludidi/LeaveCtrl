@@ -555,6 +555,76 @@ export type Database = {
           },
         ]
       }
+      employee_variable_earnings: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          earning_date: string
+          employee_id: string
+          id: string
+          include_in_leave_liability: boolean
+          note: string | null
+          organisation_id: string
+          source_overtime_event_id: string | null
+          source_type: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          earning_date: string
+          employee_id: string
+          id?: string
+          include_in_leave_liability?: boolean
+          note?: string | null
+          organisation_id: string
+          source_overtime_event_id?: string | null
+          source_type?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          earning_date?: string
+          employee_id?: string
+          id?: string
+          include_in_leave_liability?: boolean
+          note?: string | null
+          organisation_id?: string
+          source_overtime_event_id?: string | null
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_variable_earnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_variable_earnings_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_variable_earnings_source_overtime_event_id_fkey"
+            columns: ["source_overtime_event_id"]
+            isOneToOne: false
+            referencedRelation: "overtime_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           created_at: string
@@ -1191,6 +1261,119 @@ export type Database = {
         }
         Relationships: []
       }
+      overtime_events: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          include_in_leave_liability: boolean
+          multiplier: number
+          note: string | null
+          organisation_id: string
+          paid_amount: number | null
+          status: string
+          treatment: string
+          work_date: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          hours: number
+          id?: string
+          include_in_leave_liability?: boolean
+          multiplier?: number
+          note?: string | null
+          organisation_id: string
+          paid_amount?: number | null
+          status?: string
+          treatment: string
+          work_date: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          hours?: number
+          id?: string
+          include_in_leave_liability?: boolean
+          multiplier?: number
+          note?: string | null
+          organisation_id?: string
+          paid_amount?: number | null
+          status?: string
+          treatment?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_events_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overtime_settings: {
+        Row: {
+          default_multiplier: number
+          default_treatment: string
+          enabled: boolean
+          include_paid_overtime_in_liability: boolean
+          liability_averaging_weeks: number
+          organisation_id: string
+          toil_expiry_days: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          default_multiplier?: number
+          default_treatment?: string
+          enabled?: boolean
+          include_paid_overtime_in_liability?: boolean
+          liability_averaging_weeks?: number
+          organisation_id: string
+          toil_expiry_days?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          default_multiplier?: number
+          default_treatment?: string
+          enabled?: boolean
+          include_paid_overtime_in_liability?: boolean
+          liability_averaging_weeks?: number
+          organisation_id?: string
+          toil_expiry_days?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_settings_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: true
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_holidays: {
         Row: {
           created_at: string
@@ -1282,6 +1465,70 @@ export type Database = {
           verified_at?: string
         }
         Relationships: []
+      }
+      toil_ledger_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          employee_id: string
+          entry_type: string
+          expires_on: string | null
+          hours: number
+          id: string
+          organisation_id: string
+          overtime_event_id: string | null
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_date: string
+          employee_id: string
+          entry_type: string
+          expires_on?: string | null
+          hours: number
+          id?: string
+          organisation_id: string
+          overtime_event_id?: string | null
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          employee_id?: string
+          entry_type?: string
+          expires_on?: string | null
+          hours?: number
+          id?: string
+          organisation_id?: string
+          overtime_event_id?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toil_ledger_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toil_ledger_entries_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toil_ledger_entries_overtime_event_id_fkey"
+            columns: ["overtime_event_id"]
+            isOneToOne: false
+            referencedRelation: "overtime_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       work_schedules: {
         Row: {
@@ -1402,6 +1649,39 @@ export type Database = {
           },
         ]
       }
+      employee_leave_liability_rates: {
+        Row: {
+          averaging_end: string | null
+          averaging_start: string | null
+          averaging_weeks: number | null
+          base_calculation_method: string | null
+          base_daily_rate: number | null
+          currency_code: string | null
+          effective_daily_rate: number | null
+          employee_id: string | null
+          liability_calculation_method: string | null
+          organisation_id: string | null
+          scheduled_days: number | null
+          variable_daily_rate: number | null
+          variable_earnings_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_remuneration_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_remuneration_history_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_balances: {
         Row: {
           available_balance: number | null
@@ -1433,6 +1713,29 @@ export type Database = {
           },
         ]
       }
+      toil_balances: {
+        Row: {
+          available_hours: number | null
+          employee_id: string | null
+          organisation_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toil_ledger_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toil_ledger_entries_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_employee_record: {
@@ -1449,6 +1752,10 @@ export type Database = {
           p_work_schedule_id?: string
         }
         Returns: Json
+      }
+      adjust_toil_balance: {
+        Args: { p_employee_id: string; p_hours: number; p_reason: string }
+        Returns: string
       }
       apply_employee_condition_change: {
         Args: {
@@ -1570,6 +1877,30 @@ export type Database = {
         Args: { p_employee_id: string; p_grant_manager_role?: boolean }
         Returns: string
       }
+      record_overtime_event: {
+        Args: {
+          p_employee_id: string
+          p_hours: number
+          p_include_in_leave_liability?: boolean
+          p_multiplier?: number
+          p_note?: string
+          p_paid_amount?: number
+          p_treatment: string
+          p_work_date: string
+        }
+        Returns: string
+      }
+      record_variable_earning: {
+        Args: {
+          p_amount: number
+          p_category: string
+          p_earning_date: string
+          p_employee_id: string
+          p_include_in_leave_liability?: boolean
+          p_note?: string
+        }
+        Returns: string
+      }
       request_leave_cancellation: {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
@@ -1612,6 +1943,16 @@ export type Database = {
           p_start_date: string
         }
         Returns: string
+      }
+      update_overtime_settings: {
+        Args: {
+          p_default_multiplier: number
+          p_default_treatment: string
+          p_include_paid_overtime_in_liability: boolean
+          p_liability_averaging_weeks: number
+          p_toil_expiry_days: number
+        }
+        Returns: undefined
       }
       withdraw_leave_request: {
         Args: { p_note?: string; p_request_id: string }
