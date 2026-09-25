@@ -219,6 +219,7 @@ export default async function ToilRequestReviewPage({
               <ToilDecisionButtons
                 requestId={request.id}
                 kind={request.status === "cancellation_requested" ? "cancellation" : "request"}
+                showNote
               />
             ) : (
               <div className="decision-complete">
