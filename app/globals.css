@@ -71,3 +71,20 @@
 .duration-choice button.active{background:#fff;color:var(--teal-900);box-shadow:0 1px 2px rgba(20,45,45,.08);border:1px solid #dbe7e7}
 .duration-choice button:disabled{opacity:.4;cursor:not-allowed}
 .field-help{font-size:9px;color:#82909c;font-weight:500;margin-top:5px}
+
+.admin-controls{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.admin-two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.admin-mini-card{padding:18px;display:flex;flex-direction:column;gap:12px}
+.admin-mini-card label{display:flex;flex-direction:column;gap:6px;font-size:10px;font-weight:700;color:#344653}
+.admin-mini-card input,.inline-table-select{height:36px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:0 10px;color:#26323d;font:inherit}
+.schedule-hours-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.schedule-hours-grid label{font-size:9px;color:#6d7b86}
+.schedule-hours-grid input{width:100%;padding:0 6px;text-align:center}
+.inline-table-select{min-width:150px;height:32px;font-size:10px}
+.statutory-card{padding:20px;margin-top:16px}
+.statutory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.statutory-rule{border:1px solid var(--border);border-radius:9px;padding:13px;background:#fbfcfc;display:flex;flex-direction:column;gap:4px}
+.statutory-rule strong{font-size:11px;color:#26323d}
+.statutory-rule span{font-size:9px;color:#64748b;line-height:1.45}
+.statutory-rule small{font-size:9px;color:var(--teal-800);text-transform:capitalize}
+@media(max-width:900px){.admin-two-col,.statutory-grid{grid-template-columns:1fr}.schedule-hours-grid{grid-template-columns:repeat(4,1fr)}}
