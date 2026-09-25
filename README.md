@@ -34,3 +34,5 @@ npm run dev
 Vercel project: `leave-ctrl-2eqn`
 
 The active development branch is `build/foundation-v0.1`; production `main` remains intentionally unchanged until the preview build is validated.
+
+Environment configuration completed for Vercel preview on 25 Sep 2026.
