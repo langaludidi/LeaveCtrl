@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      absence_request_warnings: {
+        Row: {
+          created_at: string
+          id: string
+          leave_request_id: string | null
+          message: string
+          organisation_id: string
+          source_entity_id: string | null
+          source_entity_type: string
+          toil_request_id: string | null
+          warning_code: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leave_request_id?: string | null
+          message: string
+          organisation_id: string
+          source_entity_id?: string | null
+          source_entity_type: string
+          toil_request_id?: string | null
+          warning_code: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leave_request_id?: string | null
+          message?: string
+          organisation_id?: string
+          source_entity_id?: string | null
+          source_entity_type?: string
+          toil_request_id?: string | null
+          warning_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absence_request_warnings_leave_request_id_fkey"
+            columns: ["leave_request_id"]
+            isOneToOne: false
+            referencedRelation: "leave_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_request_warnings_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_request_warnings_toil_request_id_fkey"
+            columns: ["toil_request_id"]
+            isOneToOne: false
+            referencedRelation: "toil_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_actions: {
         Row: {
           action: Database["public"]["Enums"]["approval_action_type"]
