@@ -342,3 +342,9 @@
 .csv-result-row span{font-size:8px;color:#718096;line-height:1.45}
 .csv-result-row svg[data-lucide="x-circle"]{color:#a54444}
 @media(max-width:650px){.csv-import-footer{align-items:stretch;flex-direction:column}.csv-import-footer .btn{width:100%}.csv-import-summary{align-items:flex-start;flex-direction:column;gap:5px}}
+
+
+/* Administration header actions */
+.setup-head-actions{display:flex;align-items:center;gap:12px}
+.setup-head-actions>strong{font-size:10px;color:#718096;white-space:nowrap}
+@media(max-width:650px){.setup-head .split{flex-direction:column}.setup-head-actions{width:100%;justify-content:space-between}.setup-head-actions .btn{flex:1}}
