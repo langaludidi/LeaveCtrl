@@ -1576,6 +1576,64 @@ export type Database = {
           },
         ]
       }
+      toil_request_coverage_checks: {
+        Row: {
+          available_after_request: number
+          created_at: string
+          id: string
+          leave_date: string
+          minimum_required: number
+          organisation_id: string
+          outcome: string
+          request_id: string
+          rule_id: string
+        }
+        Insert: {
+          available_after_request: number
+          created_at?: string
+          id?: string
+          leave_date: string
+          minimum_required: number
+          organisation_id: string
+          outcome: string
+          request_id: string
+          rule_id: string
+        }
+        Update: {
+          available_after_request?: number
+          created_at?: string
+          id?: string
+          leave_date?: string
+          minimum_required?: number
+          organisation_id?: string
+          outcome?: string
+          request_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toil_request_coverage_checks_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toil_request_coverage_checks_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "toil_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toil_request_coverage_checks_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "coverage_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       toil_requests: {
         Row: {
           created_at: string
