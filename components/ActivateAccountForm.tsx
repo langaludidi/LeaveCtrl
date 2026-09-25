@@ -50,7 +50,9 @@ export function ActivateAccountForm({ token }: { token: string }) {
           ? "This invitation belongs to a different email address."
           : claimError.message === "invitation_invalid_or_expired"
             ? "This invitation is invalid or has expired."
-            : "We could not activate this LeaveCtrl profile."
+            : claimError.message === "account_already_linked_to_organisation"
+              ? "This login is already linked to another active LeaveCtrl organisation."
+              : "We could not activate this LeaveCtrl profile."
       );
       setSaving(false);
       return;
