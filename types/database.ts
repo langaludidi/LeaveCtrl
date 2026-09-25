@@ -841,25 +841,40 @@ export type Database = {
           created_at: string
           holiday_date: string
           id: string
+          is_observed: boolean
+          is_one_off: boolean
+          jurisdiction_code: string
           name: string
           organisation_id: string
+          source_kind: string
           source_reference: string | null
+          source_verified_at: string | null
         }
         Insert: {
           created_at?: string
           holiday_date: string
           id?: string
+          is_observed?: boolean
+          is_one_off?: boolean
+          jurisdiction_code?: string
           name: string
           organisation_id: string
+          source_kind?: string
           source_reference?: string | null
+          source_verified_at?: string | null
         }
         Update: {
           created_at?: string
           holiday_date?: string
           id?: string
+          is_observed?: boolean
+          is_one_off?: boolean
+          jurisdiction_code?: string
           name?: string
           organisation_id?: string
+          source_kind?: string
           source_reference?: string | null
+          source_verified_at?: string | null
         }
         Relationships: [
           {
@@ -1023,6 +1038,15 @@ export type Database = {
       request_leave_cancellation: {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
+      }
+      set_employee_opening_balance: {
+        Args: {
+          p_balance: number
+          p_employee_id: string
+          p_leave_type_code: string
+          p_reason?: string
+        }
+        Returns: number
       }
       submit_leave_request: {
         Args: {
