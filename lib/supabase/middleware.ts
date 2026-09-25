@@ -25,7 +25,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
-  const isPublic = pathname === "/login" || pathname.startsWith("/auth/");
+  const isPublic = pathname === "/login" || pathname.startsWith("/auth/") || pathname === "/join";
 
   if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone();
