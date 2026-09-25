@@ -21,6 +21,7 @@ export default async function TeamPage() {
     { data: currentConditions },
     { data: overtimeSettings },
     { data: recentOvertime },
+    { data: overtimePayments },
     { data: toilBalances },
   ] = await Promise.all([
     supabase
@@ -68,10 +69,16 @@ export default async function TeamPage() {
     canAdminPeople
       ? supabase
           .from("overtime_events")
-          .select("id, employee_id, work_date, hours, treatment, multiplier, paid_amount")
+          .select("id, employee_id, work_date, hours, treatment, multiplier")
           .eq("organisation_id", employee.organisation_id)
           .order("work_date", { ascending: false })
           .limit(15)
+      : Promise.resolve({ data: [] }),
+    canAdminPeople
+      ? supabase
+          .from("overtime_event_payments")
+          .select("overtime_event_id, amount")
+          .eq("organisation_id", employee.organisation_id)
       : Promise.resolve({ data: [] }),
     supabase
       .from("toil_balances")
@@ -137,6 +144,13 @@ export default async function TeamPage() {
     name: `${person.first_name} ${person.last_name}`,
   }));
 
+  const overtimePaymentMap = new Map(
+    (overtimePayments ?? []).map((payment) => [
+      payment.overtime_event_id,
+      Number(payment.amount),
+    ])
+  );
+
   const effectiveOvertimeSettings = overtimeSettings ?? {
     default_treatment: "paid",
     default_multiplier: 1.5,
@@ -186,7 +200,7 @@ export default async function TeamPage() {
               hours: Number(event.hours),
               treatment: event.treatment,
               multiplier: Number(event.multiplier),
-              paid_amount: event.paid_amount === null ? null : Number(event.paid_amount),
+              paid_amount: overtimePaymentMap.get(event.id) ?? null,
             }))}
             toilBalances={(toilBalances ?? []).map((row) => ({
               employee_id: row.employee_id,
