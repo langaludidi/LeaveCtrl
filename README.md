@@ -27,3 +27,10 @@ npm run dev
 - Immutable leave ledger
 - Versioned policy/statutory rule sets
 - Tenant-level isolation
+
+
+## Deployment
+
+Vercel project: `leave-ctrl-2eqn`
+
+The active development branch is `build/foundation-v0.1`; production `main` remains intentionally unchanged until the preview build is validated.
