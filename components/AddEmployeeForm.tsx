@@ -32,6 +32,8 @@ export function AddEmployeeForm() {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     const openingBalance = String(form.get("openingAnnualBalance") ?? "").trim();
+    const remuneration = String(form.get("remuneration") ?? "").trim();
+    const payFrequency = String(form.get("payFrequency") ?? "monthly");
     const prepareAccess = form.get("prepareAccess") === "on";
     const supabase = createClient();
 
@@ -77,6 +79,26 @@ export function AddEmployeeForm() {
           setError("Employee added, but the opening annual leave balance needs review.");
         } else {
           balanceMessage = `Opening annual leave balance confirmed at ${numericBalance} days.`;
+        }
+      }
+    }
+
+    if (remuneration && result.employee_id) {
+      const numericRemuneration = Number(remuneration);
+      const startDate = String(form.get("startDate") ?? "");
+      if (!Number.isFinite(numericRemuneration) || numericRemuneration < 0) {
+        setError("Employee added, but remuneration needs review.");
+      } else {
+        const { error: remunerationError } = await supabase.rpc("set_employee_remuneration", {
+          p_employee_id: result.employee_id,
+          p_effective_from: startDate,
+          p_gross_amount: numericRemuneration,
+          p_pay_frequency: payFrequency,
+          p_daily_rate_override: undefined,
+          p_reason: "Remuneration captured when employee was added",
+        });
+        if (remunerationError) {
+          setError("Employee added, but remuneration needs review.");
         }
       }
     }
@@ -166,6 +188,27 @@ export function AddEmployeeForm() {
               placeholder="Uses policy default"
             />
           </label>
+        </div>
+
+        <div className="auth-name-row">
+          <label>
+            Remuneration <span className="muted">(optional, confidential)</span>
+            <input name="remuneration" type="number" min="0" step="0.01" placeholder="e.g. 35000" />
+          </label>
+          <label>
+            Pay frequency
+            <select className="native-field" name="payFrequency" defaultValue="monthly">
+              <option value="monthly">Monthly</option>
+              <option value="annual">Annual</option>
+              <option value="weekly">Weekly</option>
+              <option value="daily">Daily</option>
+              <option value="hourly">Hourly</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="confidential-note">
+          Remuneration is stored separately from the employee profile and is not visible to employees or ordinary managers.
         </div>
 
         <label className="checkbox-row">
