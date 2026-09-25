@@ -34,6 +34,9 @@ export function ToilRequestForm({ availableHours }: { availableHours: number }) 
         public_holiday_not_chargeable: "TOIL is not required on this configured public holiday.",
         overlapping_leave_request: "You already have a leave request covering this date.",
         overlapping_toil_request: "You already have a TOIL request for this date.",
+        blocked_period: "TOIL cannot be booked during this organisation-wide blocked period.",
+        coverage_rule_block: "This TOIL request would breach a minimum staffing rule for your team.",
+        employee_profile_required: "Your active employment access could not be confirmed.",
       };
       setError(messages[rpcError.message] ?? "We could not submit this TOIL request.");
       return;
