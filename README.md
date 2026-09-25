@@ -50,3 +50,12 @@ The first governed vertical slice now covers organisation bootstrap, employee-fi
 - observed holidays and the 4 November 2026 election-day proclamation are represented explicitly
 - public holidays are excluded from chargeable leave days by the booking engine
 - employee activation email delivery is now attempted automatically, with recovery-link fallback
+
+
+### Workforce conditions and liability checkpoint
+- effective-dated transfers, manager, department, location and work-mode changes
+- weekly and rotating shift schedules, including future-dated schedule changes
+- leave calculations resolve the schedule and department in force on each leave date
+- confidential remuneration history with schedule-aware daily liability rate
+- annual-leave liability reporting and authorised CSV export
+- four-week colour-coded company leave calendar with pending, approved and public-holiday states
