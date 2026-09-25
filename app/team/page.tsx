@@ -188,7 +188,17 @@ export default async function TeamPage() {
       {canAdminPeople ? (
         <>
           <section className="people-admin-grid">
-            <AddEmployeeForm />
+            <AddEmployeeForm
+              departments={departments ?? []}
+              schedules={(schedules ?? []).map((schedule) => ({
+                id: schedule.id,
+                name: schedule.name,
+              }))}
+              managers={activePeople.map((person) => ({
+                id: person.id,
+                name: `${person.first_name} ${person.last_name}`,
+              }))}
+            />
             <ManagerAssignment people={assignmentPeople} />
           </section>
 
