@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function ToilDecisionButtons({ requestId }: { requestId: string }) {
+export function ToilDecisionButtons({
+  requestId,
+  kind = "request",
+}: {
+  requestId: string;
+  kind?: "request" | "cancellation";
+}) {
   const router = useRouter();
   const [working, setWorking] = useState<"approve" | "decline" | null>(null);
   const [error, setError] = useState("");
@@ -13,14 +19,25 @@ export function ToilDecisionButtons({ requestId }: { requestId: string }) {
   async function decide(decision: "approve" | "decline") {
     setWorking(decision);
     setError("");
-    const { error: rpcError } = await createClient().rpc("decide_toil_request", {
-      p_request_id: requestId,
-      p_decision: decision,
-      p_note: undefined,
-    });
 
-    if (rpcError) {
-      setError("Could not complete this TOIL decision.");
+    const result = kind === "cancellation"
+      ? await createClient().rpc("decide_toil_cancellation", {
+          p_request_id: requestId,
+          p_decision: decision,
+          p_note: undefined,
+        })
+      : await createClient().rpc("decide_toil_request", {
+          p_request_id: requestId,
+          p_decision: decision,
+          p_note: undefined,
+        });
+
+    if (result.error) {
+      setError(
+        kind === "cancellation"
+          ? "Could not complete this TOIL cancellation decision."
+          : "Could not complete this TOIL decision."
+      );
       setWorking(null);
       return;
     }
@@ -34,7 +51,7 @@ export function ToilDecisionButtons({ requestId }: { requestId: string }) {
         <button
           className="approve"
           disabled={working !== null}
-          aria-label="Approve TOIL request"
+          aria-label={kind === "cancellation" ? "Approve TOIL cancellation" : "Approve TOIL request"}
           onClick={() => decide("approve")}
         >
           <Check size={18}/>
@@ -42,7 +59,7 @@ export function ToilDecisionButtons({ requestId }: { requestId: string }) {
         <button
           className="reject"
           disabled={working !== null}
-          aria-label="Decline TOIL request"
+          aria-label={kind === "cancellation" ? "Decline TOIL cancellation" : "Decline TOIL request"}
           onClick={() => decide("decline")}
         >
           <X size={18}/>
@@ -53,22 +70,47 @@ export function ToilDecisionButtons({ requestId }: { requestId: string }) {
   );
 }
 
-export function ToilWithdrawButton({ requestId }: { requestId: string }) {
+export function ToilLifecycleButton({
+  requestId,
+  status,
+}: {
+  requestId: string;
+  status: string;
+}) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
 
-  async function withdraw() {
-    if (!window.confirm("Withdraw this pending TOIL request? Reserved hours will be restored.")) return;
+  const withdrawable = status === "pending_approval";
+  const cancellable = status === "approved";
+
+  if (!withdrawable && !cancellable) return null;
+
+  async function act() {
+    const message = withdrawable
+      ? "Withdraw this pending TOIL request? Reserved hours will be restored."
+      : "Request cancellation of this approved TOIL? Your manager will need to approve the cancellation.";
+
+    if (!window.confirm(message)) return;
+
     setWorking(true);
     setError("");
 
-    const { error: rpcError } = await createClient().rpc("withdraw_toil_request", {
-      p_request_id: requestId,
-    });
+    const result = withdrawable
+      ? await createClient().rpc("withdraw_toil_request", {
+          p_request_id: requestId,
+        })
+      : await createClient().rpc("request_toil_cancellation", {
+          p_request_id: requestId,
+          p_note: undefined,
+        });
 
-    if (rpcError) {
-      setError("Could not withdraw this TOIL request.");
+    if (result.error) {
+      setError(
+        withdrawable
+          ? "Could not withdraw this TOIL request."
+          : "Could not request TOIL cancellation."
+      );
       setWorking(false);
       return;
     }
@@ -78,8 +120,9 @@ export function ToilWithdrawButton({ requestId }: { requestId: string }) {
 
   return (
     <div className="request-action-stack">
-      <button className="request-text-action" onClick={withdraw} disabled={working} type="button">
-        <X size={14}/>{working ? "Updating…" : "Withdraw"}
+      <button className="request-text-action" onClick={act} disabled={working} type="button">
+        {withdrawable ? <X size={14}/> : <RotateCcw size={14}/>}
+        {working ? "Updating…" : withdrawable ? "Withdraw" : "Cancel TOIL"}
       </button>
       {error ? <small className="inline-error">{error}</small> : null}
     </div>
