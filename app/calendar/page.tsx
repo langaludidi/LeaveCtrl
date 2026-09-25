@@ -32,10 +32,11 @@ function safeColour(value: string | null) {
 }
 
 export default async function CalendarPage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, employee, displayName, roles, businessDate } =
+    await getCurrentContext();
   if (!employee) return null;
 
-  const now = new Date();
+  const now = fromKey(businessDate);
   const start = startOfMondayWeek(now);
   const days = Array.from({ length: 28 }, (_, index) => addDays(start, index));
   const startKey = dateKey(days[0]);
