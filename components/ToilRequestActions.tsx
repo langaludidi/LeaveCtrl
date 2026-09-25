@@ -118,7 +118,7 @@ export function ToilLifecycleButton({
         })
       : await createClient().rpc("request_toil_cancellation", {
           p_request_id: requestId,
-          p_note: note.trim() || undefined,
+          p_note: undefined,
         });
 
     if (result.error) {
