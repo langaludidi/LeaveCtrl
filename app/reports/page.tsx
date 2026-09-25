@@ -51,7 +51,7 @@ export default async function ReportsPage() {
       .eq("active", true),
     supabase
       .from("employee_current_conditions")
-      .select("employee_id, department_id")
+      .select("employee_id, department_id, manager_employee_id")
       .eq("organisation_id", employee.organisation_id),
   ]);
 
