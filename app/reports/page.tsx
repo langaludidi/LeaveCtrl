@@ -12,7 +12,7 @@ function todayKey() {
 }
 
 function days(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function money(value: number, currency = "ZAR") {
@@ -76,7 +76,13 @@ export default async function ReportsPage() {
   const yearStart = currentYearStart();
   const today = todayKey();
 
-  const [{ data: balances }, { data: requests }, remunerationResult] = employeeIds.length
+  const [
+    { data: balances },
+    { data: requests },
+    { data: toilBalances },
+    remunerationResult,
+    liabilityRateResult,
+  ] = employeeIds.length
     ? await Promise.all([
         supabase
           .from("leave_balances")
@@ -87,16 +93,32 @@ export default async function ReportsPage() {
           .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date")
           .in("employee_id", employeeIds)
           .gte("start_date", yearStart),
+        supabase
+          .from("toil_balances")
+          .select("employee_id, available_hours")
+          .in("employee_id", employeeIds),
         canViewLiability
           ? supabase
               .from("employee_remuneration_history")
-              .select("employee_id, gross_amount, pay_frequency, currency_code, liability_daily_rate, calculation_method, effective_from, effective_to")
+              .select("employee_id, gross_amount, pay_frequency, currency_code, effective_from, effective_to")
               .in("employee_id", employeeIds)
               .lte("effective_from", today)
               .order("effective_from", { ascending: false })
           : Promise.resolve({ data: [] }),
+        canViewLiability
+          ? supabase
+              .from("employee_leave_liability_rates")
+              .select("employee_id, currency_code, base_daily_rate, variable_earnings_total, averaging_weeks, scheduled_days, variable_daily_rate, effective_daily_rate, liability_calculation_method")
+              .in("employee_id", employeeIds)
+          : Promise.resolve({ data: [] }),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }];
+    : [
+        { data: [] },
+        { data: [] },
+        { data: [] },
+        { data: [] },
+        { data: [] },
+      ];
 
   const requestIds = (requests ?? []).map((request) => request.id);
   const { data: futureRequestDays } = requestIds.length && canViewLiability
@@ -122,6 +144,12 @@ export default async function ReportsPage() {
     (balances ?? [])
       .filter((row) => row.leave_type_id === annualType?.id)
       .map((row) => [row.employee_id, Number(row.available_balance ?? 0)])
+  );
+  const toilBalanceMap = new Map(
+    (toilBalances ?? []).map((row) => [
+      row.employee_id,
+      Number(row.available_hours ?? 0),
+    ])
   );
 
   const approvedStatuses = new Set(["approved", "cancellation_requested"]);
@@ -161,8 +189,6 @@ export default async function ReportsPage() {
       gross_amount: number;
       pay_frequency: string;
       currency_code: string;
-      liability_daily_rate: number;
-      calculation_method: string;
     }
   >();
 
@@ -175,11 +201,25 @@ export default async function ReportsPage() {
         gross_amount: Number(row.gross_amount),
         pay_frequency: row.pay_frequency,
         currency_code: row.currency_code,
-        liability_daily_rate: Number(row.liability_daily_rate),
-        calculation_method: row.calculation_method,
       });
     }
   }
+
+  const liabilityRateMap = new Map(
+    (liabilityRateResult.data ?? []).map((row) => [
+      row.employee_id,
+      {
+        currency_code: row.currency_code,
+        base_daily_rate: Number(row.base_daily_rate ?? 0),
+        variable_earnings_total: Number(row.variable_earnings_total ?? 0),
+        averaging_weeks: Number(row.averaging_weeks ?? 13),
+        scheduled_days: Number(row.scheduled_days ?? 0),
+        variable_daily_rate: Number(row.variable_daily_rate ?? 0),
+        effective_daily_rate: Number(row.effective_daily_rate ?? 0),
+        liability_calculation_method: row.liability_calculation_method,
+      },
+    ])
+  );
 
   const liabilityDaysMap = new Map<string, number>();
   const liabilityAmountMap = new Map<string, number>();
@@ -194,9 +234,9 @@ export default async function ReportsPage() {
     );
     liabilityDaysMap.set(person.id, liabilityDays);
 
-    const remuneration = remunerationMap.get(person.id);
-    if (remuneration) {
-      const amount = liabilityDays * remuneration.liability_daily_rate;
+    const rate = liabilityRateMap.get(person.id);
+    if (rate) {
+      const amount = liabilityDays * rate.effective_daily_rate;
       liabilityAmountMap.set(person.id, amount);
       totalLiability += amount;
     }
@@ -229,8 +269,8 @@ export default async function ReportsPage() {
           <p className="eyebrow">LIVE LEDGER REPORTING</p>
           <h1>Reports</h1>
           <p>
-            {scopeLabel} reporting based on the same balances, requests and effective
-            employment conditions used by LeaveCtrl workflows.
+            {scopeLabel} reporting based on leave ledgers, effective working conditions,
+            TOIL and the organisation&apos;s confidential remuneration rules.
           </p>
         </div>
         <Link href="/reports/export" className="btn secondary">
@@ -272,9 +312,9 @@ export default async function ReportsPage() {
               <span className="liability-kicker">CONFIDENTIAL FINANCE VIEW</span>
               <h2>Estimated annual-leave liability</h2>
               <p>
-                Uses untaken annual-leave days multiplied by each employee&apos;s effective
-                daily liability rate. Pending requests and approved future leave are added
-                back so they do not prematurely reduce the obligation.
+                Untaken annual leave is valued using the employee&apos;s base daily rate plus
+                the configured average of qualifying variable earnings such as overtime.
+                Future approved leave is added back until it is actually taken.
               </p>
             </div>
           </div>
@@ -296,6 +336,7 @@ export default async function ReportsPage() {
                 <th>Annual available</th>
                 <th>Approved this year</th>
                 <th>Pending</th>
+                <th>TOIL</th>
               </tr>
             </thead>
             <tbody>
@@ -309,11 +350,12 @@ export default async function ReportsPage() {
                     <td><strong>{days(annualBalanceMap.get(person.id) ?? 0)} days</strong></td>
                     <td>{days(approvedByEmployee.get(person.id) ?? 0)} days</td>
                     <td>{days(pendingByEmployee.get(person.id) ?? 0)} days</td>
+                    <td>{days(toilBalanceMap.get(person.id) ?? 0)} h</td>
                   </tr>
                 );
               })}
               {!scopedEmployees?.length ? (
-                <tr><td colSpan={5} className="empty-table-cell">No employees are visible in this reporting scope.</td></tr>
+                <tr><td colSpan={6} className="empty-table-cell">No employees are visible in this reporting scope.</td></tr>
               ) : null}
             </tbody>
           </table>
@@ -326,7 +368,7 @@ export default async function ReportsPage() {
             <div>
               <h2>Leave liability verification</h2>
               <p className="card-subtitle">
-                Remuneration is restricted to authorised company roles and is never displayed in the employee workspace.
+                Base remuneration and variable earnings are restricted to authorised company roles and are never displayed in the employee workspace.
               </p>
             </div>
             <span className="verified-pill"><LockKeyhole size={14}/> Confidential</span>
@@ -338,7 +380,9 @@ export default async function ReportsPage() {
                   <th>Employee</th>
                   <th>Liability days</th>
                   <th>Remuneration basis</th>
-                  <th>Daily rate</th>
+                  <th>Base daily</th>
+                  <th>Variable average</th>
+                  <th>Effective daily</th>
                   <th>Liability</th>
                   <th>Calculation</th>
                 </tr>
@@ -346,7 +390,10 @@ export default async function ReportsPage() {
               <tbody>
                 {(scopedEmployees ?? []).map((person) => {
                   const remuneration = remunerationMap.get(person.id);
+                  const rate = liabilityRateMap.get(person.id);
                   const liabilityDays = liabilityDaysMap.get(person.id) ?? 0;
+                  const currency = rate?.currency_code ?? remuneration?.currency_code ?? "ZAR";
+
                   return (
                     <tr key={person.id}>
                       <td>{person.first_name} {person.last_name}</td>
@@ -356,17 +403,26 @@ export default async function ReportsPage() {
                           ? `${money(remuneration.gross_amount, remuneration.currency_code)} / ${remuneration.pay_frequency}`
                           : "Not captured"}
                       </td>
+                      <td>{rate ? money(rate.base_daily_rate, currency) : "—"}</td>
                       <td>
-                        {remuneration
-                          ? money(remuneration.liability_daily_rate, remuneration.currency_code)
+                        {rate
+                          ? <>
+                              <strong>{money(rate.variable_daily_rate, currency)}</strong>
+                              <span className="table-secondary">
+                                {money(rate.variable_earnings_total, currency)} over {rate.averaging_weeks} weeks
+                              </span>
+                            </>
                           : "—"}
                       </td>
+                      <td>{rate ? <strong>{money(rate.effective_daily_rate, currency)}</strong> : "—"}</td>
                       <td>
-                        {remuneration
-                          ? <strong>{money(liabilityAmountMap.get(person.id) ?? 0, remuneration.currency_code)}</strong>
+                        {rate
+                          ? <strong>{money(liabilityAmountMap.get(person.id) ?? 0, currency)}</strong>
                           : "—"}
                       </td>
-                      <td className="liability-method">{remuneration?.calculation_method ?? "Capture remuneration to calculate"}</td>
+                      <td className="liability-method">
+                        {rate?.liability_calculation_method ?? "Capture remuneration to calculate"}
+                      </td>
                     </tr>
                   );
                 })}
