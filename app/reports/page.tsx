@@ -3,14 +3,6 @@ import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lu
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
-function currentYearStart() {
-  return `${new Date().getFullYear()}-01-01`;
-}
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function days(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
@@ -24,7 +16,8 @@ function money(value: number, currency = "ZAR") {
 }
 
 export default async function ReportsPage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, employee, displayName, roles, businessDate } =
+    await getCurrentContext();
   if (!employee) return null;
 
   const adminScope = roles.some((role) =>
@@ -73,8 +66,8 @@ export default async function ReportsPage() {
   ]);
 
   const employeeIds = (scopedEmployees ?? []).map((person) => person.id);
-  const yearStart = currentYearStart();
-  const today = todayKey();
+  const yearStart = `${businessDate.slice(0, 4)}-01-01`;
+  const today = businessDate;
 
   const [
     { data: balances },
