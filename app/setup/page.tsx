@@ -15,10 +15,13 @@ function formatHolidayDate(value: string) {
 }
 
 export default async function SetupPage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, employee, displayName, roles, businessDate } = await getCurrentContext();
   if (!employee) return null;
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
+  const businessYear = Number(businessDate.slice(0, 4));
+  const holidayStart = `${businessYear}-01-01`;
+  const holidayEnd = `${businessYear + 1}-12-31`;
 
   const [
     { data: annualType },
@@ -42,8 +45,8 @@ export default async function SetupPage() {
       .from("public_holidays")
       .select("holiday_date, name, is_observed, is_one_off, source_kind")
       .eq("organisation_id", employee.organisation_id)
-      .gte("holiday_date", "2026-01-01")
-      .lte("holiday_date", "2027-12-31")
+      .gte("holiday_date", holidayStart)
+      .lte("holiday_date", holidayEnd)
       .order("holiday_date", { ascending: true }),
     supabase
       .from("statutory_leave_rules")
@@ -156,6 +159,7 @@ export default async function SetupPage() {
               existingCycleBasis={existingCycleBasis}
               existingAnchorMonth={existingAnchorMonth}
               existingAnchorDay={existingAnchorDay}
+              businessDate={businessDate}
             />
 
             <aside className="setup-side">
@@ -181,6 +185,7 @@ export default async function SetupPage() {
             people={assignmentPeople}
             departments={departments ?? []}
             schedules={schedules ?? []}
+            businessDate={businessDate}
           />
 
           <AvailabilityControls
@@ -224,7 +229,7 @@ export default async function SetupPage() {
           <div>
             <h2>South African public holidays</h2>
             <p>
-              Official calendar entries currently loaded for 2026 and 2027,
+              Official calendar entries currently loaded for {businessYear} and {businessYear + 1},
               including observed days and one-off proclamations.
             </p>
           </div>
