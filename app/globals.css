@@ -123,3 +123,14 @@
 .leave-teal{background:#008080}.leave-blue{background:#2f6f9f}.leave-amber{background:#b97816}.leave-purple{background:#7460a8}.leave-rose{background:#a85f72}.leave-slate{background:#667681}
 @media(max-width:1050px){.workforce-change-form{grid-template-columns:repeat(2,minmax(150px,1fr))}.workforce-change-form .wide-field{grid-column:span 2}.remuneration-grid{grid-template-columns:repeat(2,minmax(160px,1fr))}}
 @media(max-width:650px){.workforce-change-form,.remuneration-grid{grid-template-columns:1fr}.workforce-change-form .wide-field{grid-column:auto}.liability-summary-card{align-items:flex-start;flex-direction:column}.calendar-legend-wrap{justify-content:flex-start}}
+
+.overtime-section{display:flex;flex-direction:column;gap:14px;margin:16px 0}
+.overtime-history-card{margin-top:0}
+.compact-inline-field{display:flex;align-items:center;gap:8px}
+.compact-inline-field input{width:110px!important}
+.compact-inline-field span{font-size:10px;color:#718096;font-weight:600}
+.toil-balance-list{border-top:1px solid var(--border);margin-top:4px;padding-top:8px;display:flex;flex-direction:column}
+.toil-balance-list>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #edf1f2}
+.toil-balance-list>div:last-child{border-bottom:0}
+.toil-balance-list span{font-size:9px;color:#64748b}
+.toil-balance-list strong{font-size:10px;color:var(--teal-900)}
