@@ -1,79 +1,250 @@
 import Link from "next/link";
+import { AlertTriangle, CalendarDays, ChevronRight, Clock3, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { DecisionButtons } from "@/components/DecisionButtons";
 import { StatusPill } from "@/components/StatusPill";
-import { AlertTriangle, CalendarDays, Check, ChevronRight, Clock3, Users, X } from "lucide-react";
+import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
-const requests = [
-  ["12 – 16 May 2026", "Annual Leave", "5 days", "Approved"],
-  ["30 Sep 2026", "Personal Leave", "1 day", "Pending"],
-  ["10 – 12 Oct 2026", "Annual Leave", "3 days", "Pending"],
-  ["18 Aug 2026", "Sick Leave", "1 day", "Approved"],
-  ["3 Mar 2026", "Annual Leave", "4 days", "Declined"],
-] as const;
+function zaToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Johannesburg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
 
-const approvals = [
-  ["JM", "Jessica Mthembu", "Annual Leave", "28–30 Sep 2026", "3 days"],
-  ["DK", "Daniel Kgope", "Annual Leave", "16–20 Oct 2026", "5 days"],
-  ["NT", "Nomusa Tshabalala", "Family Responsibility", "6 Oct 2026", "1 day"],
-];
-
-const team = [
-  ["TD","Thabo Dlamini","Engineering",["","","","Annual Leave","Annual Leave","",""]],
-  ["PN","Priya Naidoo","Engineering",["","Sick Leave","","","","",""]],
-  ["SK","Sipho Khumalo","Marketing",["Annual Leave","Annual Leave","","","","",""]],
-  ["AP","Aisha Patel","Marketing",["","","","","Annual Leave","",""]],
-  ["LB","Liam Brown","Product",["","","Work From Home","","","",""]],
-] as const;
-
-function SummaryCard({tone, icon, label, value, unit, sub}:{tone:string,icon:React.ReactNode,label:string,value:string,unit:string,sub:string}) {
-  return <div className={`summary-card ${tone}`}>
-    <div className="summary-head"><span className="summary-icon">{icon}</span><span>{label}</span></div>
-    <div className="summary-value">{value} <small>{unit}</small></div>
-    <div className="summary-foot"><span>{sub}</span><ChevronRight size={17}/></div>
-  </div>
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
 }
 
-export default function HomePage(){
-  return <AppShell>
-    <section className="page-head split">
-      <div><p className="eyebrow">Friday, 25 September 2026</p><h1>Good morning, Langa</h1><p>Here’s what’s happening with your leave and your team today.</p></div>
-      <Link href="/book-leave" className="btn primary"><CalendarDays size={18}/> Book Leave</Link>
-    </section>
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-ZA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
 
-    <section className="summary-grid">
-      <SummaryCard tone="teal" icon={<CalendarDays size={20}/>} label="Annual Leave Available" value="15" unit="days" sub="of 15 days" />
-      <SummaryCard tone="amber" icon={<Clock3 size={20}/>} label="Pending Requests" value="2" unit="requests" sub="1 for your approval" />
-      <SummaryCard tone="blue" icon={<Users size={20}/>} label="Team Away Today" value="2" unit="people" sub="out of 8" />
-      <SummaryCard tone="red" icon={<AlertTriangle size={20}/>} label="Coverage Alerts" value="1" unit="alert" sub="Operations team" />
-    </section>
+function SummaryCard({
+  tone,
+  icon,
+  label,
+  value,
+  unit,
+  sub,
+}: {
+  tone: string;
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  unit: string;
+  sub: string;
+}) {
+  return (
+    <div className={`summary-card ${tone}`}>
+      <div className="summary-head"><span className="summary-icon">{icon}</span><span>{label}</span></div>
+      <div className="summary-value">{value} <small>{unit}</small></div>
+      <div className="summary-foot"><span>{sub}</span><ChevronRight size={17}/></div>
+    </div>
+  );
+}
 
-    <section className="two-col">
-      <div className="card data-card">
-        <div className="card-title"><h2>My Leave & Requests</h2><a>View all</a></div>
-        <div className="tabs"><button className="active">Recent Requests</button><button>Upcoming Leave</button><button>Leave Balance</button></div>
-        <div className="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Status</th></tr></thead><tbody>
-          {requests.map(([date,type,duration,status])=><tr key={date}><td>{date}</td><td>{type}</td><td>{duration}</td><td><StatusPill status={status}/></td></tr>)}
-        </tbody></table></div>
-      </div>
-      <div className="card approvals-card">
-        <div className="card-title"><h2>Approvals / My Work</h2><a>View all</a></div>
-        <div className="tabs"><button className="active">Pending Approvals</button><button>Team Requests</button></div>
-        <div className="approval-list">
-          {approvals.map(([initials,name,type,date,duration],i)=><div className="approval-row" key={name}>
-            <div className={`mini-avatar a${i+1}`}>{initials}</div><div className="approval-person"><strong>{name}</strong><span>{type}</span></div>
-            <div className="approval-date"><strong>{date}</strong><span>{duration}</span></div>
-            <div className="approval-actions"><button className="approve" aria-label={`Approve ${name}`}><Check size={18}/></button><button className="reject" aria-label={`Decline ${name}`}><X size={18}/></button></div>
-          </div>)}
+export default async function HomePage() {
+  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  if (!employee) return null;
+
+  const today = zaToday();
+
+  const [
+    { data: leaveTypes },
+    { data: balances },
+    { data: myRequests },
+    { data: pendingVisible },
+    { data: employees },
+    { data: departments },
+    { data: awayToday },
+    { data: upcomingApproved },
+  ] = await Promise.all([
+    supabase.from("leave_types").select("id, name, code").eq("organisation_id", employee.organisation_id),
+    supabase.from("leave_balances").select("leave_type_id, available_balance").eq("employee_id", employee.id),
+    supabase
+      .from("leave_requests")
+      .select("id, employee_id, leave_type_id, start_date, end_date, quantity, status")
+      .eq("employee_id", employee.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("leave_requests")
+      .select("id, employee_id, leave_type_id, start_date, end_date, quantity, status")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("status", "pending_approval")
+      .order("submitted_at", { ascending: true }),
+    supabase
+      .from("employees")
+      .select("id, first_name, last_name, department_id")
+      .eq("organisation_id", employee.organisation_id),
+    supabase
+      .from("departments")
+      .select("id, name")
+      .eq("organisation_id", employee.organisation_id),
+    supabase
+      .from("leave_requests")
+      .select("id, employee_id")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("status", "approved")
+      .lte("start_date", today)
+      .gte("end_date", today),
+    supabase
+      .from("leave_requests")
+      .select("id, employee_id, leave_type_id, start_date, end_date, quantity")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("status", "approved")
+      .gte("end_date", today)
+      .order("start_date", { ascending: true })
+      .limit(8),
+  ]);
+
+  const typeMap = new Map((leaveTypes ?? []).map((item) => [item.id, item.name]));
+  const annual = (leaveTypes ?? []).find((item) => item.code === "ANNUAL");
+  const balanceMap = new Map((balances ?? []).map((item) => [item.leave_type_id, Number(item.available_balance ?? 0)]));
+  const annualBalance = annual ? balanceMap.get(annual.id) ?? 0 : 0;
+
+  const employeeMap = new Map((employees ?? []).map((item) => [item.id, item]));
+  const departmentMap = new Map((departments ?? []).map((item) => [item.id, item.name]));
+  const approvals = (pendingVisible ?? []).filter((request) => request.employee_id !== employee.id);
+  const pendingMine = (myRequests ?? []).filter((request) => request.status === "pending_approval").length;
+  const awayCount = new Set((awayToday ?? []).map((item) => item.employee_id)).size;
+
+  return (
+    <AppShell
+      displayName={displayName}
+      role={roleLabel(roles)}
+      requestCount={approvals.length}
+    >
+      <section className="page-head split">
+        <div>
+          <p className="eyebrow">WORKFORCE AVAILABILITY</p>
+          <h1>Good morning, {employee.first_name}</h1>
+          <p>Your balances, requests and approval work are now reading from the LeaveCtrl ledger.</p>
         </div>
-        <button className="text-link">View all pending approvals <ChevronRight size={16}/></button>
-      </div>
-    </section>
+        <Link href="/book-leave" className="btn primary"><CalendarDays size={18}/> Book Leave</Link>
+      </section>
 
-    <section className="card availability-card">
-      <div className="availability-head"><div><h2>Team Availability</h2><p>See who’s away and upcoming leave across your team.</p></div><div className="date-controls"><button>‹</button><span>25 Sep – 1 Oct 2026</span><button>›</button><button className="today">Today</button></div></div>
-      <div className="table-scroll"><table className="availability-table"><thead><tr><th>Employee</th><th>Team</th>{["Fri 25","Sat 26","Sun 27","Mon 28","Tue 29","Wed 30","Thu 01"].map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>
-        {team.map(([initials,name,dept,days],ri)=><tr key={name}><td><span className="person-cell"><span className={`tiny-avatar t${ri+1}`}>{initials}</span>{name}</span></td><td>{dept}</td>{days.map((v,idx)=><td key={idx}>{v ? <span className={`leave-chip ${v.includes("Sick")?"sick":v.includes("Work")?"info":ri===2?"amber":"annual"}`}>{v}</span> : <span className="empty">–</span>}</td>)}</tr>)}
-      </tbody></table></div>
-    </section>
-  </AppShell>
+      <section className="summary-grid">
+        <SummaryCard
+          tone="teal"
+          icon={<CalendarDays size={20}/>}
+          label="Annual Leave Available"
+          value={String(annualBalance)}
+          unit="days"
+          sub={annual ? "current ledger balance" : "setup required"}
+        />
+        <SummaryCard
+          tone="amber"
+          icon={<Clock3 size={20}/>}
+          label="My Pending Requests"
+          value={String(pendingMine)}
+          unit={pendingMine === 1 ? "request" : "requests"}
+          sub={approvals.length ? `${approvals.length} approval item${approvals.length === 1 ? "" : "s"} for you` : "no approval work"}
+        />
+        <SummaryCard
+          tone="blue"
+          icon={<Users size={20}/>}
+          label="Away Today"
+          value={String(awayCount)}
+          unit={awayCount === 1 ? "person" : "people"}
+          sub="visible to your role"
+        />
+        <SummaryCard
+          tone="red"
+          icon={<AlertTriangle size={20}/>}
+          label="Coverage Alerts"
+          value="0"
+          unit="alerts"
+          sub="coverage rules next"
+        />
+      </section>
+
+      <section className="two-col">
+        <div className="card data-card">
+          <div className="card-title"><h2>My Leave & Requests</h2><Link href="/requests">View all</Link></div>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Dates</th><th>Type</th><th>Duration</th><th>Status</th></tr></thead>
+              <tbody>
+                {(myRequests ?? []).map((request) => (
+                  <tr key={request.id}>
+                    <td>{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` – ${formatDate(request.end_date)}` : ""}</td>
+                    <td>{typeMap.get(request.leave_type_id) ?? "Leave"}</td>
+                    <td>{Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}</td>
+                    <td><StatusPill status={request.status}/></td>
+                  </tr>
+                ))}
+                {!myRequests?.length ? (
+                  <tr><td colSpan={4} className="empty-table-cell">No requests yet. Your first submitted request will appear here.</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card approvals-card">
+          <div className="card-title"><h2>Approvals / My Work</h2><Link href="/requests">View all</Link></div>
+          <div className="approval-list">
+            {approvals.slice(0, 3).map((request) => {
+              const person = employeeMap.get(request.employee_id);
+              const name = person ? `${person.first_name} ${person.last_name}` : "Employee";
+              const initials = name.split(" ").map((value) => value[0]).slice(0, 2).join("");
+              return (
+                <div className="approval-row" key={request.id}>
+                  <div className="mini-avatar">{initials}</div>
+                  <div className="approval-person"><strong>{name}</strong><span>{typeMap.get(request.leave_type_id) ?? "Leave"}</span></div>
+                  <div className="approval-date"><strong>{formatDate(request.start_date)}</strong><span>{Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}</span></div>
+                  <DecisionButtons requestId={request.id}/>
+                </div>
+              );
+            })}
+            {!approvals.length ? (
+              <div className="empty-work-state">
+                <strong>You're up to date</strong>
+                <span>Actionable work will remain here until it is resolved.</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="card availability-card">
+        <div className="availability-head">
+          <div>
+            <h2>Upcoming approved leave</h2>
+            <p>A privacy-aware projection of approved leave visible to your role.</p>
+          </div>
+          <Link href="/calendar" className="btn secondary">Open calendar</Link>
+        </div>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Employee</th><th>Team</th><th>Leave</th><th>Dates</th><th>Days</th></tr></thead>
+            <tbody>
+              {(upcomingApproved ?? []).map((request) => {
+                const person = employeeMap.get(request.employee_id);
+                return (
+                  <tr key={request.id}>
+                    <td>{person ? `${person.first_name} ${person.last_name}` : "Employee"}</td>
+                    <td>{person?.department_id ? departmentMap.get(person.department_id) ?? "—" : "—"}</td>
+                    <td>{typeMap.get(request.leave_type_id) ?? "Away"}</td>
+                    <td>{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` – ${formatDate(request.end_date)}` : ""}</td>
+                    <td>{Number(request.quantity)}</td>
+                  </tr>
+                );
+              })}
+              {!upcomingApproved?.length ? (
+                <tr><td colSpan={5} className="empty-table-cell">No approved upcoming leave is visible yet.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </AppShell>
+  );
 }
