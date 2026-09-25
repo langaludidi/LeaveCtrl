@@ -202,10 +202,12 @@ export default async function TeamPage() {
               multiplier: Number(event.multiplier),
               paid_amount: overtimePaymentMap.get(event.id) ?? null,
             }))}
-            toilBalances={(toilBalances ?? []).map((row) => ({
-              employee_id: row.employee_id,
-              available_hours: Number(row.available_hours ?? 0),
-            }))}
+            toilBalances={(toilBalances ?? [])
+              .filter((row): row is typeof row & { employee_id: string } => Boolean(row.employee_id))
+              .map((row) => ({
+                employee_id: row.employee_id,
+                available_hours: Number(row.available_hours ?? 0),
+              }))}
           />
         </>
       ) : null}
