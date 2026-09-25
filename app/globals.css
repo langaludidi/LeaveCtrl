@@ -17,3 +17,14 @@
 .onboarding-copy{margin-bottom:22px}.onboarding-form{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:var(--shadow)}.onboarding-defaults{background:var(--teal-50);border:1px solid #dceeee;border-radius:9px;padding:13px;display:flex;flex-direction:column;gap:4px}.onboarding-defaults strong{font-size:11px;color:var(--teal-900)}.onboarding-defaults span{font-size:10px;color:#667985}.onboarding-submit{margin-top:4px}
 @media(max-width:850px){.auth-page{grid-template-columns:1fr}.auth-aside{display:none}.auth-panel{padding:34px 24px}.auth-brand{margin-bottom:36px}}
 @media(max-width:520px){.auth-name-row{grid-template-columns:1fr}.auth-copy h1,.onboarding-copy h1{font-size:29px}.onboarding-page{padding:30px 14px}.onboarding-form{padding:18px}}
+
+.native-field{width:100%;height:46px;border:1px solid var(--border-strong);border-radius:9px;padding:0 12px;background:#fff;color:var(--ink);outline:none;margin-top:7px}
+.native-field:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,128,128,.08)}
+.empty-state-card{padding:28px}.empty-state-card h2{margin-top:0}.empty-state-card p{color:#64748b;font-size:13px;line-height:1.6;max-width:620px}.empty-state-card .btn{margin-top:8px}
+.empty-table-cell{text-align:center!important;color:#83909b!important;padding:28px 12px!important}
+.empty-work-state{padding:28px 12px;text-align:center;display:flex;flex-direction:column;gap:5px;color:#64748b}.empty-work-state strong{color:#334155;font-size:13px}.empty-work-state span{font-size:11px}
+.decision-stack{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.inline-error{color:var(--danger);font-size:9px}
+.compact-field{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;margin:0!important}.compact-field input{width:90px;height:40px;border:1px solid var(--border-strong);border-radius:8px;padding:0 10px;outline:none}.compact-field input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,128,128,.08)}.compact-field span{font-size:11px!important;color:#52606d!important}
+.setup-reassurance{display:flex;gap:10px;background:var(--teal-50);border:1px solid #dceeee;border-radius:9px;padding:13px;margin-top:10px;color:var(--teal-900)}.setup-reassurance p{margin:3px 0 0;color:#667985;font-size:10px;line-height:1.5}
+.real-setup-card .field-row{margin-top:0}.real-setup-card .native-field{margin-top:0}
+.btn:disabled,.approval-actions button:disabled{opacity:.55;cursor:not-allowed}
