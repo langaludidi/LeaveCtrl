@@ -3,6 +3,7 @@ import { CalendarDays, Scale, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { OrganisationControls } from "@/components/OrganisationControls";
+import { AvailabilityControls } from "@/components/AvailabilityControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 function formatHolidayDate(value: string) {
@@ -27,6 +28,9 @@ export default async function SetupPage() {
     { data: schedules },
     { data: people },
     { data: assignments },
+    { data: leaveTypes },
+    { data: blockedPeriods },
+    { data: coverageRules },
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -70,6 +74,23 @@ export default async function SetupPage() {
       .eq("organisation_id", employee.organisation_id)
       .is("effective_to", null)
       .order("effective_from", { ascending: false }),
+    supabase
+      .from("leave_types")
+      .select("id, name")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true)
+      .order("name"),
+    supabase
+      .from("blocked_periods")
+      .select("id, name, start_date, end_date, hard_block")
+      .eq("organisation_id", employee.organisation_id)
+      .order("start_date"),
+    supabase
+      .from("coverage_rules")
+      .select("id, name, department_id, minimum_available, severity")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true)
+      .order("name"),
   ]);
 
   let existingDays = 15;
@@ -144,6 +165,13 @@ export default async function SetupPage() {
             people={assignmentPeople}
             departments={departments ?? []}
             schedules={schedules ?? []}
+          />
+
+          <AvailabilityControls
+            departments={departments ?? []}
+            leaveTypes={leaveTypes ?? []}
+            blockedPeriods={blockedPeriods ?? []}
+            coverageRules={coverageRules ?? []}
           />
         </>
       ) : null}
