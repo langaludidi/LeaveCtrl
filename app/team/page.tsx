@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AddEmployeeForm } from "@/components/AddEmployeeForm";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
@@ -11,6 +12,8 @@ export default async function TeamPage() {
   if (!employee) return null;
 
   const canAdminPeople = roles.includes("org_admin") || roles.includes("hr_admin");
+  const canManageTeam = canAdminPeople || roles.includes("manager");
+  if (!canManageTeam) redirect("/");
 
   const [
     { data: people },
@@ -135,6 +138,14 @@ export default async function TeamPage() {
     (person) => person.employment_status === "active"
   );
 
+  const visiblePeople = canAdminPeople
+    ? activePeople
+    : activePeople.filter((person) => {
+        if (person.id === employee.id) return true;
+        const condition = conditionMap.get(person.id);
+        return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
+      });
+
   const assignmentPeople = activePeople.map((person) => {
     const condition = conditionMap.get(person.id);
     return {
@@ -224,7 +235,7 @@ export default async function TeamPage() {
       <section className="card data-card">
         <div className="card-title">
           <h2>People</h2>
-          <span className="muted-count">{people?.length ?? 0} employees</span>
+          <span className="muted-count">{visiblePeople.length} employees</span>
         </div>
 
         <div className="table-scroll">
@@ -244,7 +255,7 @@ export default async function TeamPage() {
               </tr>
             </thead>
             <tbody>
-              {(people ?? []).map((person) => {
+              {visiblePeople.map((person) => {
                 const condition = conditionMap.get(person.id);
                 const departmentId = condition?.department_id ?? person.department_id;
                 const managerId = condition?.manager_employee_id ?? person.manager_employee_id;
