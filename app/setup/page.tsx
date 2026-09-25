@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Scale, ShieldCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, Circle, Scale, ShieldCheck, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { OrganisationControls } from "@/components/OrganisationControls";
@@ -97,6 +97,7 @@ export default async function SetupPage() {
   ]);
 
   let existingDays = 15;
+  let hasAnnualPolicy = false;
   let existingCycleBasis: "organisation_fixed" | "employment_anniversary" =
     "organisation_fixed";
   let existingAnchorMonth = 1;
@@ -112,6 +113,7 @@ export default async function SetupPage() {
       .limit(1)
       .maybeSingle();
 
+    hasAnnualPolicy = Boolean(policy);
     existingDays = Number(policy?.entitlement_amount ?? 15);
     existingCycleBasis =
       policy?.cycle_basis === "employment_anniversary"
@@ -135,6 +137,42 @@ export default async function SetupPage() {
     scheduleId: scheduleMap.get(person.id) ?? null,
   }));
 
+  const activePeopleCount = people?.length ?? 0;
+  const assignedScheduleCount = assignmentPeople.filter((person) => person.scheduleId).length;
+  const allPeopleScheduled =
+    activePeopleCount > 0 && assignedScheduleCount === activePeopleCount;
+
+  const readinessChecks = [
+    {
+      label: "Annual leave policy",
+      detail: hasAnnualPolicy ? "Configured and versioned" : "Configure the annual leave policy",
+      done: hasAnnualPolicy,
+    },
+    {
+      label: "Work schedule coverage",
+      detail: allPeopleScheduled
+        ? "Every active employee has a schedule"
+        : `${assignedScheduleCount} of ${activePeopleCount} active employees assigned`,
+      done: allPeopleScheduled,
+    },
+    {
+      label: "Employee records",
+      detail: activePeopleCount
+        ? `${activePeopleCount} active employee${activePeopleCount === 1 ? "" : "s"}`
+        : "Add at least one employee",
+      done: activePeopleCount > 0,
+    },
+    {
+      label: "Public holiday calendar",
+      detail: holidays?.length
+        ? `${holidays.length} verified entries loaded for the current window`
+        : "No public holidays loaded",
+      done: Boolean(holidays?.length),
+    },
+  ];
+
+  const readinessComplete = readinessChecks.filter((check) => check.done).length;
+
   return (
     <AppShell displayName={displayName} role={roleLabel(roles)}>
       <section className="page-head setup-head">
@@ -153,6 +191,42 @@ export default async function SetupPage() {
 
       {canAdmin ? (
         <>
+          <section className="card readiness-card">
+            <div className="readiness-overview">
+              <div className="readiness-icon">
+                {readinessComplete === readinessChecks.length
+                  ? <CheckCircle2 size={22}/>
+                  : <Circle size={22}/>}
+              </div>
+              <div>
+                <span className="liability-kicker">SETUP READINESS</span>
+                <h2>
+                  {readinessComplete === readinessChecks.length
+                    ? "Core leave controls are ready"
+                    : `${readinessComplete} of ${readinessChecks.length} core checks complete`}
+                </h2>
+                <p>
+                  LeaveCtrl only calls the workspace ready when policy, schedules,
+                  people and the public-holiday calendar can support reliable calculations.
+                </p>
+              </div>
+              <Link href="/team" className="btn secondary">
+                <Users size={16}/> Manage people
+              </Link>
+            </div>
+            <div className="readiness-checks">
+              {readinessChecks.map((check) => (
+                <div className={`readiness-check ${check.done ? "done" : ""}`} key={check.label}>
+                  {check.done ? <CheckCircle2 size={15}/> : <Circle size={15}/>}
+                  <div>
+                    <strong>{check.label}</strong>
+                    <span>{check.detail}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="setup-grid">
             <InitialPolicyForm
               existingDays={existingDays}
