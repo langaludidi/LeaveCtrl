@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -10,11 +10,13 @@ export function InitialPolicyForm({
   existingCycleBasis = "organisation_fixed",
   existingAnchorMonth = 1,
   existingAnchorDay = 1,
+  businessDate,
 }: {
   existingDays?: number;
   existingCycleBasis?: "organisation_fixed" | "employment_anniversary";
   existingAnchorMonth?: number;
   existingAnchorDay?: number;
+  businessDate: string;
 }) {
   const router = useRouter();
   const [annualDays, setAnnualDays] = useState(String(existingDays));
@@ -23,11 +25,6 @@ export function InitialPolicyForm({
   const [anchorDay, setAnchorDay] = useState(String(existingAnchorDay));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  const effectiveDate = useMemo(
-    () => new Date().toISOString().slice(0, 10),
-    []
-  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,7 +41,7 @@ export function InitialPolicyForm({
           cycleBasis === "organisation_fixed" ? Number(anchorMonth) : undefined,
         p_fixed_cycle_start_day:
           cycleBasis === "organisation_fixed" ? Number(anchorDay) : undefined,
-        p_effective_from: effectiveDate,
+        p_effective_from: businessDate,
       } as never
     );
 
