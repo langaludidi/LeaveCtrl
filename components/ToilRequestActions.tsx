@@ -8,13 +8,16 @@ import { createClient } from "@/lib/supabase/client";
 export function ToilDecisionButtons({
   requestId,
   kind = "request",
+  showNote = false,
 }: {
   requestId: string;
   kind?: "request" | "cancellation";
+  showNote?: boolean;
 }) {
   const router = useRouter();
   const [working, setWorking] = useState<"approve" | "decline" | null>(null);
   const [error, setError] = useState("");
+  const [note, setNote] = useState("");
 
   async function decide(decision: "approve" | "decline") {
     setWorking(decision);
@@ -24,12 +27,12 @@ export function ToilDecisionButtons({
       ? await createClient().rpc("decide_toil_cancellation", {
           p_request_id: requestId,
           p_decision: decision,
-          p_note: undefined,
+          p_note: note.trim() || undefined,
         })
       : await createClient().rpc("decide_toil_request", {
           p_request_id: requestId,
           p_decision: decision,
-          p_note: undefined,
+          p_note: note.trim() || undefined,
         });
 
     if (result.error) {
@@ -46,7 +49,18 @@ export function ToilDecisionButtons({
   }
 
   return (
-    <div className="decision-stack">
+    <div className={showNote ? "decision-stack expanded-decision" : "decision-stack"}>
+      {showNote ? (
+        <label className="decision-note-field">
+          Decision note <span>(optional)</span>
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Add context for the employee and audit trail"
+            maxLength={600}
+          />
+        </label>
+      ) : null}
       <div className="approval-actions">
         <button
           className="approve"
@@ -55,6 +69,7 @@ export function ToilDecisionButtons({
           onClick={() => decide("approve")}
         >
           <Check size={18}/>
+          {showNote ? <span>Approve</span> : null}
         </button>
         <button
           className="reject"
@@ -63,6 +78,7 @@ export function ToilDecisionButtons({
           onClick={() => decide("decline")}
         >
           <X size={18}/>
+          {showNote ? <span>Decline</span> : null}
         </button>
       </div>
       {error ? <small className="inline-error">{error}</small> : null}
@@ -102,7 +118,7 @@ export function ToilLifecycleButton({
         })
       : await createClient().rpc("request_toil_cancellation", {
           p_request_id: requestId,
-          p_note: undefined,
+          p_note: note.trim() || undefined,
         });
 
     if (result.error) {
