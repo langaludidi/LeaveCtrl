@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CalendarDays, CheckCircle2, Circle, Scale, ShieldCheck, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
@@ -19,6 +20,7 @@ export default async function SetupPage() {
   if (!employee) return null;
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
+  if (!canAdmin) redirect("/");
   const businessYear = Number(businessDate.slice(0, 4));
   const holidayStart = `${businessYear}-01-01`;
   const holidayEnd = `${businessYear + 1}-12-31`;
