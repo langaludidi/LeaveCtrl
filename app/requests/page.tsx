@@ -31,6 +31,7 @@ export default async function RequestsPage({
     { data: myToilRequests },
     { data: visibleToilWork },
     { data: toilCoverageChecks },
+    { data: absenceWarnings },
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -74,6 +75,10 @@ export default async function RequestsPage({
       .select("request_id, outcome")
       .eq("organisation_id", employee.organisation_id)
       .eq("outcome", "warning"),
+    supabase
+      .from("absence_request_warnings")
+      .select("leave_request_id, toil_request_id, warning_code, message")
+      .eq("organisation_id", employee.organisation_id),
   ]);
 
   const typeMap = new Map((leaveTypes ?? []).map((item) => [item.id, item.name]));
@@ -101,6 +106,23 @@ export default async function RequestsPage({
       check.request_id,
       (toilCoverageWarningMap.get(check.request_id) ?? 0) + 1
     );
+  }
+
+  const leaveOperationalWarnings = new Map<string, string[]>();
+  const toilOperationalWarnings = new Map<string, string[]>();
+  for (const warning of absenceWarnings ?? []) {
+    if (warning.leave_request_id) {
+      leaveOperationalWarnings.set(
+        warning.leave_request_id,
+        [...(leaveOperationalWarnings.get(warning.leave_request_id) ?? []), warning.message]
+      );
+    }
+    if (warning.toil_request_id) {
+      toilOperationalWarnings.set(
+        warning.toil_request_id,
+        [...(toilOperationalWarnings.get(warning.toil_request_id) ?? []), warning.message]
+      );
+    }
   }
 
   return (
@@ -196,6 +218,7 @@ export default async function RequestsPage({
                       {cancellation ? "Cancellation · " : ""}
                       {typeMap.get(request.leave_type_id) ?? "Leave"}
                       {coverageWarningMap.get(request.id) ? " · Coverage warning" : ""}
+                      {leaveOperationalWarnings.get(request.id)?.length ? " · Operational warning" : ""}
                     </span>
                   </div>
                   <div className="approval-date">
@@ -226,6 +249,9 @@ export default async function RequestsPage({
                       : "TOIL request"}
                     {toilCoverageWarningMap.get(request.id)
                       ? " · Coverage warning"
+                      : ""}
+                    {toilOperationalWarnings.get(request.id)?.length
+                      ? " · Operational warning"
                       : ""}
                   </span>
                 </div>
