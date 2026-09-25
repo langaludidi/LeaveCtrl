@@ -1,6 +1,21 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+export function dateInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-ZA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "1970";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+
+  return `${year}-${month}-${day}`;
+}
+
 export async function getCurrentContext(options?: { requireEmployee?: boolean }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,21 +34,43 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
   }
 
   let roles: string[] = [];
+  let organisation: {
+    id: string;
+    name: string;
+    timezone: string;
+    country_code: string;
+    currency_code: string;
+  } | null = null;
+
   if (employee) {
-    const { data: memberships } = await supabase
-      .from("organisation_memberships")
-      .select("role")
-      .eq("organisation_id", employee.organisation_id)
-      .eq("user_id", user.id)
-      .eq("is_active", true);
+    const [{ data: memberships }, { data: organisationRow }] = await Promise.all([
+      supabase
+        .from("organisation_memberships")
+        .select("role")
+        .eq("organisation_id", employee.organisation_id)
+        .eq("user_id", user.id)
+        .eq("is_active", true),
+      supabase
+        .from("organisations")
+        .select("id, name, timezone, country_code, currency_code")
+        .eq("id", employee.organisation_id)
+        .maybeSingle(),
+    ]);
 
     roles = memberships?.map((membership) => membership.role) ?? [];
+    organisation = organisationRow ?? null;
   }
+
+  const timezone = organisation?.timezone ?? "UTC";
+  const businessDate = dateInTimeZone(new Date(), timezone);
 
   return {
     supabase,
     user,
     employee,
+    organisation,
+    timezone,
+    businessDate,
     roles,
     displayName: employee ? `${employee.first_name} ${employee.last_name}` : user.email ?? "User",
   };
