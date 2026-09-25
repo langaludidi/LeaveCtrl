@@ -1982,6 +1982,10 @@ export type Database = {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
       }
+      decide_toil_cancellation: {
+        Args: { p_decision: string; p_note?: string; p_request_id: string }
+        Returns: string
+      }
       decide_toil_request: {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: string
@@ -2025,6 +2029,10 @@ export type Database = {
       request_leave_cancellation: {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
+      }
+      request_toil_cancellation: {
+        Args: { p_note?: string; p_request_id: string }
+        Returns: string
       }
       set_employee_opening_balance: {
         Args: {
