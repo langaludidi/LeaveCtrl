@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
 import { StatusPill } from "@/components/StatusPill";
+import { ToilDecisionButtons, ToilWithdrawButton } from "@/components/ToilRequestActions";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 function formatDate(value: string) {
@@ -15,7 +16,7 @@ function formatDate(value: string) {
 export default async function RequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ submitted?: string }>;
+  searchParams: Promise<{ submitted?: string; toilSubmitted?: string }>;
 }) {
   const params = await searchParams;
   const { supabase, employee, displayName, roles } = await getCurrentContext();
@@ -27,6 +28,8 @@ export default async function RequestsPage({
     { data: myRequests },
     { data: visibleWork },
     { data: coverageChecks },
+    { data: myToilRequests },
+    { data: visibleToilWork },
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -53,6 +56,18 @@ export default async function RequestsPage({
       .select("request_id, outcome")
       .eq("organisation_id", employee.organisation_id)
       .eq("outcome", "warning"),
+    supabase
+      .from("toil_requests")
+      .select("id, employee_id, leave_date, hours, status, submitted_at")
+      .eq("employee_id", employee.id)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("toil_requests")
+      .select("id, employee_id, leave_date, hours, status, submitted_at")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("status", "pending_approval")
+      .order("submitted_at", { ascending: true }),
   ]);
 
   const typeMap = new Map((leaveTypes ?? []).map((item) => [item.id, item.name]));
@@ -62,6 +77,10 @@ export default async function RequestsPage({
   const approvals = (visibleWork ?? []).filter(
     (request) => request.employee_id !== employee.id
   );
+  const toilApprovals = (visibleToilWork ?? []).filter(
+    (request) => request.employee_id !== employee.id
+  );
+
   const coverageWarningMap = new Map<string, number>();
   for (const check of coverageChecks ?? []) {
     coverageWarningMap.set(
@@ -74,16 +93,21 @@ export default async function RequestsPage({
     <AppShell
       displayName={displayName}
       role={roleLabel(roles)}
-      requestCount={approvals.length}
+      requestCount={approvals.length + toilApprovals.length}
     >
       <section className="page-head">
         <h1>Requests</h1>
-        <p>Your leave history and any approval work that needs your attention.</p>
+        <p>Your leave and TOIL history, plus approval work that needs your attention.</p>
       </section>
 
       {params.submitted ? (
         <div className="success-banner">
           Your leave request was submitted and the balance reservation is now recorded.
+        </div>
+      ) : null}
+      {params.toilSubmitted ? (
+        <div className="success-banner">
+          Your TOIL request was submitted and those hours are reserved while approval is pending.
         </div>
       ) : null}
 
@@ -94,7 +118,7 @@ export default async function RequestsPage({
             <table>
               <thead>
                 <tr>
-                  <th>Dates</th>
+                  <th>Date</th>
                   <th>Type</th>
                   <th>Duration</th>
                   <th>Status</th>
@@ -116,18 +140,26 @@ export default async function RequestsPage({
                     </td>
                     <td><StatusPill status={request.status}/></td>
                     <td className="request-action-cell">
-                      <RequestLifecycleAction
-                        requestId={request.id}
-                        status={request.status}
-                      />
+                      <RequestLifecycleAction requestId={request.id} status={request.status} />
                     </td>
                   </tr>
                 ))}
-                {!myRequests?.length ? (
-                  <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      No leave requests yet.
+                {(myToilRequests ?? []).map((request) => (
+                  <tr key={request.id}>
+                    <td>{formatDate(request.leave_date)}</td>
+                    <td>TOIL</td>
+                    <td>{Number(request.hours).toFixed(2)} hours</td>
+                    <td><StatusPill status={request.status}/></td>
+                    <td className="request-action-cell">
+                      {request.status === "pending_approval"
+                        ? <ToilWithdrawButton requestId={request.id} />
+                        : null}
                     </td>
+                  </tr>
+                ))}
+                {!myRequests?.length && !myToilRequests?.length ? (
+                  <tr>
+                    <td colSpan={5} className="empty-table-cell">No leave or TOIL requests yet.</td>
                   </tr>
                 ) : null}
               </tbody>
@@ -144,19 +176,14 @@ export default async function RequestsPage({
                 <div className="approval-row" key={request.id}>
                   <div className="mini-avatar">
                     {(employeeMap.get(request.employee_id) ?? "E")
-                      .split(" ")
-                      .map((x) => x[0])
-                      .slice(0, 2)
-                      .join("")}
+                      .split(" ").map((x) => x[0]).slice(0, 2).join("")}
                   </div>
                   <div className="approval-person">
                     <strong>{employeeMap.get(request.employee_id) ?? "Employee"}</strong>
                     <span>
                       {cancellation ? "Cancellation · " : ""}
                       {typeMap.get(request.leave_type_id) ?? "Leave"}
-                      {coverageWarningMap.get(request.id)
-                        ? ` · Coverage warning`
-                        : ""}
+                      {coverageWarningMap.get(request.id) ? " · Coverage warning" : ""}
                     </span>
                   </div>
                   <div className="approval-date">
@@ -166,21 +193,35 @@ export default async function RequestsPage({
                         ? ` – ${formatDate(request.end_date)}`
                         : ""}
                     </strong>
-                    <span>
-                      {Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}
-                    </span>
+                    <span>{Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}</span>
                   </div>
-                  <DecisionButtons
-                    requestId={request.id}
-                    kind={cancellation ? "cancellation" : "leave"}
-                  />
+                  <DecisionButtons requestId={request.id} kind={cancellation ? "cancellation" : "leave"} />
                 </div>
               );
             })}
-            {!approvals.length ? (
+
+            {toilApprovals.map((request) => (
+              <div className="approval-row" key={request.id}>
+                <div className="mini-avatar">
+                  {(employeeMap.get(request.employee_id) ?? "E")
+                    .split(" ").map((x) => x[0]).slice(0, 2).join("")}
+                </div>
+                <div className="approval-person">
+                  <strong>{employeeMap.get(request.employee_id) ?? "Employee"}</strong>
+                  <span>TOIL request</span>
+                </div>
+                <div className="approval-date">
+                  <strong>{formatDate(request.leave_date)}</strong>
+                  <span>{Number(request.hours).toFixed(2)} hours</span>
+                </div>
+                <ToilDecisionButtons requestId={request.id} />
+              </div>
+            ))}
+
+            {!approvals.length && !toilApprovals.length ? (
               <div className="empty-work-state">
                 <strong>Nothing needs your approval</strong>
-                <span>New requests and cancellation requests will appear here.</span>
+                <span>New leave, cancellation and TOIL requests will appear here.</span>
               </div>
             ) : null}
           </div>
