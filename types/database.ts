@@ -1873,6 +1873,14 @@ export type Database = {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
       }
+      liability_scheduled_days: {
+        Args: {
+          p_employee_id: string
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: number
+      }
       prepare_employee_access_invitation: {
         Args: { p_employee_id: string; p_grant_manager_role?: boolean }
         Returns: string
