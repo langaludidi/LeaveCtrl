@@ -134,3 +134,12 @@
 .toil-balance-list>div:last-child{border-bottom:0}
 .toil-balance-list span{font-size:9px;color:#64748b}
 .toil-balance-list strong{font-size:10px;color:var(--teal-900)}
+
+.toil-request-card{padding:18px;margin-top:16px}
+.toil-balance-highlight{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--teal-50);border:1px solid #dceeee;border-radius:9px;padding:12px;margin:12px 0}
+.toil-balance-highlight span{font-size:10px;color:#64748b}.toil-balance-highlight strong{font-size:17px;color:var(--teal-900)}
+.toil-request-form{display:grid;grid-template-columns:160px 130px 1fr auto;gap:10px;align-items:end}
+.toil-request-form label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#344653}.toil-request-form .native-field{margin-top:0}
+.toil-swatch,.toil-cell{background:#7460a8}
+@media(max-width:850px){.toil-request-form{grid-template-columns:1fr 1fr}.toil-request-form .wide-field{grid-column:span 2}}
+@media(max-width:560px){.toil-request-form{grid-template-columns:1fr}.toil-request-form .wide-field{grid-column:auto}}
