@@ -88,3 +88,9 @@
 .statutory-rule span{font-size:9px;color:#64748b;line-height:1.45}
 .statutory-rule small{font-size:9px;color:var(--teal-800);text-transform:capitalize}
 @media(max-width:900px){.admin-two-col,.statutory-grid{grid-template-columns:1fr}.schedule-hours-grid{grid-template-columns:repeat(4,1fr)}}
+
+.compact-list-card{padding:18px}
+.compact-rule-list{display:flex;flex-direction:column}
+.compact-rule{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.compact-rule:last-child{border-bottom:0}.compact-rule>div{display:flex;flex-direction:column;gap:2px}.compact-rule strong{font-size:10px}.compact-rule span{font-size:9px;color:#718096}
+.empty-compact{font-size:10px;color:#82909c;margin:8px 0 0}
