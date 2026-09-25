@@ -325,17 +325,27 @@ export default async function HomePage() {
                   <div className="mini-avatar">{initials}</div>
                   <div className="approval-person"><strong>{name}</strong><span>{request.label}</span></div>
                   <div className="approval-date"><strong>{formatDate(request.date)}</strong><span>{request.duration}</span></div>
-                  {request.kind === "leave" ? (
-                    <DecisionButtons
-                      requestId={request.id}
-                      kind={request.status === "cancellation_requested" ? "cancellation" : "leave"}
-                    />
-                  ) : (
-                    <ToilDecisionButtons
-                      requestId={request.id}
-                      kind={request.status === "cancellation_requested" ? "cancellation" : "request"}
-                    />
-                  )}
+                  <div className="approval-review-actions">
+                    <Link
+                      href={request.kind === "leave"
+                        ? `/requests/leave/${request.id}`
+                        : `/requests/toil/${request.id}`}
+                      className="request-text-action"
+                    >
+                      Review
+                    </Link>
+                    {request.kind === "leave" ? (
+                      <DecisionButtons
+                        requestId={request.id}
+                        kind={request.status === "cancellation_requested" ? "cancellation" : "leave"}
+                      />
+                    ) : (
+                      <ToilDecisionButtons
+                        requestId={request.id}
+                        kind={request.status === "cancellation_requested" ? "cancellation" : "request"}
+                      />
+                    )}
+                  </div>
                 </div>
               );
             })}
