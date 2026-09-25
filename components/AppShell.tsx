@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  Bell,
   CalendarDays,
   CalendarPlus,
   FileText,
@@ -39,6 +41,29 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+
+    async function loadUnread() {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .is("read_at", null);
+
+      if (active) setUnreadNotifications(count ?? 0);
+    }
+
+    loadUnread();
+    window.addEventListener("leavectrl-notifications-changed", loadUnread);
+
+    return () => {
+      active = false;
+      window.removeEventListener("leavectrl-notifications-changed", loadUnread);
+    };
+  }, [pathname]);
 
   const canManagePeople = ["Organisation Admin", "HR Admin", "Manager"].includes(role);
   const canReport = ["Organisation Admin", "HR Admin", "Manager", "Reporter", "Auditor"].includes(role);
@@ -110,6 +135,20 @@ export function AppShell({
                 Book leave
               </Link>
             ) : null}
+
+            <Link
+              href="/notifications"
+              className="notification-button"
+              aria-label={unreadNotifications
+                ? `${unreadNotifications} unread notifications`
+                : "Notifications"}
+              title="Notifications"
+            >
+              <Bell size={18}/>
+              {unreadNotifications ? (
+                <span>{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
+              ) : null}
+            </Link>
 
             <div className="profile profile-static">
               <div className="avatar">{initials(displayName)}</div>
