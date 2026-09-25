@@ -50,6 +50,8 @@ export function NotificationList({
       return;
     }
 
+    window.dispatchEvent(new Event("leavectrl-notifications-changed"));
+
     if (open) {
       router.push("/requests");
     } else {
@@ -71,6 +73,7 @@ export function NotificationList({
       setError("Notifications could not be marked as read.");
       return;
     }
+    window.dispatchEvent(new Event("leavectrl-notifications-changed"));
     router.refresh();
   }
 
