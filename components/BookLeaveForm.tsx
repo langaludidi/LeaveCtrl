@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CalendarDays, Check, Info } from "lucide-react";
+import { CalendarDays, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type LeaveTypeOption = {
@@ -28,25 +28,29 @@ function estimateWeekdays(start: string, end: string) {
 
 export function BookLeaveForm({
   leaveTypes,
-  initialBalance,
+  balancesByType,
 }: {
   leaveTypes: LeaveTypeOption[];
-  initialBalance: number;
+  balancesByType: Record<string, number>;
 }) {
   const router = useRouter();
   const [leaveTypeId, setLeaveTypeId] = useState(leaveTypes[0]?.id ?? "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [dayFraction, setDayFraction] = useState<1 | 0.5>(1);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const estimate = useMemo(
-    () => estimateWeekdays(startDate, endDate || startDate),
-    [startDate, endDate]
-  );
+  const singleDay = Boolean(startDate && endDate && startDate === endDate);
 
-  const projected = Math.max(initialBalance - estimate, 0);
+  const estimate = useMemo(() => {
+    const weekdays = estimateWeekdays(startDate, endDate || startDate);
+    return singleDay && dayFraction === 0.5 ? weekdays * 0.5 : weekdays;
+  }, [startDate, endDate, singleDay, dayFraction]);
+
+  const currentBalance = balancesByType[leaveTypeId] ?? 0;
+  const projected = Math.max(currentBalance - estimate, 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,11 +60,12 @@ export function BookLeaveForm({
     setError("");
 
     const supabase = createClient();
-    const { error: rpcError } = await supabase.rpc("submit_leave_request", {
+    const { error: rpcError } = await supabase.rpc("submit_leave_request_v2", {
       p_leave_type_id: leaveTypeId,
       p_start_date: startDate,
       p_end_date: endDate,
       p_note: note || undefined,
+      p_day_fraction: dayFraction,
     });
 
     if (rpcError) {
@@ -69,8 +74,12 @@ export function BookLeaveForm({
         no_chargeable_working_days: "The selected dates do not contain a chargeable working day.",
         leave_policy_not_configured: "This leave type is not fully configured yet.",
         leave_entitlement_not_configured: "Your entitlement for this leave type has not been configured yet.",
+        partial_day_requires_single_date: "Half-day leave can only be booked for a single date.",
       };
-      setError(friendly[rpcError.message] ?? "We could not submit this request. Please review the dates and try again.");
+      setError(
+        friendly[rpcError.message] ??
+          "We could not submit this request. Please review the dates and try again."
+      );
       setSubmitting(false);
       return;
     }
@@ -84,7 +93,10 @@ export function BookLeaveForm({
       <form className="card leave-form" onSubmit={submit}>
         <div className="section-heading">
           <h2>Leave details</h2>
-          <p>Choose the leave type and dates. The server performs the authoritative calculation before submission.</p>
+          <p>
+            Choose the leave type and dates. The server performs the authoritative
+            calculation before submission.
+          </p>
         </div>
 
         {error ? <div className="auth-alert error">{error}</div> : null}
@@ -97,7 +109,9 @@ export function BookLeaveForm({
             onChange={(event) => setLeaveTypeId(event.target.value)}
             required
           >
-            {leaveTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+            {leaveTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
           </select>
         </label>
 
@@ -111,7 +125,12 @@ export function BookLeaveForm({
               onChange={(event) => {
                 const value = event.target.value;
                 setStartDate(value);
-                if (!endDate || endDate < value) setEndDate(value);
+                if (!endDate || endDate < value) {
+                  setEndDate(value);
+                  setDayFraction(1);
+                } else if (endDate !== value) {
+                  setDayFraction(1);
+                }
               }}
               required
             />
@@ -123,11 +142,39 @@ export function BookLeaveForm({
               type="date"
               min={startDate || undefined}
               value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setEndDate(value);
+                if (value !== startDate) setDayFraction(1);
+              }}
               required
             />
           </label>
         </div>
+
+        <label>
+          Duration
+          <div className="duration-choice" role="group" aria-label="Leave duration">
+            <button
+              className={dayFraction === 1 ? "active" : ""}
+              type="button"
+              onClick={() => setDayFraction(1)}
+            >
+              Full day
+            </button>
+            <button
+              className={dayFraction === 0.5 ? "active" : ""}
+              type="button"
+              disabled={!singleDay}
+              onClick={() => setDayFraction(0.5)}
+            >
+              Half day
+            </button>
+          </div>
+          {!singleDay ? (
+            <span className="field-help">Half day becomes available when the request is for one date.</span>
+          ) : null}
+        </label>
 
         <label>
           Estimated duration
@@ -152,7 +199,9 @@ export function BookLeaveForm({
         </label>
 
         <div className="form-actions">
-          <button className="btn secondary" type="button" onClick={() => router.back()}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => router.back()}>
+            Cancel
+          </button>
           <button className="btn primary" type="submit" disabled={submitting || !leaveTypes.length}>
             {submitting ? "Submitting…" : "Submit request"}
           </button>
@@ -166,7 +215,7 @@ export function BookLeaveForm({
             <span className="summary-icon"><CalendarDays size={20}/></span>
             <div>
               <span>Available balance</span>
-              <strong>{initialBalance} <small>days</small></strong>
+              <strong>{currentBalance} <small>days</small></strong>
               <small>Current ledger balance, including pending reservations.</small>
             </div>
           </div>
@@ -189,7 +238,10 @@ export function BookLeaveForm({
             <Info size={21}/>
             <div>
               <strong>Coverage rules are being introduced progressively</strong>
-              <p>Your entitlement and work-schedule checks are authoritative now. Capability and minimum-staffing rules will appear here once configured.</p>
+              <p>
+                Your entitlement and work-schedule checks are authoritative now.
+                Capability and minimum-staffing rules will appear here once configured.
+              </p>
             </div>
           </div>
         </section>
@@ -199,6 +251,7 @@ export function BookLeaveForm({
           <div className="calc-row"><span>Selected calendar period</span><strong>Checked</strong></div>
           <div className="calc-row"><span>Non-working schedule days</span><strong>Excluded</strong></div>
           <div className="calc-row"><span>Configured public holidays</span><strong>Excluded</strong></div>
+          <div className="calc-row"><span>Partial-day quantity</span><strong>{dayFraction === 0.5 ? "0.5 day" : "Full day"}</strong></div>
           <div className="calc-row total"><span>Authoritative quantity</span><strong>Calculated on submit</strong></div>
         </section>
       </div>
