@@ -6,18 +6,6 @@ import { StatusPill } from "@/components/StatusPill";
 import { ToilDecisionButtons } from "@/components/ToilRequestActions";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
-function zaToday() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Johannesburg",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
-}
-
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", {
     day: "2-digit",
@@ -57,10 +45,11 @@ function SummaryCard({
 }
 
 export default async function HomePage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, employee, displayName, roles, businessDate } =
+    await getCurrentContext();
   if (!employee) return null;
 
-  const today = zaToday();
+  const today = businessDate;
 
   const [
     { data: leaveTypes },
