@@ -245,3 +245,46 @@
 .notification-copy p{margin:4px 0 0;font-size:10px;line-height:1.5;color:#64748b}
 .notification-actions{display:flex;align-items:center;gap:10px;padding-left:8px}
 @media(max-width:700px){.notification-row{grid-template-columns:14px 1fr}.notification-actions{grid-column:2;padding-left:0}.notification-heading{align-items:flex-start;flex-direction:column;gap:2px}.notifications-toolbar{align-items:flex-start;flex-direction:column}.notifications-toolbar .btn{width:100%}}
+
+
+/* Contextual approval review */
+.approval-review-actions{display:flex;align-items:center;gap:10px}
+.review-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.review-stat{padding:15px;display:flex;flex-direction:column;gap:5px;min-height:112px}
+.review-stat>span{font-size:9px;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:.04em}
+.review-stat>strong{font-size:22px;color:#26323d;letter-spacing:-.5px}
+.review-stat>strong small{font-size:10px;color:#66737e}
+.review-stat>small{font-size:9px;color:#82909c;line-height:1.4}
+.review-stat .review-stat-text{font-size:14px;letter-spacing:-.15px}
+.review-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.review-main{display:flex;flex-direction:column;gap:16px}
+.review-card{padding:18px}
+.review-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:13px 0 16px}
+.review-meta>div{border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:3px;background:#fbfcfc}
+.review-meta span{font-size:8px;color:#7a8793;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.review-meta strong{font-size:10px;color:#334155;overflow-wrap:anywhere}
+.request-note{background:#f7f9f9;border:1px solid var(--border);border-radius:9px;padding:12px;margin:4px 0 15px}
+.request-note>span{font-size:8px;color:#718096;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.request-note p{font-size:10px;color:#465563;line-height:1.55;margin:5px 0 0}
+.review-side{position:sticky;top:94px}
+.decision-card{padding:18px}
+.decision-card-icon{width:36px;height:36px;border-radius:9px;background:var(--teal-50);color:var(--teal-800);display:grid;place-items:center;margin-bottom:11px}
+.decision-card h2{font-size:15px;margin:0 0 5px}
+.decision-card p{font-size:10px;color:#718096;line-height:1.55;margin:0 0 16px}
+.decision-card .decision-stack{align-items:stretch}
+.decision-card .approval-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.decision-card .approval-actions button{width:100%;height:38px;border-radius:8px}
+.decision-complete{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.decision-complete span{font-size:9px;color:#718096}
+.review-warning-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.review-warning{display:flex;gap:9px;background:#fff8ed;border:1px solid #f3dfbd;border-radius:8px;padding:10px;color:#a66516}
+.review-warning>div{display:flex;flex-direction:column;gap:2px}
+.review-warning strong{font-size:9px;text-transform:capitalize}
+.review-warning span{font-size:9px;color:#6f6251;line-height:1.45}
+.coverage-review-list{display:flex;flex-direction:column}
+.coverage-review-row{display:grid;grid-template-columns:minmax(180px,1.5fr) 1fr 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f2}
+.coverage-review-row>div{display:flex;flex-direction:column;gap:2px}
+.coverage-review-row span{font-size:8px;color:#82909c}
+.coverage-review-row strong{font-size:10px;color:#334155}
+@media(max-width:1050px){.review-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.review-layout{grid-template-columns:1fr}.review-side{position:static}.review-meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.review-summary-grid,.review-meta{grid-template-columns:1fr}.coverage-review-row{grid-template-columns:1fr 1fr}.coverage-review-row>div:first-child{grid-column:span 2}.approval-review-actions{align-items:flex-end;flex-direction:column}}
