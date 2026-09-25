@@ -1323,7 +1323,6 @@ export type Database = {
           multiplier: number
           note: string | null
           organisation_id: string
-          paid_amount: number | null
           status: string
           treatment: string
           work_date: string
@@ -1340,7 +1339,6 @@ export type Database = {
           multiplier?: number
           note?: string | null
           organisation_id: string
-          paid_amount?: number | null
           status?: string
           treatment: string
           work_date: string
@@ -1357,7 +1355,6 @@ export type Database = {
           multiplier?: number
           note?: string | null
           organisation_id?: string
-          paid_amount?: number | null
           status?: string
           treatment?: string
           work_date?: string
