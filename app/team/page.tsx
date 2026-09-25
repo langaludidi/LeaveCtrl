@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AddEmployeeForm } from "@/components/AddEmployeeForm";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
+import { OvertimeControls } from "@/components/OvertimeControls";
 import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
@@ -18,6 +19,9 @@ export default async function TeamPage() {
     { data: schedules },
     { data: locations },
     { data: currentConditions },
+    { data: overtimeSettings },
+    { data: recentOvertime },
+    { data: toilBalances },
   ] = await Promise.all([
     supabase
       .from("employees")
@@ -54,6 +58,25 @@ export default async function TeamPage() {
       .from("employee_current_conditions")
       .select("employee_id, department_id, manager_employee_id, work_schedule_id, location_id, work_mode")
       .eq("organisation_id", employee.organisation_id),
+    canAdminPeople
+      ? supabase
+          .from("overtime_settings")
+          .select("default_treatment, default_multiplier, toil_expiry_days, liability_averaging_weeks, include_paid_overtime_in_liability")
+          .eq("organisation_id", employee.organisation_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    canAdminPeople
+      ? supabase
+          .from("overtime_events")
+          .select("id, employee_id, work_date, hours, treatment, multiplier, paid_amount")
+          .eq("organisation_id", employee.organisation_id)
+          .order("work_date", { ascending: false })
+          .limit(15)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("toil_balances")
+      .select("employee_id, available_hours")
+      .eq("organisation_id", employee.organisation_id),
   ]);
 
   let activeInvitations: { employee_id: string | null }[] = [];
@@ -74,6 +97,9 @@ export default async function TeamPage() {
     (balances ?? [])
       .filter((balance) => balance.leave_type_id === annualType?.id)
       .map((balance) => [balance.employee_id, Number(balance.available_balance ?? 0)])
+  );
+  const toilBalanceMap = new Map(
+    (toilBalances ?? []).map((row) => [row.employee_id, Number(row.available_hours ?? 0)])
   );
 
   const conditionMap = new Map(
@@ -111,13 +137,21 @@ export default async function TeamPage() {
     name: `${person.first_name} ${person.last_name}`,
   }));
 
+  const effectiveOvertimeSettings = overtimeSettings ?? {
+    default_treatment: "paid",
+    default_multiplier: 1.5,
+    toil_expiry_days: null,
+    liability_averaging_weeks: 13,
+    include_paid_overtime_in_liability: true,
+  };
+
   return (
     <AppShell displayName={displayName} role={roleLabel(roles)}>
       <section className="page-head">
         <h1>Team</h1>
         <p>
-          People, reporting lines and working conditions are effective-dated so transfers,
-          roster changes and work arrangements remain historically explainable.
+          People, reporting lines, working conditions, overtime and remuneration are kept
+          as separate governed histories so leave calculations remain explainable.
         </p>
       </section>
 
@@ -133,6 +167,31 @@ export default async function TeamPage() {
             departments={departments ?? []}
             schedules={(schedules ?? []).map((schedule) => ({ id: schedule.id, name: schedule.name }))}
             locations={locations ?? []}
+          />
+
+          <OvertimeControls
+            people={workforcePeople}
+            settings={{
+              default_treatment: effectiveOvertimeSettings.default_treatment,
+              default_multiplier: Number(effectiveOvertimeSettings.default_multiplier),
+              toil_expiry_days: effectiveOvertimeSettings.toil_expiry_days,
+              liability_averaging_weeks: effectiveOvertimeSettings.liability_averaging_weeks,
+              include_paid_overtime_in_liability:
+                effectiveOvertimeSettings.include_paid_overtime_in_liability,
+            }}
+            recentEvents={(recentOvertime ?? []).map((event) => ({
+              id: event.id,
+              employee_id: event.employee_id,
+              work_date: event.work_date,
+              hours: Number(event.hours),
+              treatment: event.treatment,
+              multiplier: Number(event.multiplier),
+              paid_amount: event.paid_amount === null ? null : Number(event.paid_amount),
+            }))}
+            toilBalances={(toilBalances ?? []).map((row) => ({
+              employee_id: row.employee_id,
+              available_hours: Number(row.available_hours ?? 0),
+            }))}
           />
         </>
       ) : null}
@@ -154,6 +213,7 @@ export default async function TeamPage() {
                 <th>Arrangement</th>
                 <th>Location</th>
                 <th>Annual leave</th>
+                <th>TOIL</th>
                 {canAdminPeople ? <th>Access</th> : null}
                 <th>Status</th>
               </tr>
@@ -193,6 +253,7 @@ export default async function TeamPage() {
                         ? <span className="muted">Not configured</span>
                         : <strong>{annualBalance} days</strong>}
                     </td>
+                    <td>{(toilBalanceMap.get(person.id) ?? 0).toFixed(2)} h</td>
                     {canAdminPeople ? (
                       <td>
                         <span className={`access-pill ${person.user_id ? "active" : pendingAccess.has(person.id) ? "pending" : "neutral"}`}>
