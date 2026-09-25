@@ -1261,6 +1261,55 @@ export type Database = {
         }
         Relationships: []
       }
+      overtime_event_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency_code: string
+          employee_id: string
+          organisation_id: string
+          overtime_event_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency_code?: string
+          employee_id: string
+          organisation_id: string
+          overtime_event_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency_code?: string
+          employee_id?: string
+          organisation_id?: string
+          overtime_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_event_payments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_event_payments_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_event_payments_overtime_event_id_fkey"
+            columns: ["overtime_event_id"]
+            isOneToOne: true
+            referencedRelation: "overtime_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       overtime_events: {
         Row: {
           approved_at: string | null
