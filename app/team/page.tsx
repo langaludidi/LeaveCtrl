@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AddEmployeeForm } from "@/components/AddEmployeeForm";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
+import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 export default async function TeamPage() {
@@ -14,6 +15,9 @@ export default async function TeamPage() {
     { data: departments },
     { data: leaveTypes },
     { data: balances },
+    { data: schedules },
+    { data: locations },
+    { data: currentConditions },
   ] = await Promise.all([
     supabase
       .from("employees")
@@ -23,7 +27,9 @@ export default async function TeamPage() {
     supabase
       .from("departments")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true)
+      .order("name"),
     supabase
       .from("leave_types")
       .select("id, code")
@@ -32,6 +38,21 @@ export default async function TeamPage() {
     supabase
       .from("leave_balances")
       .select("employee_id, leave_type_id, available_balance")
+      .eq("organisation_id", employee.organisation_id),
+    supabase
+      .from("work_schedules")
+      .select("id, name, schedule_kind")
+      .eq("organisation_id", employee.organisation_id)
+      .order("name"),
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true)
+      .order("name"),
+    supabase
+      .from("employee_current_conditions")
+      .select("employee_id, department_id, manager_employee_id, work_schedule_id, location_id, work_mode")
       .eq("organisation_id", employee.organisation_id),
   ]);
 
@@ -55,14 +76,20 @@ export default async function TeamPage() {
       .map((balance) => [balance.employee_id, Number(balance.available_balance ?? 0)])
   );
 
+  const conditionMap = new Map(
+    (currentConditions ?? []).map((condition) => [condition.employee_id, condition])
+  );
   const departmentMap = new Map(
     (departments ?? []).map((department) => [department.id, department.name])
   );
+  const scheduleMap = new Map(
+    (schedules ?? []).map((schedule) => [schedule.id, schedule])
+  );
+  const locationMap = new Map(
+    (locations ?? []).map((location) => [location.id, location.name])
+  );
   const managerMap = new Map(
-    (people ?? []).map((person) => [
-      person.id,
-      `${person.first_name} ${person.last_name}`,
-    ])
+    (people ?? []).map((person) => [person.id, `${person.first_name} ${person.last_name}`])
   );
   const pendingAccess = new Set(
     activeInvitations
@@ -70,10 +97,18 @@ export default async function TeamPage() {
       .filter((id): id is string => Boolean(id))
   );
 
-  const assignmentPeople = (people ?? []).map((person) => ({
+  const assignmentPeople = (people ?? []).map((person) => {
+    const condition = conditionMap.get(person.id);
+    return {
+      id: person.id,
+      name: `${person.first_name} ${person.last_name}`,
+      managerEmployeeId: condition?.manager_employee_id ?? person.manager_employee_id,
+    };
+  });
+
+  const workforcePeople = (people ?? []).map((person) => ({
     id: person.id,
     name: `${person.first_name} ${person.last_name}`,
-    managerEmployeeId: person.manager_employee_id,
   }));
 
   return (
@@ -81,16 +116,25 @@ export default async function TeamPage() {
       <section className="page-head">
         <h1>Team</h1>
         <p>
-          People exist independently of login access. Leave positions are provisioned
-          from policy, while reporting lines drive approvals.
+          People, reporting lines and working conditions are effective-dated so transfers,
+          roster changes and work arrangements remain historically explainable.
         </p>
       </section>
 
       {canAdminPeople ? (
-        <section className="people-admin-grid">
-          <AddEmployeeForm />
-          <ManagerAssignment people={assignmentPeople} />
-        </section>
+        <>
+          <section className="people-admin-grid">
+            <AddEmployeeForm />
+            <ManagerAssignment people={assignmentPeople} />
+          </section>
+
+          <WorkforceChangeControls
+            people={workforcePeople}
+            departments={departments ?? []}
+            schedules={(schedules ?? []).map((schedule) => ({ id: schedule.id, name: schedule.name }))}
+            locations={locations ?? []}
+          />
+        </>
       ) : null}
 
       <section className="card data-card">
@@ -104,9 +148,11 @@ export default async function TeamPage() {
             <thead>
               <tr>
                 <th>Employee</th>
-                <th>Email</th>
                 <th>Department</th>
                 <th>Manager</th>
+                <th>Work pattern</th>
+                <th>Arrangement</th>
+                <th>Location</th>
                 <th>Annual leave</th>
                 {canAdminPeople ? <th>Access</th> : null}
                 <th>Status</th>
@@ -114,6 +160,12 @@ export default async function TeamPage() {
             </thead>
             <tbody>
               {(people ?? []).map((person) => {
+                const condition = conditionMap.get(person.id);
+                const departmentId = condition?.department_id ?? person.department_id;
+                const managerId = condition?.manager_employee_id ?? person.manager_employee_id;
+                const schedule = condition?.work_schedule_id
+                  ? scheduleMap.get(condition.work_schedule_id)
+                  : undefined;
                 const access = person.user_id
                   ? "Active"
                   : pendingAccess.has(person.id)
@@ -123,18 +175,19 @@ export default async function TeamPage() {
 
                 return (
                   <tr key={person.id}>
-                    <td>{person.first_name} {person.last_name}</td>
-                    <td>{person.email}</td>
                     <td>
-                      {person.department_id
-                        ? departmentMap.get(person.department_id) ?? "—"
+                      <strong>{person.first_name} {person.last_name}</strong>
+                      <span className="table-secondary">{person.email}</span>
+                    </td>
+                    <td>{departmentId ? departmentMap.get(departmentId) ?? "—" : "—"}</td>
+                    <td>{managerId ? managerMap.get(managerId) ?? "—" : "Not assigned"}</td>
+                    <td>
+                      {schedule
+                        ? <><strong>{schedule.name}</strong><span className="table-secondary">{schedule.schedule_kind === "rotating" ? "Rotating shift" : "Weekly schedule"}</span></>
                         : "—"}
                     </td>
-                    <td>
-                      {person.manager_employee_id
-                        ? managerMap.get(person.manager_employee_id) ?? "—"
-                        : "Not assigned"}
-                    </td>
+                    <td className="capitalize-cell">{condition?.work_mode?.replaceAll("_", " ") ?? "Onsite"}</td>
+                    <td>{condition?.location_id ? locationMap.get(condition.location_id) ?? "—" : "—"}</td>
                     <td>
                       {annualBalance === undefined
                         ? <span className="muted">Not configured</span>
@@ -147,9 +200,7 @@ export default async function TeamPage() {
                         </span>
                       </td>
                     ) : null}
-                    <td>
-                      <span className="neutral-pill">{person.employment_status}</span>
-                    </td>
+                    <td><span className="neutral-pill">{person.employment_status}</span></td>
                   </tr>
                 );
               })}
