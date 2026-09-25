@@ -740,6 +740,41 @@ export type Database = {
         }
         Relationships: []
       }
+      public_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          name: string
+          organisation_id: string
+          source_reference: string | null
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          name: string
+          organisation_id: string
+          source_reference?: string | null
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          name?: string
+          organisation_id?: string
+          source_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_holidays_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_schedules: {
         Row: {
           created_at: string
@@ -792,7 +827,37 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leave_balances: {
+        Row: {
+          available_balance: number | null
+          employee_id: string | null
+          leave_type_id: string | null
+          organisation_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_ledger_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_ledger_entries_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_ledger_entries_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bootstrap_organisation: {
@@ -802,6 +867,27 @@ export type Database = {
           p_last_name: string
           p_name: string
           p_start_date?: string
+        }
+        Returns: string
+      }
+      configure_initial_leave_policy: {
+        Args: {
+          p_annual_days: number
+          p_cycle_end: string
+          p_cycle_start: string
+        }
+        Returns: string
+      }
+      decide_leave_request: {
+        Args: { p_decision: string; p_note?: string; p_request_id: string }
+        Returns: Database["public"]["Enums"]["leave_request_status"]
+      }
+      submit_leave_request: {
+        Args: {
+          p_end_date: string
+          p_leave_type_id: string
+          p_note?: string
+          p_start_date: string
         }
         Returns: string
       }
