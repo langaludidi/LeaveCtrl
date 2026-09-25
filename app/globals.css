@@ -52,3 +52,16 @@
 .request-text-action{border:0;background:transparent;color:var(--teal-800);font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:5px 0}
 .request-text-action:hover{text-decoration:underline}
 .request-text-action:disabled{opacity:.55;cursor:not-allowed;text-decoration:none}
+
+.holiday-admin-card{padding:20px;margin-top:16px}
+.holiday-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-top:16px}
+.holiday-row{display:grid;grid-template-columns:112px 1fr auto;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.holiday-date{font-size:10px;font-weight:700;color:#52606d}
+.holiday-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.holiday-name strong{font-size:11px;color:#26323d}
+.holiday-name span{font-size:9px;color:#82909c}
+.verified-pill,.special-pill{display:inline-flex;align-items:center;gap:5px;border-radius:7px;font-size:9px;font-weight:700;white-space:nowrap}
+.verified-pill{padding:7px 9px;background:#e8f5f2;color:#176b62}
+.special-pill{padding:5px 7px;background:#eef4fb;color:#2f5f9f}
+@media(max-width:900px){.holiday-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.holiday-row{grid-template-columns:90px 1fr}.holiday-row .special-pill{grid-column:2;justify-self:start}}
