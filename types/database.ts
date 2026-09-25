@@ -1057,6 +1057,16 @@ export type Database = {
         }
         Returns: string
       }
+      submit_leave_request_v2: {
+        Args: {
+          p_day_fraction?: number
+          p_end_date: string
+          p_leave_type_id: string
+          p_note?: string
+          p_start_date: string
+        }
+        Returns: string
+      }
       withdraw_leave_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
