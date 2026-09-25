@@ -886,6 +886,48 @@ export type Database = {
           },
         ]
       }
+      statutory_leave_rules: {
+        Row: {
+          calculation_method: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          jurisdiction_code: string
+          legal_reference: string
+          name: string
+          parameters: Json
+          rule_code: string
+          source_reference: string
+          verified_at: string
+        }
+        Insert: {
+          calculation_method: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          jurisdiction_code: string
+          legal_reference: string
+          name: string
+          parameters?: Json
+          rule_code: string
+          source_reference: string
+          verified_at?: string
+        }
+        Update: {
+          calculation_method?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          jurisdiction_code?: string
+          legal_reference?: string
+          name?: string
+          parameters?: Json
+          rule_code?: string
+          source_reference?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       work_schedules: {
         Row: {
           created_at: string
@@ -986,8 +1028,20 @@ export type Database = {
         }
         Returns: Json
       }
+      assign_employee_department: {
+        Args: { p_department_id: string; p_employee_id: string }
+        Returns: undefined
+      }
       assign_employee_manager: {
         Args: { p_employee_id: string; p_manager_employee_id: string }
+        Returns: undefined
+      }
+      assign_employee_schedule: {
+        Args: {
+          p_effective_from?: string
+          p_employee_id: string
+          p_work_schedule_id: string
+        }
         Returns: undefined
       }
       bootstrap_organisation: {
@@ -1009,6 +1063,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_department: {
+        Args: { p_code?: string; p_name: string }
+        Returns: string
+      }
       create_employee_invitation: {
         Args: {
           p_department_id?: string
@@ -1020,6 +1078,19 @@ export type Database = {
           p_manager_employee_id?: string
           p_start_date: string
           p_work_schedule_id?: string
+        }
+        Returns: string
+      }
+      create_work_schedule: {
+        Args: {
+          p_friday_hours?: number
+          p_monday_hours?: number
+          p_name: string
+          p_saturday_hours?: number
+          p_sunday_hours?: number
+          p_thursday_hours?: number
+          p_tuesday_hours?: number
+          p_wednesday_hours?: number
         }
         Returns: string
       }
