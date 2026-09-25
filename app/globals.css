@@ -94,3 +94,32 @@
 .compact-rule{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
 .compact-rule:last-child{border-bottom:0}.compact-rule>div{display:flex;flex-direction:column;gap:2px}.compact-rule strong{font-size:10px}.compact-rule span{font-size:9px;color:#718096}
 .empty-compact{font-size:10px;color:#82909c;margin:8px 0 0}
+
+.confidential-note{font-size:9px;line-height:1.45;color:#65737f;background:#f4f7f7;border:1px solid var(--border);border-radius:8px;padding:9px 10px}
+.workforce-change-section{display:flex;flex-direction:column;gap:14px;margin:16px 0}
+.workforce-change-card,.remuneration-card{padding:18px}
+.workforce-change-form{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;align-items:end}
+.workforce-change-form label,.remuneration-grid label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#344653}
+.workforce-change-form .wide-field{grid-column:span 3}
+.remuneration-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px;margin-bottom:12px}
+.table-secondary{display:block;font-size:9px;color:#82909c;margin-top:2px;font-weight:500}
+.capitalize-cell{text-transform:capitalize}
+.liability-summary-card{padding:18px 20px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:24px;border-left:3px solid var(--teal)}
+.liability-summary-card>div{display:flex;gap:12px;align-items:flex-start}.liability-summary-card h2{margin:1px 0 4px;font-size:15px}.liability-summary-card p{margin:0;color:#718096;font-size:10px;line-height:1.5;max-width:700px}.liability-summary-card>strong{font-size:24px;color:var(--teal-900);white-space:nowrap}
+.liability-kicker{font-size:8px;letter-spacing:.08em;font-weight:800;color:var(--teal-800)}
+.liability-table-card{margin-top:16px}.liability-method{max-width:320px;font-size:9px;color:#64748b;line-height:1.45}
+.calendar-legend-wrap{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px 13px}
+.calendar-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:9px;color:#64748b}
+.legend-swatch{width:12px;height:12px;border-radius:3px;border:1px solid transparent;display:inline-block}
+.legend-swatch.is-pending{background:#fff;border:2px solid #7a8793}.holiday-swatch{background:#eef1f2;border-color:#d9e0e2}
+.company-calendar-card{padding:0;overflow:hidden}.calendar-range-title{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.calendar-range-title strong{font-size:12px}.calendar-range-title span{font-size:9px;color:#7a8793}
+.company-calendar-scroll{overflow:auto}.company-calendar-grid{display:grid;min-width:max-content}.calendar-row-fragment{display:contents}
+.calendar-corner,.calendar-day-head,.calendar-person,.calendar-cell{border-right:1px solid #e8edef;border-bottom:1px solid #e8edef;background:#fff}
+.calendar-corner{position:sticky;left:0;z-index:4;padding:10px 12px;font-size:9px;font-weight:800;color:#718096;background:#f8fafa}
+.calendar-day-head{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:8px;color:#76838e;background:#f8fafa}.calendar-day-head strong{font-size:11px;color:#344653}.calendar-day-head.weekend{background:#f3f5f5}.calendar-day-head.holiday{background:#edf1f2}
+.calendar-person{position:sticky;left:0;z-index:3;min-height:39px;padding:7px 10px;display:flex;flex-direction:column;justify-content:center;background:#fff}.calendar-person strong{font-size:10px;color:#26323d}.calendar-person span{font-size:8px;color:#84919c;margin-top:2px}
+.calendar-cell{min-height:39px;display:grid;place-items:center}.calendar-weekend{background:#f6f7f7}.calendar-holiday{background:#eef1f2;color:#697681;font-size:8px;font-weight:800}
+.calendar-leave{color:#fff;font-size:8px;font-weight:800}.calendar-leave.is-pending{background:#fff!important;color:#52606d!important;border:2px solid currentColor}
+.leave-teal{background:#008080}.leave-blue{background:#2f6f9f}.leave-amber{background:#b97816}.leave-purple{background:#7460a8}.leave-rose{background:#a85f72}.leave-slate{background:#667681}
+@media(max-width:1050px){.workforce-change-form{grid-template-columns:repeat(2,minmax(150px,1fr))}.workforce-change-form .wide-field{grid-column:span 2}.remuneration-grid{grid-template-columns:repeat(2,minmax(160px,1fr))}}
+@media(max-width:650px){.workforce-change-form,.remuneration-grid{grid-template-columns:1fr}.workforce-change-form .wide-field{grid-column:auto}.liability-summary-card{align-items:flex-start;flex-direction:column}.calendar-legend-wrap{justify-content:flex-start}}
