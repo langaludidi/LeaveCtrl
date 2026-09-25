@@ -81,7 +81,7 @@ export default async function CalendarPage() {
       .from("toil_requests")
       .select("id, employee_id, leave_date, hours, status")
       .eq("organisation_id", employee.organisation_id)
-      .in("status", ["approved", "pending_approval"])
+      .in("status", ["approved", "pending_approval", "cancellation_requested"])
       .gte("leave_date", startKey)
       .lte("leave_date", endKey),
     supabase
@@ -247,11 +247,16 @@ export default async function CalendarPage() {
 
                     if (toil) {
                       const pending = toil.status === "pending_approval";
+                      const toilStatus = pending
+                        ? "Pending"
+                        : toil.status === "cancellation_requested"
+                          ? "Approved · cancellation pending"
+                          : "Approved";
                       return (
                         <div
                           key={key}
                           className={`calendar-cell calendar-leave toil-cell ${pending ? "is-pending" : ""}`}
-                          title={`${person.first_name} ${person.last_name} · TOIL · ${Number(toil.hours).toFixed(2)} hours · ${pending ? "Pending" : "Approved"}`}
+                          title={`${person.first_name} ${person.last_name} · TOIL · ${Number(toil.hours).toFixed(2)} hours · ${toilStatus}`}
                         >
                           <span>T</span>
                         </div>
