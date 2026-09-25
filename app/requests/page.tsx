@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
@@ -230,7 +231,12 @@ export default async function RequestsPage({
                     </strong>
                     <span>{Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}</span>
                   </div>
-                  <DecisionButtons requestId={request.id} kind={cancellation ? "cancellation" : "leave"} />
+                  <div className="approval-review-actions">
+                    <Link href={`/requests/leave/${request.id}`} className="request-text-action">
+                      Review
+                    </Link>
+                    <DecisionButtons requestId={request.id} kind={cancellation ? "cancellation" : "leave"} />
+                  </div>
                 </div>
               );
             })}
@@ -259,10 +265,15 @@ export default async function RequestsPage({
                   <strong>{formatDate(request.leave_date)}</strong>
                   <span>{Number(request.hours).toFixed(2)} hours</span>
                 </div>
-                <ToilDecisionButtons
-                  requestId={request.id}
-                  kind={request.status === "cancellation_requested" ? "cancellation" : "request"}
-                />
+                <div className="approval-review-actions">
+                  <Link href={`/requests/toil/${request.id}`} className="request-text-action">
+                    Review
+                  </Link>
+                  <ToilDecisionButtons
+                    requestId={request.id}
+                    kind={request.status === "cancellation_requested" ? "cancellation" : "request"}
+                  />
+                </div>
               </div>
             ))}
 
