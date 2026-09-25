@@ -143,3 +143,13 @@
 .toil-swatch,.toil-cell{background:#7460a8}
 @media(max-width:850px){.toil-request-form{grid-template-columns:1fr 1fr}.toil-request-form .wide-field{grid-column:span 2}}
 @media(max-width:560px){.toil-request-form{grid-template-columns:1fr}.toil-request-form .wide-field{grid-column:auto}}
+
+.employee-exit-card{padding:18px;margin:16px 0;border-left:3px solid #b45309}
+.employee-exit-card .card-title>svg{color:#b45309}
+.employee-exit-form{display:grid;grid-template-columns:minmax(180px,1fr) 170px minmax(260px,1.4fr) auto;gap:10px;align-items:end}
+.employee-exit-form label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#344653}
+.employee-exit-note{margin:10px 0 0;font-size:9px;line-height:1.5;color:#7c6a55}
+.danger-btn{background:#fff7ed;color:#9a4d08;border-color:#fed7aa}
+.danger-btn:hover{background:#ffedd5}
+@media(max-width:980px){.employee-exit-form{grid-template-columns:1fr 1fr}.employee-exit-form .wide-field{grid-column:span 2}}
+@media(max-width:560px){.employee-exit-form{grid-template-columns:1fr}.employee-exit-form .wide-field{grid-column:auto}}
