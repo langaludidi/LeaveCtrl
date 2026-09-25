@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
 import { StatusPill } from "@/components/StatusPill";
-import { ToilDecisionButtons, ToilWithdrawButton } from "@/components/ToilRequestActions";
+import { ToilDecisionButtons, ToilLifecycleButton } from "@/components/ToilRequestActions";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 function formatDate(value: string) {
@@ -66,7 +66,7 @@ export default async function RequestsPage({
       .from("toil_requests")
       .select("id, employee_id, leave_date, hours, status, submitted_at")
       .eq("organisation_id", employee.organisation_id)
-      .eq("status", "pending_approval")
+      .in("status", ["pending_approval", "cancellation_requested"])
       .order("submitted_at", { ascending: true }),
   ]);
 
@@ -151,9 +151,7 @@ export default async function RequestsPage({
                     <td>{Number(request.hours).toFixed(2)} hours</td>
                     <td><StatusPill status={request.status}/></td>
                     <td className="request-action-cell">
-                      {request.status === "pending_approval"
-                        ? <ToilWithdrawButton requestId={request.id} />
-                        : null}
+                      <ToilLifecycleButton requestId={request.id} status={request.status} />
                     </td>
                   </tr>
                 ))}
@@ -208,13 +206,20 @@ export default async function RequestsPage({
                 </div>
                 <div className="approval-person">
                   <strong>{employeeMap.get(request.employee_id) ?? "Employee"}</strong>
-                  <span>TOIL request</span>
+                  <span>
+                    {request.status === "cancellation_requested"
+                      ? "TOIL cancellation"
+                      : "TOIL request"}
+                  </span>
                 </div>
                 <div className="approval-date">
                   <strong>{formatDate(request.leave_date)}</strong>
                   <span>{Number(request.hours).toFixed(2)} hours</span>
                 </div>
-                <ToilDecisionButtons requestId={request.id} />
+                <ToilDecisionButtons
+                  requestId={request.id}
+                  kind={request.status === "cancellation_requested" ? "cancellation" : "request"}
+                />
               </div>
             ))}
 
