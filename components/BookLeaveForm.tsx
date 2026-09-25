@@ -60,7 +60,7 @@ export function BookLeaveForm({
       p_leave_type_id: leaveTypeId,
       p_start_date: startDate,
       p_end_date: endDate,
-      p_note: note || null,
+      p_note: note || undefined,
     });
 
     if (rpcError) {
