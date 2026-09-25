@@ -4,6 +4,7 @@ import { AddEmployeeForm } from "@/components/AddEmployeeForm";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
 import { OvertimeControls } from "@/components/OvertimeControls";
 import { EmployeeExitControl } from "@/components/EmployeeExitControl";
+import { EmployeeCsvImport } from "@/components/EmployeeCsvImport";
 import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
@@ -201,6 +202,19 @@ export default async function TeamPage() {
             />
             <ManagerAssignment people={assignmentPeople} />
           </section>
+
+          <EmployeeCsvImport
+            departments={departments ?? []}
+            schedules={(schedules ?? []).map((schedule) => ({
+              id: schedule.id,
+              name: schedule.name,
+            }))}
+            existingPeople={activePeople.map((person) => ({
+              id: person.id,
+              name: `${person.first_name} ${person.last_name}`,
+              email: person.email,
+            }))}
+          />
 
           <WorkforceChangeControls
             people={workforcePeople}
