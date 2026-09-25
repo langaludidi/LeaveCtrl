@@ -94,10 +94,15 @@ export default async function SetupPage() {
   ]);
 
   let existingDays = 15;
+  let existingCycleBasis: "organisation_fixed" | "employment_anniversary" =
+    "organisation_fixed";
+  let existingAnchorMonth = 1;
+  let existingAnchorDay = 1;
+
   if (annualType) {
     const { data: policy } = await supabase
       .from("leave_policy_versions")
-      .select("entitlement_amount")
+      .select("entitlement_amount, cycle_basis, cycle_anchor_month, cycle_anchor_day")
       .eq("organisation_id", employee.organisation_id)
       .eq("leave_type_id", annualType.id)
       .order("version", { ascending: false })
@@ -105,6 +110,12 @@ export default async function SetupPage() {
       .maybeSingle();
 
     existingDays = Number(policy?.entitlement_amount ?? 15);
+    existingCycleBasis =
+      policy?.cycle_basis === "employment_anniversary"
+        ? "employment_anniversary"
+        : "organisation_fixed";
+    existingAnchorMonth = Number(policy?.cycle_anchor_month ?? 1);
+    existingAnchorDay = Number(policy?.cycle_anchor_day ?? 1);
   }
 
   const scheduleMap = new Map<string, string>();
@@ -140,7 +151,12 @@ export default async function SetupPage() {
       {canAdmin ? (
         <>
           <section className="setup-grid">
-            <InitialPolicyForm existingDays={existingDays}/>
+            <InitialPolicyForm
+              existingDays={existingDays}
+              existingCycleBasis={existingCycleBasis}
+              existingAnchorMonth={existingAnchorMonth}
+              existingAnchorDay={existingAnchorDay}
+            />
 
             <aside className="setup-side">
               <div className="card progress-card">
