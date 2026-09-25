@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const appUrl = "https://leave-ctrl-2eqn.vercel.app";
+const appUrl = Deno.env.get("LEAVECTRL_APP_URL") ?? "https://leave-ctrl-2eqn.vercel.app";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -78,6 +78,21 @@ Deno.serve(async (req: Request) => {
 
     if (!membership?.length) {
       return Response.json({ error: "not_authorised" }, { status: 403, headers: corsHeaders });
+    }
+
+    const { data: tokenValid, error: tokenError } = await userClient.rpc(
+      "validate_employee_invitation_for_delivery",
+      {
+        p_employee_id: employeeId,
+        p_token: token,
+      }
+    );
+
+    if (tokenError || tokenValid !== true) {
+      return Response.json(
+        { error: "invitation_token_invalid_or_expired" },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
