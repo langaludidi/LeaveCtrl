@@ -26,7 +26,11 @@ export default function OnboardingPage() {
     });
 
     if (rpcError) {
-      setError("We could not create the organisation. Please check the details and try again.");
+      setError(
+        rpcError.message === "account_already_linked_to_organisation"
+          ? "This login is already linked to an active LeaveCtrl organisation."
+          : "We could not create the organisation. Please check the details and try again."
+      );
       setSaving(false);
       return;
     }
