@@ -1,79 +1,240 @@
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
-function dateOnly(date: Date) {
-  return date.toISOString().slice(0, 10);
+function dateKey(date: Date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
-function pretty(value: string) {
-  return new Intl.DateTimeFormat("en-ZA", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
+function fromKey(value: string) {
+  return new Date(`${value}T12:00:00`);
+}
+
+function addDays(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function startOfMondayWeek(date: Date) {
+  const day = date.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  return addDays(date, offset);
+}
+
+function safeColour(value: string | null) {
+  return ["teal", "blue", "amber", "purple", "rose", "slate"].includes(value ?? "")
+    ? value!
+    : "teal";
 }
 
 export default async function CalendarPage() {
   const { supabase, employee, displayName, roles } = await getCurrentContext();
   if (!employee) return null;
 
-  const today = new Date();
-  const horizon = new Date(today);
-  horizon.setDate(horizon.getDate() + 90);
+  const now = new Date();
+  const start = startOfMondayWeek(now);
+  const days = Array.from({ length: 28 }, (_, index) => addDays(start, index));
+  const startKey = dateKey(days[0]);
+  const endKey = dateKey(days[days.length - 1]);
 
-  const [{ data: employees }, { data: leaveTypes }, { data: approved }] = await Promise.all([
+  const [
+    { data: employees },
+    { data: departments },
+    { data: leaveTypes },
+    { data: requests },
+    { data: holidays },
+  ] = await Promise.all([
     supabase
       .from("employees")
-      .select("id, first_name, last_name")
-      .eq("organisation_id", employee.organisation_id),
+      .select("id, first_name, last_name, department_id, employment_status")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("employment_status", "active")
+      .order("first_name"),
     supabase
-      .from("leave_types")
+      .from("departments")
       .select("id, name")
       .eq("organisation_id", employee.organisation_id),
     supabase
-      .from("leave_requests")
-      .select("id, employee_id, leave_type_id, start_date, end_date, quantity")
+      .from("leave_types")
+      .select("id, code, name, colour_token")
       .eq("organisation_id", employee.organisation_id)
-      .in("status", ["approved", "cancellation_requested"])
-      .gte("end_date", dateOnly(today))
-      .lte("start_date", dateOnly(horizon))
-      .order("start_date", { ascending: true }),
+      .eq("active", true)
+      .order("name"),
+    supabase
+      .from("leave_requests")
+      .select("id, employee_id, leave_type_id, start_date, end_date, quantity, status")
+      .eq("organisation_id", employee.organisation_id)
+      .in("status", ["approved", "pending_approval", "cancellation_requested"])
+      .lte("start_date", endKey)
+      .gte("end_date", startKey),
+    supabase
+      .from("public_holidays")
+      .select("holiday_date, name")
+      .eq("organisation_id", employee.organisation_id)
+      .gte("holiday_date", startKey)
+      .lte("holiday_date", endKey),
   ]);
 
-  const employeeMap = new Map((employees ?? []).map((item) => [item.id, `${item.first_name} ${item.last_name}`]));
-  const typeMap = new Map((leaveTypes ?? []).map((item) => [item.id, item.name]));
+  const departmentMap = new Map(
+    (departments ?? []).map((department) => [department.id, department.name])
+  );
+  const typeMap = new Map(
+    (leaveTypes ?? []).map((type) => [type.id, type])
+  );
+  const holidayMap = new Map(
+    (holidays ?? []).map((holiday) => [holiday.holiday_date, holiday.name])
+  );
+
+  const requestByEmployeeDate = new Map<string, NonNullable<typeof requests>[number]>();
+  const requestPriority = (status: string) =>
+    status === "approved" || status === "cancellation_requested" ? 2 : 1;
+
+  for (const request of requests ?? []) {
+    let cursor = fromKey(request.start_date);
+    const requestEnd = fromKey(request.end_date);
+
+    while (cursor <= requestEnd) {
+      const key = dateKey(cursor);
+      if (key >= startKey && key <= endKey) {
+        const mapKey = `${request.employee_id}:${key}`;
+        const existing = requestByEmployeeDate.get(mapKey);
+        if (!existing || requestPriority(request.status) > requestPriority(existing.status)) {
+          requestByEmployeeDate.set(mapKey, request);
+        }
+      }
+      cursor = addDays(cursor, 1);
+    }
+  }
+
+  const visibleEmployees = [...(employees ?? [])].sort((a, b) => {
+    const departmentA = a.department_id ? departmentMap.get(a.department_id) ?? "" : "";
+    const departmentB = b.department_id ? departmentMap.get(b.department_id) ?? "" : "";
+    return departmentA.localeCompare(departmentB) ||
+      `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+  });
 
   return (
     <AppShell displayName={displayName} role={roleLabel(roles)}>
       <section className="page-head split">
         <div>
-          <h1>Calendar</h1>
-          <p>Approved leave visible to your role over the next 90 days. Leave stays visible while a cancellation is awaiting approval.</p>
+          <p className="eyebrow">WORKFORCE AVAILABILITY</p>
+          <h1>Company Calendar</h1>
+          <p>
+            A four-week operational view of approved and pending leave, public holidays
+            and employee availability visible to your role.
+          </p>
         </div>
-        <div className="calendar-legend"><span className="legend-dot teal-dot"/> Approved leave</div>
+
+        <div className="calendar-legend calendar-legend-wrap">
+          {(leaveTypes ?? []).map((type) => (
+            <span key={type.id} className="calendar-legend-item">
+              <i className={`legend-swatch leave-${safeColour(type.colour_token)}`}/>
+              {type.name}
+            </span>
+          ))}
+          <span className="calendar-legend-item">
+            <i className="legend-swatch is-pending"/>
+            Pending
+          </span>
+          <span className="calendar-legend-item">
+            <i className="legend-swatch holiday-swatch"/>
+            Public holiday
+          </span>
+        </div>
       </section>
 
-      <section className="card calendar-card">
-        <div className="card-title"><h2>Upcoming availability</h2></div>
-        <div className="table-scroll">
-          <table>
-            <thead><tr><th>Employee</th><th>Leave type</th><th>From</th><th>To</th><th>Working days</th></tr></thead>
-            <tbody>
-              {(approved ?? []).map((request) => (
-                <tr key={request.id}>
-                  <td>{employeeMap.get(request.employee_id) ?? "Employee"}</td>
-                  <td><span className="leave-chip annual">{typeMap.get(request.leave_type_id) ?? "Away"}</span></td>
-                  <td>{pretty(request.start_date)}</td>
-                  <td>{pretty(request.end_date)}</td>
-                  <td>{Number(request.quantity)}</td>
-                </tr>
-              ))}
-              {!approved?.length ? (
-                <tr><td className="empty-table-cell" colSpan={5}>No approved leave is visible in the next 90 days.</td></tr>
-              ) : null}
-            </tbody>
-          </table>
+      <section className="card company-calendar-card">
+        <div className="calendar-range-title">
+          <strong>
+            {days[0].toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
+            {" – "}
+            {days[days.length - 1].toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
+          </strong>
+          <span>{visibleEmployees.length} visible employees</span>
+        </div>
+
+        <div className="company-calendar-scroll">
+          <div
+            className="company-calendar-grid"
+            style={{ gridTemplateColumns: `220px repeat(${days.length}, 42px)` }}
+          >
+            <div className="calendar-corner">Employee</div>
+
+            {days.map((day) => {
+              const key = dateKey(day);
+              const holiday = holidayMap.get(key);
+              const weekend = day.getDay() === 0 || day.getDay() === 6;
+              return (
+                <div
+                  className={`calendar-day-head ${weekend ? "weekend" : ""} ${holiday ? "holiday" : ""}`}
+                  key={key}
+                  title={holiday ?? undefined}
+                >
+                  <span>{day.toLocaleDateString("en-ZA", { weekday: "short" }).slice(0, 2)}</span>
+                  <strong>{day.getDate()}</strong>
+                </div>
+              );
+            })}
+
+            {visibleEmployees.map((person) => (
+              <div className="calendar-row-fragment" key={person.id}>
+                <div className="calendar-person">
+                  <strong>{person.first_name} {person.last_name}</strong>
+                  <span>
+                    {person.department_id
+                      ? departmentMap.get(person.department_id) ?? "No department"
+                      : "No department"}
+                  </span>
+                </div>
+
+                {days.map((day) => {
+                  const key = dateKey(day);
+                  const request = requestByEmployeeDate.get(`${person.id}:${key}`);
+                  const holiday = holidayMap.get(key);
+                  const weekend = day.getDay() === 0 || day.getDay() === 6;
+
+                  if (request) {
+                    const type = typeMap.get(request.leave_type_id);
+                    const pending = request.status === "pending_approval";
+                    const statusLabel = pending
+                      ? "Pending"
+                      : request.status === "cancellation_requested"
+                        ? "Approved · cancellation pending"
+                        : "Approved";
+
+                    return (
+                      <div
+                        key={key}
+                        className={`calendar-cell calendar-leave leave-${safeColour(type?.colour_token ?? null)} ${pending ? "is-pending" : ""}`}
+                        title={`${person.first_name} ${person.last_name} · ${type?.name ?? "Leave"} · ${statusLabel}`}
+                      >
+                        <span>{type?.code?.slice(0, 2) ?? "L"}</span>
+                      </div>
+                    );
+                  }
+
+                  if (holiday) {
+                    return (
+                      <div key={key} className="calendar-cell calendar-holiday" title={holiday}>
+                        <span>PH</span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={key}
+                      className={`calendar-cell ${weekend ? "calendar-weekend" : ""}`}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </AppShell>
