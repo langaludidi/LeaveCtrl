@@ -27,14 +27,14 @@ export function WorkforceChangeControls({
     const {error:rpcError}=await createClient().rpc("apply_employee_condition_change",{
       p_employee_id:String(form.get("employee")),
       p_effective_from:String(form.get("effectiveFrom")),
-      p_department_id:nullish("department"),
-      p_manager_employee_id:nullish("manager"),
+      p_department_id:nullish("department") ?? null,
+      p_manager_employee_id:nullish("manager") ?? null,
       p_work_schedule_id:String(form.get("schedule")),
-      p_location_id:nullish("location"),
+      p_location_id:nullish("location") ?? null,
       p_work_mode:String(form.get("workMode")),
       p_change_type:String(form.get("changeType")),
       p_reason:String(form.get("reason")??"").trim()||undefined,
-    });
+    } as never);
     setSaving("");
     if(rpcError){setError("The staff change could not be recorded.");return;}
     setNotice("Staff change recorded with its effective date.");
