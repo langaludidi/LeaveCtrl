@@ -269,6 +269,7 @@ export default async function LeaveRequestReviewPage({
               <DecisionButtons
                 requestId={request.id}
                 kind={request.status === "cancellation_requested" ? "cancellation" : "leave"}
+                showNote
               />
             ) : (
               <div className="decision-complete">
