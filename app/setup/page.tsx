@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckCircle2, Circle, Scale, ShieldCheck, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Circle, Download, Scale, ShieldCheck, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { OrganisationControls } from "@/components/OrganisationControls";
@@ -187,7 +187,12 @@ export default async function SetupPage() {
               statutory references LeaveCtrl uses to govern calculations.
             </p>
           </div>
-          <strong>South Africa · ZA</strong>
+          <div className="setup-head-actions">
+            <a href="/setup/export" className="btn secondary">
+              <Download size={16}/> Export organisation data
+            </a>
+            <strong>South Africa · ZA</strong>
+          </div>
         </div>
       </section>
 
