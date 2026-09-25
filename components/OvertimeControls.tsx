@@ -52,12 +52,10 @@ export function OvertimeControls({
     setNotice("");
 
     const form = new FormData(event.currentTarget);
-    const expiry = String(form.get("expiryDays") ?? "").trim();
-
     const { error: rpcError } = await createClient().rpc("update_overtime_settings", {
       p_default_treatment: String(form.get("defaultTreatment") ?? "paid"),
       p_default_multiplier: Number(form.get("defaultMultiplier") ?? 1.5),
-      p_toil_expiry_days: expiry ? Number(expiry) : null,
+      p_toil_expiry_days: null,
       p_liability_averaging_weeks: Number(form.get("averagingWeeks") ?? 13),
       p_include_paid_overtime_in_liability:
         form.get("includePaidOvertime") === "on",
@@ -192,15 +190,13 @@ export function OvertimeControls({
             </select>
           </label>
 
-          <div className="auth-name-row">
-            <label>
-              Default multiplier
-              <input name="defaultMultiplier" type="number" min="0.1" step="0.1" defaultValue={settings.default_multiplier} />
-            </label>
-            <label>
-              TOIL expiry days <span className="muted">(optional)</span>
-              <input name="expiryDays" type="number" min="1" step="1" defaultValue={settings.toil_expiry_days ?? ""} />
-            </label>
+          <label>
+            Default multiplier
+            <input name="defaultMultiplier" type="number" min="0.1" step="0.1" defaultValue={settings.default_multiplier} />
+          </label>
+
+          <div className="confidential-note">
+            TOIL expiry is intentionally not enabled in V1. Credits remain available until used or adjusted, avoiding unverified expiry calculations.
           </div>
 
           <label>
