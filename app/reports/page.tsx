@@ -28,28 +28,18 @@ export default async function ReportsPage() {
     ["org_admin", "hr_admin", "reporter"].includes(role)
   );
 
-  let scopedEmployeesQuery = supabase
-    .from("employees")
-    .select("id, first_name, last_name, department_id, employment_status")
-    .eq("organisation_id", employee.organisation_id)
-    .eq("employment_status", "active")
-    .order("first_name");
-
-  if (managerScope) {
-    scopedEmployeesQuery = scopedEmployeesQuery.or(
-      `id.eq.${employee.id},manager_employee_id.eq.${employee.id}`
-    );
-  } else if (!adminScope) {
-    scopedEmployeesQuery = scopedEmployeesQuery.eq("id", employee.id);
-  }
-
   const [
-    { data: scopedEmployees },
+    { data: allEmployees },
     { data: departments },
     { data: leaveTypes },
     { data: currentConditions },
   ] = await Promise.all([
-    scopedEmployeesQuery,
+    supabase
+      .from("employees")
+      .select("id, first_name, last_name, department_id, employment_status, manager_employee_id")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("employment_status", "active")
+      .order("first_name"),
     supabase
       .from("departments")
       .select("id, name")
@@ -65,7 +55,21 @@ export default async function ReportsPage() {
       .eq("organisation_id", employee.organisation_id),
   ]);
 
-  const employeeIds = (scopedEmployees ?? []).map((person) => person.id);
+  const conditionByEmployee = new Map(
+    (currentConditions ?? []).map((condition) => [condition.employee_id, condition])
+  );
+
+  const scopedEmployees = adminScope
+    ? allEmployees ?? []
+    : managerScope
+      ? (allEmployees ?? []).filter((person) => {
+          if (person.id === employee.id) return true;
+          const condition = conditionByEmployee.get(person.id);
+          return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
+        })
+      : (allEmployees ?? []).filter((person) => person.id === employee.id);
+
+  const employeeIds = scopedEmployees.map((person) => person.id);
   const yearStart = `${businessDate.slice(0, 4)}-01-01`;
   const today = businessDate;
 
@@ -235,7 +239,7 @@ export default async function ReportsPage() {
     }
   }
 
-  const activePeople = scopedEmployees?.length ?? 0;
+  const activePeople = scopedEmployees.length;
   const totalAvailableAnnual = Array.from(annualBalanceMap.values()).reduce(
     (sum, value) => sum + value,
     0
@@ -333,7 +337,7 @@ export default async function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {(scopedEmployees ?? []).map((person) => {
+              {scopedEmployees.map((person) => {
                 const departmentId =
                   currentDepartmentMap.get(person.id) ?? person.department_id;
                 return (
@@ -347,7 +351,7 @@ export default async function ReportsPage() {
                   </tr>
                 );
               })}
-              {!scopedEmployees?.length ? (
+              {!scopedEmployees.length ? (
                 <tr><td colSpan={6} className="empty-table-cell">No employees are visible in this reporting scope.</td></tr>
               ) : null}
             </tbody>
@@ -381,7 +385,7 @@ export default async function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {(scopedEmployees ?? []).map((person) => {
+                {scopedEmployees.map((person) => {
                   const remuneration = remunerationMap.get(person.id);
                   const rate = liabilityRateMap.get(person.id);
                   const liabilityDays = liabilityDaysMap.get(person.id) ?? 0;
