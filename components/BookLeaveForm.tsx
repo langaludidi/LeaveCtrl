@@ -75,6 +75,8 @@ export function BookLeaveForm({
         leave_policy_not_configured: "This leave type is not fully configured yet.",
         leave_entitlement_not_configured: "Your entitlement for this leave type has not been configured yet.",
         partial_day_requires_single_date: "Half-day leave can only be booked for a single date.",
+        blocked_period: "Leave cannot be booked across one of your organisation's blocked periods.",
+        coverage_rule_block: "This request would breach a minimum staffing rule for your team.",
       };
       setError(
         friendly[rpcError.message] ??
