@@ -2045,6 +2045,10 @@ export type Database = {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: string
       }
+      exit_employee: {
+        Args: { p_employee_id: string; p_end_date: string; p_reason: string }
+        Returns: Json
+      }
       liability_scheduled_days: {
         Args: {
           p_employee_id: string
