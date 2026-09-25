@@ -10,7 +10,17 @@ type AddEmployeeResult = {
   invitation_token?: string | null;
 };
 
-export function AddEmployeeForm() {
+type Option = { id: string; name: string };
+
+export function AddEmployeeForm({
+  departments,
+  schedules,
+  managers,
+}: {
+  departments: Option[];
+  schedules: Option[];
+  managers: Option[];
+}) {
   const router = useRouter();
   const [link, setLink] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -43,9 +53,9 @@ export function AddEmployeeForm() {
       p_last_name: String(form.get("lastName") ?? "").trim(),
       p_start_date: String(form.get("startDate") ?? ""),
       p_employee_number: String(form.get("employeeNumber") ?? "").trim() || undefined,
-      p_department_id: undefined,
-      p_manager_employee_id: undefined,
-      p_work_schedule_id: undefined,
+      p_department_id: String(form.get("department") ?? "") || undefined,
+      p_manager_employee_id: String(form.get("manager") ?? "") || undefined,
+      p_work_schedule_id: String(form.get("schedule") ?? "") || undefined,
       p_grant_manager_role: form.get("managerRole") === "on",
       p_prepare_invitation: prepareAccess,
     });
@@ -172,6 +182,37 @@ export function AddEmployeeForm() {
           <label>Email<input name="email" type="email" required /></label>
           <label>Start date<input name="startDate" type="date" required /></label>
         </div>
+
+        <div className="auth-name-row">
+          <label>
+            Department <span className="muted">(optional)</span>
+            <select className="native-field" name="department" defaultValue="">
+              <option value="">Assign later</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>{department.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Manager <span className="muted">(optional)</span>
+            <select className="native-field" name="manager" defaultValue="">
+              <option value="">Assign later</option>
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id}>{manager.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Work schedule <span className="muted">(optional)</span>
+          <select className="native-field" name="schedule" defaultValue="">
+            <option value="">Assign later</option>
+            {schedules.map((schedule) => (
+              <option key={schedule.id} value={schedule.id}>{schedule.name}</option>
+            ))}
+          </select>
+        </label>
 
         <div className="auth-name-row">
           <label>
