@@ -77,6 +77,9 @@ export function BookLeaveForm({
         partial_day_requires_single_date: "Half-day leave can only be booked for a single date.",
         blocked_period: "Leave cannot be booked across one of your organisation's blocked periods.",
         coverage_rule_block: "This request would breach a minimum staffing rule for your team.",
+        overlapping_leave_request: "You already have leave covering part of these dates.",
+        overlapping_toil_request: "You already have TOIL covering part of these dates.",
+        employee_profile_required: "Your active employment access could not be confirmed.",
       };
       setError(
         friendly[rpcError.message] ??
@@ -239,10 +242,10 @@ export function BookLeaveForm({
           <div className="coverage-alert">
             <Info size={21}/>
             <div>
-              <strong>Coverage rules are being introduced progressively</strong>
+              <strong>Operational coverage is checked on submission</strong>
               <p>
-                Your entitlement and work-schedule checks are authoritative now.
-                Capability and minimum-staffing rules will appear here once configured.
+                Configured minimum-staffing rules evaluate both ordinary leave and TOIL.
+                A hard rule blocks the request; a warning is shown to the approver.
               </p>
             </div>
           </div>
