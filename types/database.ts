@@ -1579,6 +1579,66 @@ export type Database = {
           },
         ]
       }
+      toil_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          leave_date: string
+          note: string | null
+          organisation_id: string
+          status: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employee_id: string
+          hours: number
+          id?: string
+          leave_date: string
+          note?: string | null
+          organisation_id: string
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employee_id?: string
+          hours?: number
+          id?: string
+          leave_date?: string
+          note?: string | null
+          organisation_id?: string
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toil_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toil_requests_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_schedules: {
         Row: {
           created_at: string
@@ -1922,6 +1982,10 @@ export type Database = {
         Args: { p_decision: string; p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
       }
+      decide_toil_request: {
+        Args: { p_decision: string; p_note?: string; p_request_id: string }
+        Returns: string
+      }
       liability_scheduled_days: {
         Args: {
           p_employee_id: string
@@ -2001,6 +2065,10 @@ export type Database = {
         }
         Returns: string
       }
+      submit_toil_request: {
+        Args: { p_hours: number; p_leave_date: string; p_note?: string }
+        Returns: string
+      }
       update_overtime_settings: {
         Args: {
           p_default_multiplier: number
@@ -2015,6 +2083,7 @@ export type Database = {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
       }
+      withdraw_toil_request: { Args: { p_request_id: string }; Returns: string }
     }
     Enums: {
       approval_action_type:
