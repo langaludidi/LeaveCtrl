@@ -227,7 +227,7 @@ export default async function MyLeavePage() {
           <span>Annual leave available</span>
           <strong>{compact(annualBalance)} <small>days</small></strong>
           <small>
-            {annualCycle
+            {annualCycle?.cycle_start && annualCycle?.cycle_end
               ? `${formatDate(annualCycle.cycle_start)} – ${formatDate(annualCycle.cycle_end)}`
               : "No active annual entitlement"}
           </small>
