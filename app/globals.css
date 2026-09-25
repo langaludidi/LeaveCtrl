@@ -65,3 +65,9 @@
 .special-pill{padding:5px 7px;background:#eef4fb;color:#2f5f9f}
 @media(max-width:900px){.holiday-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.holiday-row{grid-template-columns:90px 1fr}.holiday-row .special-pill{grid-column:2;justify-self:start}}
+
+.duration-choice{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px;padding:4px;border:1px solid var(--border);border-radius:9px;background:#f7f9f9}
+.duration-choice button{height:36px;border:0;border-radius:7px;background:transparent;color:#667985;font-size:11px;font-weight:700;cursor:pointer}
+.duration-choice button.active{background:#fff;color:var(--teal-900);box-shadow:0 1px 2px rgba(20,45,45,.08);border:1px solid #dbe7e7}
+.duration-choice button:disabled{opacity:.4;cursor:not-allowed}
+.field-help{font-size:9px;color:#82909c;font-weight:500;margin-top:5px}
