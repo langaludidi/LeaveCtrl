@@ -1,26 +1,28 @@
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 function dateKey(date: Date) {
   return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
   ].join("-");
 }
 
 function fromKey(value: string) {
-  return new Date(`${value}T12:00:00`);
+  return new Date(`${value}T12:00:00Z`);
 }
 
 function addDays(date: Date, amount: number) {
   const next = new Date(date);
-  next.setDate(next.getDate() + amount);
+  next.setUTCDate(next.getUTCDate() + amount);
   return next;
 }
 
 function startOfMondayWeek(date: Date) {
-  const day = date.getDay();
+  const day = date.getUTCDay();
   const offset = day === 0 ? -6 : 1 - day;
   return addDays(date, offset);
 }
@@ -31,24 +33,44 @@ function safeColour(value: string | null) {
     : "teal";
 }
 
-export default async function CalendarPage() {
+function formatRangeDate(date: Date, withYear = false) {
+  return new Intl.DateTimeFormat("en-ZA", {
+    timeZone: "UTC",
+    day: "2-digit",
+    month: "short",
+    ...(withYear ? { year: "numeric" as const } : {}),
+  }).format(date);
+}
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ start?: string }>;
+}) {
+  const params = await searchParams;
   const { supabase, employee, displayName, roles, businessDate } =
     await getCurrentContext();
   if (!employee) return null;
 
-  const now = fromKey(businessDate);
-  const start = startOfMondayWeek(now);
+  const candidate =
+    params.start && /^\d{4}-\d{2}-\d{2}$/.test(params.start)
+      ? params.start
+      : businessDate;
+  const start = startOfMondayWeek(fromKey(candidate));
   const days = Array.from({ length: 28 }, (_, index) => addDays(start, index));
   const startKey = dateKey(days[0]);
   const endKey = dateKey(days[days.length - 1]);
+  const previousStart = dateKey(addDays(start, -28));
+  const nextStart = dateKey(addDays(start, 28));
 
   const [
     { data: employees },
     { data: departments },
     { data: currentConditions },
     { data: leaveTypes },
-    { data: requests },
-    { data: toilRequests },
+    { data: calendarFeed },
+    { data: pendingLeave },
+    { data: pendingToil },
     { data: holidays },
   ] = await Promise.all([
     supabase
@@ -71,18 +93,20 @@ export default async function CalendarPage() {
       .eq("organisation_id", employee.organisation_id)
       .eq("active", true)
       .order("name"),
+    supabase.rpc("get_workforce_calendar", {
+      p_start_date: startKey,
+      p_end_date: endKey,
+    }),
     supabase
       .from("leave_requests")
-      .select("id, employee_id, leave_type_id, start_date, end_date, quantity, status")
+      .select("id, employee_id, leave_type_id, status")
       .eq("organisation_id", employee.organisation_id)
-      .in("status", ["approved", "pending_approval", "cancellation_requested"])
-      .lte("start_date", endKey)
-      .gte("end_date", startKey),
+      .eq("status", "pending_approval"),
     supabase
       .from("toil_requests")
       .select("id, employee_id, leave_date, hours, status")
       .eq("organisation_id", employee.organisation_id)
-      .in("status", ["approved", "pending_approval", "cancellation_requested"])
+      .eq("status", "pending_approval")
       .gte("leave_date", startKey)
       .lte("leave_date", endKey),
     supabase
@@ -93,50 +117,76 @@ export default async function CalendarPage() {
       .lte("holiday_date", endKey),
   ]);
 
+  const pendingIds = (pendingLeave ?? []).map((request) => request.id);
+  const { data: pendingLeaveDays } = pendingIds.length
+    ? await supabase
+        .from("leave_request_days")
+        .select("request_id, leave_date, chargeable_quantity, exclusion_reason")
+        .in("request_id", pendingIds)
+        .gte("leave_date", startKey)
+        .lte("leave_date", endKey)
+    : { data: [] };
+
   const departmentMap = new Map(
     (departments ?? []).map((department) => [department.id, department.name])
   );
   const currentDepartmentMap = new Map(
-    (currentConditions ?? []).map((condition) => [condition.employee_id, condition.department_id])
+    (currentConditions ?? []).map((condition) => [
+      condition.employee_id,
+      condition.department_id,
+    ])
   );
   const typeMap = new Map((leaveTypes ?? []).map((type) => [type.id, type]));
+  const pendingRequestMap = new Map(
+    (pendingLeave ?? []).map((request) => [request.id, request])
+  );
   const holidayMap = new Map(
     (holidays ?? []).map((holiday) => [holiday.holiday_date, holiday.name])
   );
 
-  const requestByEmployeeDate = new Map<string, NonNullable<typeof requests>[number]>();
-  const toilByEmployeeDate = new Map<string, NonNullable<typeof toilRequests>[number]>();
-  const requestPriority = (status: string) =>
-    status === "approved" || status === "cancellation_requested" ? 2 : 1;
-
-  for (const request of requests ?? []) {
-    let cursor = fromKey(request.start_date);
-    const requestEnd = fromKey(request.end_date);
-
-    while (cursor <= requestEnd) {
-      const key = dateKey(cursor);
-      if (key >= startKey && key <= endKey) {
-        const mapKey = `${request.employee_id}:${key}`;
-        const existing = requestByEmployeeDate.get(mapKey);
-        if (!existing || requestPriority(request.status) > requestPriority(existing.status)) {
-          requestByEmployeeDate.set(mapKey, request);
-        }
-      }
-      cursor = addDays(cursor, 1);
-    }
+  const approvedByEmployeeDate = new Map<
+    string,
+    NonNullable<typeof calendarFeed>[number]
+  >();
+  for (const absence of calendarFeed ?? []) {
+    approvedByEmployeeDate.set(
+      `${absence.employee_id}:${absence.absence_date}`,
+      absence
+    );
   }
 
-  for (const request of toilRequests ?? []) {
-    toilByEmployeeDate.set(`${request.employee_id}:${request.leave_date}`, request);
+  const pendingLeaveByEmployeeDate = new Map<
+    string,
+    NonNullable<typeof pendingLeave>[number]
+  >();
+  for (const day of pendingLeaveDays ?? []) {
+    if (day.exclusion_reason || Number(day.chargeable_quantity ?? 0) <= 0) continue;
+    const request = pendingRequestMap.get(day.request_id);
+    if (!request) continue;
+    pendingLeaveByEmployeeDate.set(
+      `${request.employee_id}:${day.leave_date}`,
+      request
+    );
   }
+
+  const pendingToilByEmployeeDate = new Map(
+    (pendingToil ?? []).map((request) => [
+      `${request.employee_id}:${request.leave_date}`,
+      request,
+    ])
+  );
 
   const visibleEmployees = [...(employees ?? [])].sort((a, b) => {
     const departmentAId = currentDepartmentMap.get(a.id) ?? a.department_id;
     const departmentBId = currentDepartmentMap.get(b.id) ?? b.department_id;
     const departmentA = departmentAId ? departmentMap.get(departmentAId) ?? "" : "";
     const departmentB = departmentBId ? departmentMap.get(departmentBId) ?? "" : "";
-    return departmentA.localeCompare(departmentB) ||
-      `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+    return (
+      departmentA.localeCompare(departmentB) ||
+      `${a.first_name} ${a.last_name}`.localeCompare(
+        `${b.first_name} ${b.last_name}`
+      )
+    );
   });
 
   return (
@@ -146,12 +196,15 @@ export default async function CalendarPage() {
           <p className="eyebrow">WORKFORCE AVAILABILITY</p>
           <h1>Company Calendar</h1>
           <p>
-            A four-week operational view of approved and pending leave, TOIL, public
-            holidays and employee availability visible to your role.
+            A privacy-aware four-week view of approved absence, actionable pending
+            requests and public holidays.
           </p>
         </div>
 
         <div className="calendar-legend calendar-legend-wrap">
+          <span className="calendar-legend-item">
+            <i className="legend-swatch leave-teal"/> Away
+          </span>
           {(leaveTypes ?? []).map((type) => (
             <span key={type.id} className="calendar-legend-item">
               <i className={`legend-swatch leave-${safeColour(type.colour_token)}`}/>
@@ -159,28 +212,36 @@ export default async function CalendarPage() {
             </span>
           ))}
           <span className="calendar-legend-item">
-            <i className="legend-swatch toil-swatch"/>
-            TOIL
+            <i className="legend-swatch toil-swatch"/> TOIL
           </span>
           <span className="calendar-legend-item">
-            <i className="legend-swatch is-pending"/>
-            Pending
+            <i className="legend-swatch is-pending"/> Pending
           </span>
           <span className="calendar-legend-item">
-            <i className="legend-swatch holiday-swatch"/>
-            Public holiday
+            <i className="legend-swatch holiday-swatch"/> Public holiday
           </span>
         </div>
       </section>
 
       <section className="card company-calendar-card">
         <div className="calendar-range-title">
-          <strong>
-            {days[0].toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
-            {" – "}
-            {days[days.length - 1].toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
-          </strong>
-          <span>{visibleEmployees.length} visible employees</span>
+          <div>
+            <strong>
+              {formatRangeDate(days[0])}
+              {" – "}
+              {formatRangeDate(days[days.length - 1], true)}
+            </strong>
+            <span>{visibleEmployees.length} active employees</span>
+          </div>
+          <div className="calendar-nav">
+            <Link href={`/calendar?start=${previousStart}`} aria-label="Previous four weeks">
+              <ChevronLeft size={16}/>
+            </Link>
+            <Link href="/calendar" className="today-link">Today</Link>
+            <Link href={`/calendar?start=${nextStart}`} aria-label="Next four weeks">
+              <ChevronRight size={16}/>
+            </Link>
+          </div>
         </div>
 
         <div className="company-calendar-scroll">
@@ -193,21 +254,34 @@ export default async function CalendarPage() {
             {days.map((day) => {
               const key = dateKey(day);
               const holiday = holidayMap.get(key);
-              const weekend = day.getDay() === 0 || day.getDay() === 6;
+              const weekend = day.getUTCDay() === 0 || day.getUTCDay() === 6;
+              const today = key === businessDate;
               return (
                 <div
-                  className={`calendar-day-head ${weekend ? "weekend" : ""} ${holiday ? "holiday" : ""}`}
+                  className={[
+                    "calendar-day-head",
+                    weekend ? "weekend" : "",
+                    holiday ? "holiday" : "",
+                    today ? "today-column" : "",
+                  ].filter(Boolean).join(" ")}
                   key={key}
                   title={holiday ?? undefined}
                 >
-                  <span>{day.toLocaleDateString("en-ZA", { weekday: "short" }).slice(0, 2)}</span>
-                  <strong>{day.getDate()}</strong>
+                  <span>
+                    {new Intl.DateTimeFormat("en-ZA", {
+                      timeZone: "UTC",
+                      weekday: "short",
+                    }).format(day).slice(0, 2)}
+                  </span>
+                  <strong>{day.getUTCDate()}</strong>
                 </div>
               );
             })}
 
             {visibleEmployees.map((person) => {
-              const departmentId = currentDepartmentMap.get(person.id) ?? person.department_id;
+              const departmentId =
+                currentDepartmentMap.get(person.id) ?? person.department_id;
+
               return (
                 <div className="calendar-row-fragment" key={person.id}>
                   <div className="calendar-person">
@@ -221,52 +295,70 @@ export default async function CalendarPage() {
 
                   {days.map((day) => {
                     const key = dateKey(day);
-                    const request = requestByEmployeeDate.get(`${person.id}:${key}`);
-                    const toil = toilByEmployeeDate.get(`${person.id}:${key}`);
+                    const mapKey = `${person.id}:${key}`;
+                    const pendingLeaveRequest =
+                      pendingLeaveByEmployeeDate.get(mapKey);
+                    const pendingToilRequest =
+                      pendingToilByEmployeeDate.get(mapKey);
+                    const approved = approvedByEmployeeDate.get(mapKey);
                     const holiday = holidayMap.get(key);
-                    const weekend = day.getDay() === 0 || day.getDay() === 6;
+                    const weekend =
+                      day.getUTCDay() === 0 || day.getUTCDay() === 6;
+                    const today = key === businessDate;
 
-                    if (request) {
-                      const type = typeMap.get(request.leave_type_id);
-                      const pending = request.status === "pending_approval";
-                      const statusLabel = pending
-                        ? "Pending"
-                        : request.status === "cancellation_requested"
-                          ? "Approved · cancellation pending"
-                          : "Approved";
-
+                    if (pendingLeaveRequest) {
+                      const type = typeMap.get(pendingLeaveRequest.leave_type_id);
                       return (
                         <div
                           key={key}
-                          className={`calendar-cell calendar-leave leave-${safeColour(type?.colour_token ?? null)} ${pending ? "is-pending" : ""}`}
-                          title={`${person.first_name} ${person.last_name} · ${type?.name ?? "Leave"} · ${statusLabel}`}
+                          className={`calendar-cell calendar-leave leave-${safeColour(type?.colour_token ?? null)} is-pending ${today ? "today-column" : ""}`}
+                          title={`${person.first_name} ${person.last_name} · ${type?.name ?? "Leave"} · Pending`}
                         >
                           <span>{type?.code?.slice(0, 2) ?? "L"}</span>
                         </div>
                       );
                     }
 
-                    if (toil) {
-                      const pending = toil.status === "pending_approval";
-                      const toilStatus = pending
-                        ? "Pending"
-                        : toil.status === "cancellation_requested"
-                          ? "Approved · cancellation pending"
-                          : "Approved";
+                    if (pendingToilRequest) {
                       return (
                         <div
                           key={key}
-                          className={`calendar-cell calendar-leave toil-cell ${pending ? "is-pending" : ""}`}
-                          title={`${person.first_name} ${person.last_name} · TOIL · ${Number(toil.hours).toFixed(2)} hours · ${toilStatus}`}
+                          className={`calendar-cell calendar-leave toil-cell is-pending ${today ? "today-column" : ""}`}
+                          title={`${person.first_name} ${person.last_name} · TOIL · Pending`}
                         >
                           <span>T</span>
                         </div>
                       );
                     }
 
+                    if (approved) {
+                      const sourceKind = approved.source_kind ?? "away";
+                      const label = approved.display_label ?? "Away";
+                      const code =
+                        sourceKind === "toil"
+                          ? "T"
+                          : sourceKind === "away"
+                            ? "A"
+                            : label.slice(0, 2).toUpperCase();
+
+                      return (
+                        <div
+                          key={key}
+                          className={`calendar-cell calendar-leave leave-${safeColour(approved.colour_token)} ${today ? "today-column" : ""}`}
+                          title={`${person.first_name} ${person.last_name} · ${label}`}
+                        >
+                          <span>{code}</span>
+                        </div>
+                      );
+                    }
+
                     if (holiday) {
                       return (
-                        <div key={key} className="calendar-cell calendar-holiday" title={holiday}>
+                        <div
+                          key={key}
+                          className={`calendar-cell calendar-holiday ${today ? "today-column" : ""}`}
+                          title={holiday}
+                        >
                           <span>PH</span>
                         </div>
                       );
@@ -275,7 +367,11 @@ export default async function CalendarPage() {
                     return (
                       <div
                         key={key}
-                        className={`calendar-cell ${weekend ? "calendar-weekend" : ""}`}
+                        className={[
+                          "calendar-cell",
+                          weekend ? "calendar-weekend" : "",
+                          today ? "today-column" : "",
+                        ].filter(Boolean).join(" ")}
                       />
                     );
                   })}
@@ -285,6 +381,11 @@ export default async function CalendarPage() {
           </div>
         </div>
       </section>
+
+      <p className="calendar-privacy-note">
+        Colleagues see that a person is away. Leave category and TOIL detail are shown
+        only where the viewer has an authorised operational reason to see them.
+      </p>
     </AppShell>
   );
 }
