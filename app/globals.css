@@ -159,3 +159,54 @@
 .cycle-anchor-fields{display:grid;grid-template-columns:110px 110px;gap:8px}
 .cycle-anchor-fields label{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:700;color:#53616c}
 @media(max-width:650px){.policy-cycle-select{min-width:0;width:100%}.cycle-anchor-fields{grid-template-columns:1fr 1fr;width:100%}}
+
+
+/* Production shell refinements */
+.topbar-context{display:flex;flex-direction:column;gap:2px;min-width:0}
+.topbar-context strong{font-size:12px;color:#26323d;letter-spacing:-.1px}
+.topbar-context span{font-size:10px;color:#84919c}
+.topbar-book-link{height:36px;padding:0 12px;border:1px solid var(--border-strong);border-radius:8px;display:inline-flex;align-items:center;gap:7px;background:#fff;color:#334155;font-size:11px;font-weight:700}
+.topbar-book-link:hover{border-color:#aebabc;background:#f8fafa}
+.profile-static{border-left:1px solid var(--border)}
+.signout-btn{border-left:1px solid var(--border);padding-left:16px;margin-left:-5px}
+
+/* My Leave workspace */
+.my-leave-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.my-leave-stat{background:#fff;border:1px solid var(--border);border-radius:11px;padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:5px;min-height:116px}
+.my-leave-stat>span{font-size:10px;font-weight:700;color:#66737e;text-transform:uppercase;letter-spacing:.035em}
+.my-leave-stat>strong{font-size:25px;line-height:1.1;color:var(--teal-900);letter-spacing:-.7px}
+.my-leave-stat>strong small{font-size:11px;color:#53616c;font-weight:650}
+.my-leave-stat>small{font-size:9px;color:#82909c;line-height:1.4}
+.my-leave-stat .my-leave-next{font-size:18px;letter-spacing:-.3px;color:#26323d}
+.my-leave-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start;margin-bottom:16px}
+.personal-calendar-card{padding:18px}
+.personal-calendar-head{align-items:flex-start}
+.personal-calendar-head>div:first-child{display:flex;flex-direction:column;gap:2px}
+.personal-calendar-legend{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px 10px}
+.personal-calendar-legend span{font-size:8px;color:#718096;display:inline-flex;align-items:center;gap:4px}
+.year-calendar-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:15px}
+.month-card{border:1px solid var(--border);border-radius:9px;padding:10px;background:#fff}
+.month-title{display:block;font-size:10px;color:#26323d;margin-bottom:8px}
+.month-weekdays,.month-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.month-weekdays{margin-bottom:4px}
+.month-weekdays span{font-size:7px;color:#8a96a0;text-align:center;font-weight:700}
+.month-day{aspect-ratio:1/1;display:grid;place-items:center;border-radius:4px;font-size:8px;color:#53616c;background:#fafbfb;border:1px solid transparent;position:relative}
+.month-day.blank{background:transparent}
+.month-day.today{box-shadow:inset 0 0 0 1px var(--teal);font-weight:800}
+.month-day.holiday{background:#eef1f2;color:#58656f;font-weight:800}
+.month-day.toil{background:#7460a8;color:#fff}
+.month-day.pending{background:#fff!important;color:#44515d!important;border:1px dashed #667681}
+.month-day.leave-teal,.month-day.leave-blue,.month-day.leave-amber,.month-day.leave-purple,.month-day.leave-rose,.month-day.leave-slate{color:#fff}
+.my-leave-side{display:flex;flex-direction:column;gap:14px}
+.my-balance-card,.upcoming-card{padding:16px}
+.my-balance-list,.upcoming-list{display:flex;flex-direction:column}
+.my-balance-list>div,.upcoming-list>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #edf1f2}
+.my-balance-list>div:last-child,.upcoming-list>div:last-child{border-bottom:0}
+.my-balance-list span,.upcoming-list span{font-size:9px;color:#718096}
+.my-balance-list strong,.upcoming-list strong{font-size:10px;color:#26323d}
+.upcoming-list>div{align-items:flex-start;flex-direction:column;gap:2px}
+.my-leave-history{margin-top:0}
+.my-leave-footer-action{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+@media(max-width:1150px){.my-leave-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.my-leave-layout{grid-template-columns:1fr}.my-leave-side{display:grid;grid-template-columns:1fr 1fr}.year-calendar-grid{grid-template-columns:repeat(3,minmax(180px,1fr));overflow:auto}}
+@media(max-width:760px){.topbar-context span{display:none}.topbar-book-link{display:none}.my-leave-summary{grid-template-columns:1fr 1fr}.my-leave-side{grid-template-columns:1fr}.year-calendar-grid{grid-template-columns:repeat(2,minmax(170px,1fr))}}
+@media(max-width:520px){.my-leave-summary{grid-template-columns:1fr}.year-calendar-grid{grid-template-columns:1fr}.personal-calendar-legend{justify-content:flex-start}.personal-calendar-head{flex-direction:column;gap:8px}.my-leave-footer-action{flex-direction:column}.my-leave-footer-action .btn{width:100%}}
