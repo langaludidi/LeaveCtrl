@@ -1,3 +1,4 @@
+import { dateInTimeZone } from "@/lib/current-context";
 import { createClient } from "@/lib/supabase/server";
 
 function csvCell(value: string | number) {
@@ -19,12 +20,19 @@ export async function GET() {
 
   if (!employee) return new Response("Employee profile required", { status: 403 });
 
-  const { data: memberships } = await supabase
-    .from("organisation_memberships")
-    .select("role")
-    .eq("organisation_id", employee.organisation_id)
-    .eq("user_id", user.id)
-    .eq("is_active", true);
+  const [{ data: memberships }, { data: organisation }] = await Promise.all([
+    supabase
+      .from("organisation_memberships")
+      .select("role")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("user_id", user.id)
+      .eq("is_active", true),
+    supabase
+      .from("organisations")
+      .select("timezone")
+      .eq("id", employee.organisation_id)
+      .maybeSingle(),
+  ]);
 
   const roles = memberships?.map((membership) => membership.role) ?? [];
   const adminScope = roles.some((role) =>
@@ -74,8 +82,11 @@ export async function GET() {
   ]);
 
   const employeeIds = (people ?? []).map((person) => person.id);
-  const yearStart = `${new Date().getFullYear()}-01-01`;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateInTimeZone(
+    new Date(),
+    organisation?.timezone ?? "UTC"
+  );
+  const yearStart = `${today.slice(0, 4)}-01-01`;
 
   const [
     { data: balances },
