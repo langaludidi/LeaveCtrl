@@ -2204,6 +2204,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_employee_invitation_for_delivery: {
+        Args: { p_employee_id: string; p_token: string }
+        Returns: boolean
+      }
       withdraw_leave_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
