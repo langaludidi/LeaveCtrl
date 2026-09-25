@@ -18,7 +18,7 @@ export function DecisionButtons({ requestId }: { requestId: string }) {
     const { error: rpcError } = await supabase.rpc("decide_leave_request", {
       p_request_id: requestId,
       p_decision: decision,
-      p_note: null,
+      p_note: undefined,
     });
 
     if (rpcError) {
