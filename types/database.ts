@@ -2208,6 +2208,10 @@ export type Database = {
         Args: { p_employee_id: string; p_grant_manager_role?: boolean }
         Returns: string
       }
+      record_organisation_data_export: {
+        Args: { p_format?: string }
+        Returns: string
+      }
       record_overtime_event: {
         Args: {
           p_employee_id: string
