@@ -3,10 +3,13 @@ import { signIn, signUp } from "@/app/auth/actions";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; error?: string; message?: string }>;
+  searchParams: Promise<{ mode?: string; error?: string; message?: string; next?: string }>;
 }) {
   const params = await searchParams;
   const signingUp = params.mode === "signup";
+  const next = params.next?.startsWith("/") && !params.next.startsWith("//")
+    ? params.next
+    : signingUp ? "/onboarding" : "/";
 
   return (
     <main className="auth-page">
@@ -18,7 +21,7 @@ export default async function LoginPage({
           <h1>{signingUp ? "Create your workspace" : "Welcome back"}</h1>
           <p>
             {signingUp
-              ? "Set up a calm, reliable place for leave, approvals and team availability."
+              ? "Create your secure account, then continue directly to your organisation or invitation."
               : "Sign in to manage your leave, your team and the work that needs your attention."}
           </p>
         </div>
@@ -27,6 +30,8 @@ export default async function LoginPage({
         {params.message && <div className="auth-alert success">{params.message}</div>}
 
         <form action={signingUp ? signUp : signIn} className="auth-form">
+          <input type="hidden" name="next" value={next} />
+
           {signingUp && (
             <div className="auth-name-row">
               <label>First name<input name="firstName" autoComplete="given-name" required /></label>
@@ -53,7 +58,9 @@ export default async function LoginPage({
 
         <p className="auth-switch">
           {signingUp ? "Already have an account?" : "New to LeaveCtrl?"}{" "}
-          <a href={signingUp ? "/login" : "/login?mode=signup"}>
+          <a href={signingUp
+            ? `/login?next=${encodeURIComponent(next)}`
+            : `/login?mode=signup&next=${encodeURIComponent(next)}`}>
             {signingUp ? "Sign in" : "Create account"}
           </a>
         </p>
@@ -62,9 +69,7 @@ export default async function LoginPage({
       <aside className="auth-aside">
         <div className="auth-aside-card">
           <div className="auth-kicker">Simple on the surface. Governed underneath.</div>
-          <h2>
-            Know who is away, why a request is allowed, and whether the team can support it.
-          </h2>
+          <h2>Know who is away, why a request is allowed, and whether the team can support it.</h2>
           <div className="auth-points">
             <span>South Africa-first setup</span>
             <span>Clear employee balances</span>
