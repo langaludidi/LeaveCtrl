@@ -2136,6 +2136,19 @@ export type Database = {
         Args: { p_employee_id: string; p_end_date: string; p_reason: string }
         Returns: Json
       }
+      get_workforce_calendar: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          absence_date: string
+          can_view_detail: boolean
+          colour_token: string
+          display_label: string
+          employee_id: string
+          hours: number
+          source_kind: string
+          status: string
+        }[]
+      }
       liability_scheduled_days: {
         Args: {
           p_employee_id: string
