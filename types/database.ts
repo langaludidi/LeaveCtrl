@@ -145,6 +145,92 @@ export type Database = {
           },
         ]
       }
+      employee_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          email: string
+          employee_number: string | null
+          expires_at: string
+          first_name: string
+          grant_manager_role: boolean
+          id: string
+          last_name: string
+          manager_employee_id: string | null
+          organisation_id: string
+          start_date: string
+          token_hash: string
+          work_schedule_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          email: string
+          employee_number?: string | null
+          expires_at?: string
+          first_name: string
+          grant_manager_role?: boolean
+          id?: string
+          last_name: string
+          manager_employee_id?: string | null
+          organisation_id: string
+          start_date: string
+          token_hash: string
+          work_schedule_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          email?: string
+          employee_number?: string | null
+          expires_at?: string
+          first_name?: string
+          grant_manager_role?: boolean
+          id?: string
+          last_name?: string
+          manager_employee_id?: string | null
+          organisation_id?: string
+          start_date?: string
+          token_hash?: string
+          work_schedule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_invitations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_manager_employee_id_fkey"
+            columns: ["manager_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_work_schedule_id_fkey"
+            columns: ["work_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "work_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_schedule_assignments: {
         Row: {
           created_at: string
@@ -860,6 +946,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_employee_manager: {
+        Args: { p_employee_id: string; p_manager_employee_id: string }
+        Returns: undefined
+      }
       bootstrap_organisation: {
         Args: {
           p_email: string
@@ -870,11 +960,26 @@ export type Database = {
         }
         Returns: string
       }
+      claim_employee_invitation: { Args: { p_token: string }; Returns: string }
       configure_initial_leave_policy: {
         Args: {
           p_annual_days: number
           p_cycle_end: string
           p_cycle_start: string
+        }
+        Returns: string
+      }
+      create_employee_invitation: {
+        Args: {
+          p_department_id?: string
+          p_email: string
+          p_employee_number?: string
+          p_first_name: string
+          p_grant_manager_role?: boolean
+          p_last_name: string
+          p_manager_employee_id?: string
+          p_start_date: string
+          p_work_schedule_id?: string
         }
         Returns: string
       }
