@@ -911,6 +911,9 @@ export type Database = {
           carry_over_cap: number | null
           carry_over_expiry_date_rule: string | null
           created_at: string
+          cycle_anchor_day: number | null
+          cycle_anchor_month: number | null
+          cycle_basis: string
           cycle_months: number | null
           effective_from: string
           effective_to: string | null
@@ -929,6 +932,9 @@ export type Database = {
           carry_over_cap?: number | null
           carry_over_expiry_date_rule?: string | null
           created_at?: string
+          cycle_anchor_day?: number | null
+          cycle_anchor_month?: number | null
+          cycle_basis?: string
           cycle_months?: number | null
           effective_from: string
           effective_to?: string | null
@@ -947,6 +953,9 @@ export type Database = {
           carry_over_cap?: number | null
           carry_over_expiry_date_rule?: string | null
           created_at?: string
+          cycle_anchor_day?: number | null
+          cycle_anchor_month?: number | null
+          cycle_basis?: string
           cycle_months?: number | null
           effective_from?: string
           effective_to?: string | null
@@ -2020,6 +2029,16 @@ export type Database = {
         Returns: string
       }
       claim_employee_invitation: { Args: { p_token: string }; Returns: string }
+      configure_annual_leave_policy_v2: {
+        Args: {
+          p_annual_days: number
+          p_cycle_basis: string
+          p_effective_from?: string
+          p_fixed_cycle_start_day?: number
+          p_fixed_cycle_start_month?: number
+        }
+        Returns: string
+      }
       configure_initial_leave_policy: {
         Args: {
           p_annual_days: number
