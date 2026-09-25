@@ -1,18 +1,36 @@
 import Link from "next/link";
+import { CalendarDays, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
+
+function formatHolidayDate(value: string) {
+  return new Intl.DateTimeFormat("en-ZA", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
 
 export default async function SetupPage() {
   const { supabase, employee, displayName, roles } = await getCurrentContext();
   if (!employee) return null;
 
-  const { data: annualType } = await supabase
-    .from("leave_types")
-    .select("id")
-    .eq("organisation_id", employee.organisation_id)
-    .eq("code", "ANNUAL")
-    .maybeSingle();
+  const [{ data: annualType }, { data: holidays }] = await Promise.all([
+    supabase
+      .from("leave_types")
+      .select("id")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("code", "ANNUAL")
+      .maybeSingle(),
+    supabase
+      .from("public_holidays")
+      .select("holiday_date, name, is_observed, is_one_off, source_kind")
+      .eq("organisation_id", employee.organisation_id)
+      .gte("holiday_date", "2026-01-01")
+      .lte("holiday_date", "2027-12-31")
+      .order("holiday_date", { ascending: true }),
+  ]);
 
   let existingDays = 15;
   if (annualType) {
@@ -34,10 +52,13 @@ export default async function SetupPage() {
         <Link className="back-link" href="/">← Back to Home</Link>
         <div className="split">
           <div>
-            <h1>Organisation setup</h1>
-            <p>Configure the first authoritative leave policy. More policy types and statutory rule packs will be added behind this same versioned model.</p>
+            <h1>Administration</h1>
+            <p>
+              Govern leave policy, statutory calendar inputs and the rules that drive
+              balances and chargeable leave days.
+            </p>
           </div>
-          <strong>Foundation setup</strong>
+          <strong>South Africa · ZA</strong>
         </div>
       </section>
 
@@ -46,21 +67,53 @@ export default async function SetupPage() {
 
         <aside className="setup-side">
           <div className="card progress-card">
-            <div className="ring">1 <small>of 1</small></div>
+            <div className="ring"><ShieldCheck size={22}/></div>
             <div>
-              <h3>Ready for the first workflow</h3>
-              <p>Once this policy is saved, you can submit a real leave request against the ledger.</p>
+              <h3>Policy-driven balances</h3>
+              <p>New employees inherit the active leave policy automatically. Opening balances remain auditable ledger adjustments.</p>
             </div>
           </div>
 
           <div className="card info-card">
-            <InfoIcon/>
+            <CalendarDays size={19}/>
             <div>
-              <h3>What happens next?</h3>
-              <p>LeaveCtrl creates the leave type, policy version, entitlement and opening ledger entry as one governed transaction.</p>
+              <h3>Public holidays are operational data</h3>
+              <p>Configured holidays are excluded from chargeable leave when they fall on a scheduled working day.</p>
             </div>
           </div>
         </aside>
+      </section>
+
+      <section className="card holiday-admin-card">
+        <div className="availability-head">
+          <div>
+            <h2>South African public holidays</h2>
+            <p>
+              Official calendar entries currently loaded for 2026 and 2027,
+              including observed days and one-off proclamations.
+            </p>
+          </div>
+          <span className="verified-pill"><ShieldCheck size={14}/> Source verified</span>
+        </div>
+
+        <div className="holiday-grid">
+          {(holidays ?? []).map((holiday) => (
+            <div className="holiday-row" key={holiday.holiday_date}>
+              <div className="holiday-date">{formatHolidayDate(holiday.holiday_date)}</div>
+              <div className="holiday-name">
+                <strong>{holiday.name}</strong>
+                <span>
+                  {holiday.is_one_off
+                    ? "Presidential proclamation"
+                    : holiday.is_observed
+                      ? "Observed public holiday"
+                      : "Public holiday"}
+                </span>
+              </div>
+              {holiday.is_one_off ? <span className="special-pill">One-off</span> : null}
+            </div>
+          ))}
+        </div>
       </section>
     </AppShell>
   );
