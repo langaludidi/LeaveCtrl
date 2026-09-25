@@ -118,7 +118,3 @@ export default async function SetupPage() {
     </AppShell>
   );
 }
-
-function InfoIcon() {
-  return <span className="summary-icon">i</span>;
-}
