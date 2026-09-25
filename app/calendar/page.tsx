@@ -35,7 +35,7 @@ export default async function CalendarPage() {
       .from("leave_requests")
       .select("id, employee_id, leave_type_id, start_date, end_date, quantity")
       .eq("organisation_id", employee.organisation_id)
-      .eq("status", "approved")
+      .in("status", ["approved", "cancellation_requested"])
       .gte("end_date", dateOnly(today))
       .lte("start_date", dateOnly(horizon))
       .order("start_date", { ascending: true }),
@@ -49,7 +49,7 @@ export default async function CalendarPage() {
       <section className="page-head split">
         <div>
           <h1>Calendar</h1>
-          <p>Approved leave visible to your role over the next 90 days.</p>
+          <p>Approved leave visible to your role over the next 90 days. Leave stays visible while a cancellation is awaiting approval.</p>
         </div>
         <div className="calendar-legend"><span className="legend-dot teal-dot"/> Approved leave</div>
       </section>
