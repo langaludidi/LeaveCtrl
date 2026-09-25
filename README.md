@@ -36,3 +36,8 @@ Vercel project: `leave-ctrl-2eqn`
 The active development branch is `build/foundation-v0.1`; production `main` remains intentionally unchanged until the preview build is validated.
 
 Environment configuration completed for Vercel preview on 25 Sep 2026.
+
+
+## Current acceptance checkpoint
+
+The first governed vertical slice now covers organisation bootstrap, employee-first onboarding, access invitations, manager assignment, leave submission, approval, withdrawal, cancellation, immutable ledger reconciliation, and live calendar/request projection.
