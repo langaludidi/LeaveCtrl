@@ -100,6 +100,111 @@ export type Database = {
           },
         ]
       }
+      blocked_periods: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string
+          hard_block: boolean
+          id: string
+          leave_type_id: string | null
+          name: string
+          organisation_id: string
+          reason: string | null
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          hard_block?: boolean
+          id?: string
+          leave_type_id?: string | null
+          name: string
+          organisation_id: string
+          reason?: string | null
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          hard_block?: boolean
+          id?: string
+          leave_type_id?: string | null
+          name?: string
+          organisation_id?: string
+          reason?: string | null
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_periods_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_periods_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coverage_rules: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          id: string
+          minimum_available: number
+          name: string
+          organisation_id: string
+          severity: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          id?: string
+          minimum_available: number
+          name: string
+          organisation_id: string
+          severity?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          id?: string
+          minimum_available?: number
+          name?: string
+          organisation_id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coverage_rules_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coverage_rules_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           active: boolean
@@ -587,6 +692,64 @@ export type Database = {
           },
         ]
       }
+      leave_request_coverage_checks: {
+        Row: {
+          available_after_request: number
+          created_at: string
+          id: string
+          leave_date: string
+          minimum_required: number
+          organisation_id: string
+          outcome: string
+          request_id: string
+          rule_id: string
+        }
+        Insert: {
+          available_after_request: number
+          created_at?: string
+          id?: string
+          leave_date: string
+          minimum_required: number
+          organisation_id: string
+          outcome: string
+          request_id: string
+          rule_id: string
+        }
+        Update: {
+          available_after_request?: number
+          created_at?: string
+          id?: string
+          leave_date?: string
+          minimum_required?: number
+          organisation_id?: string
+          outcome?: string
+          request_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_request_coverage_checks_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_request_coverage_checks_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "leave_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_request_coverage_checks_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "coverage_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_request_days: {
         Row: {
           chargeable_quantity: number
@@ -1060,6 +1223,26 @@ export type Database = {
           p_annual_days: number
           p_cycle_end: string
           p_cycle_start: string
+        }
+        Returns: string
+      }
+      create_blocked_period: {
+        Args: {
+          p_end_date: string
+          p_hard_block?: boolean
+          p_leave_type_id?: string
+          p_name: string
+          p_reason?: string
+          p_start_date: string
+        }
+        Returns: string
+      }
+      create_coverage_rule: {
+        Args: {
+          p_department_id: string
+          p_minimum_available: number
+          p_name: string
+          p_severity?: string
         }
         Returns: string
       }
