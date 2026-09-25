@@ -26,6 +26,7 @@ export default async function RequestsPage({
     { data: employees },
     { data: myRequests },
     { data: visibleWork },
+    { data: coverageChecks },
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -47,6 +48,11 @@ export default async function RequestsPage({
       .eq("organisation_id", employee.organisation_id)
       .in("status", ["pending_approval", "cancellation_requested"])
       .order("submitted_at", { ascending: true }),
+    supabase
+      .from("leave_request_coverage_checks")
+      .select("request_id, outcome")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("outcome", "warning"),
   ]);
 
   const typeMap = new Map((leaveTypes ?? []).map((item) => [item.id, item.name]));
@@ -56,6 +62,13 @@ export default async function RequestsPage({
   const approvals = (visibleWork ?? []).filter(
     (request) => request.employee_id !== employee.id
   );
+  const coverageWarningMap = new Map<string, number>();
+  for (const check of coverageChecks ?? []) {
+    coverageWarningMap.set(
+      check.request_id,
+      (coverageWarningMap.get(check.request_id) ?? 0) + 1
+    );
+  }
 
   return (
     <AppShell
@@ -141,6 +154,9 @@ export default async function RequestsPage({
                     <span>
                       {cancellation ? "Cancellation · " : ""}
                       {typeMap.get(request.leave_type_id) ?? "Leave"}
+                      {coverageWarningMap.get(request.id)
+                        ? ` · Coverage warning`
+                        : ""}
                     </span>
                   </div>
                   <div className="approval-date">
