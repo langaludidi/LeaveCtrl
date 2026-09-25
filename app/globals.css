@@ -210,3 +210,13 @@
 @media(max-width:1150px){.my-leave-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.my-leave-layout{grid-template-columns:1fr}.my-leave-side{display:grid;grid-template-columns:1fr 1fr}.year-calendar-grid{grid-template-columns:repeat(3,minmax(180px,1fr));overflow:auto}}
 @media(max-width:760px){.topbar-context span{display:none}.topbar-book-link{display:none}.my-leave-summary{grid-template-columns:1fr 1fr}.my-leave-side{grid-template-columns:1fr}.year-calendar-grid{grid-template-columns:repeat(2,minmax(170px,1fr))}}
 @media(max-width:520px){.my-leave-summary{grid-template-columns:1fr}.year-calendar-grid{grid-template-columns:1fr}.personal-calendar-legend{justify-content:flex-start}.personal-calendar-head{flex-direction:column;gap:8px}.my-leave-footer-action{flex-direction:column}.my-leave-footer-action .btn{width:100%}}
+
+
+/* Calendar navigation and privacy */
+.calendar-range-title>div:first-child{display:flex;flex-direction:column;gap:2px}
+.calendar-nav{display:flex;align-items:center;gap:6px}
+.calendar-nav a{height:30px;min-width:30px;border:1px solid var(--border);border-radius:7px;background:#fff;display:grid;place-items:center;color:#52606d;font-size:9px;font-weight:700}
+.calendar-nav a:hover{background:#f6f9f9;border-color:#c6d0d2}
+.calendar-nav .today-link{padding:0 10px}
+.today-column{box-shadow:inset 0 0 0 1px rgba(0,128,128,.28)}
+.calendar-privacy-note{margin:10px 2px 0;color:#7a8793;font-size:9px;line-height:1.5}
