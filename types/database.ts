@@ -250,6 +250,100 @@ export type Database = {
           },
         ]
       }
+      employee_employment_conditions: {
+        Row: {
+          change_type: string
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          id: string
+          location_id: string | null
+          manager_employee_id: string | null
+          organisation_id: string
+          reason: string | null
+          work_mode: string
+          work_schedule_id: string
+        }
+        Insert: {
+          change_type?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          effective_from: string
+          effective_to?: string | null
+          employee_id: string
+          id?: string
+          location_id?: string | null
+          manager_employee_id?: string | null
+          organisation_id: string
+          reason?: string | null
+          work_mode?: string
+          work_schedule_id: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          id?: string
+          location_id?: string | null
+          manager_employee_id?: string | null
+          organisation_id?: string
+          reason?: string | null
+          work_mode?: string
+          work_schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_employment_conditions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_manager_employee_id_fkey"
+            columns: ["manager_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_work_schedule_id_fkey"
+            columns: ["work_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "work_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_invitations: {
         Row: {
           accepted_at: string | null
@@ -342,6 +436,69 @@ export type Database = {
             columns: ["work_schedule_id"]
             isOneToOne: false
             referencedRelation: "work_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_remuneration_history: {
+        Row: {
+          calculation_method: string
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          gross_amount: number
+          id: string
+          liability_daily_rate: number
+          organisation_id: string
+          pay_frequency: string
+          reason: string | null
+        }
+        Insert: {
+          calculation_method: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          effective_from: string
+          effective_to?: string | null
+          employee_id: string
+          gross_amount: number
+          id?: string
+          liability_daily_rate: number
+          organisation_id: string
+          pay_frequency: string
+          reason?: string | null
+        }
+        Update: {
+          calculation_method?: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          gross_amount?: number
+          id?: string
+          liability_daily_rate?: number
+          organisation_id?: string
+          pay_frequency?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_remuneration_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_remuneration_history_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
         ]
@@ -928,6 +1085,41 @@ export type Database = {
           },
         ]
       }
+      locations: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          id: string
+          name: string
+          organisation_id: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          organisation_id: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          organisation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisation_memberships: {
         Row: {
           created_at: string
@@ -1094,12 +1286,15 @@ export type Database = {
       work_schedules: {
         Row: {
           created_at: string
+          cycle_anchor_date: string | null
+          cycle_days: Json | null
           friday_hours: number
           id: string
           monday_hours: number
           name: string
           organisation_id: string
           saturday_hours: number
+          schedule_kind: string
           sunday_hours: number
           thursday_hours: number
           tuesday_hours: number
@@ -1107,12 +1302,15 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cycle_anchor_date?: string | null
+          cycle_days?: Json | null
           friday_hours?: number
           id?: string
           monday_hours?: number
           name: string
           organisation_id: string
           saturday_hours?: number
+          schedule_kind?: string
           sunday_hours?: number
           thursday_hours?: number
           tuesday_hours?: number
@@ -1120,12 +1318,15 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cycle_anchor_date?: string | null
+          cycle_days?: Json | null
           friday_hours?: number
           id?: string
           monday_hours?: number
           name?: string
           organisation_id?: string
           saturday_hours?: number
+          schedule_kind?: string
           sunday_hours?: number
           thursday_hours?: number
           tuesday_hours?: number
@@ -1143,6 +1344,64 @@ export type Database = {
       }
     }
     Views: {
+      employee_current_conditions: {
+        Row: {
+          change_type: string | null
+          department_id: string | null
+          effective_from: string | null
+          employee_id: string | null
+          location_id: string | null
+          manager_employee_id: string | null
+          organisation_id: string | null
+          reason: string | null
+          work_mode: string | null
+          work_schedule_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_employment_conditions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_manager_employee_id_fkey"
+            columns: ["manager_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_conditions_work_schedule_id_fkey"
+            columns: ["work_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "work_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_balances: {
         Row: {
           available_balance: number | null
@@ -1190,6 +1449,20 @@ export type Database = {
           p_work_schedule_id?: string
         }
         Returns: Json
+      }
+      apply_employee_condition_change: {
+        Args: {
+          p_change_type?: string
+          p_department_id: string
+          p_effective_from: string
+          p_employee_id: string
+          p_location_id?: string
+          p_manager_employee_id: string
+          p_reason?: string
+          p_work_mode?: string
+          p_work_schedule_id: string
+        }
+        Returns: string
       }
       assign_employee_department: {
         Args: { p_department_id: string; p_employee_id: string }
@@ -1264,6 +1537,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_location: {
+        Args: { p_code?: string; p_name: string }
+        Returns: string
+      }
+      create_rotating_shift_schedule: {
+        Args: { p_anchor_date: string; p_cycle_pattern: string; p_name: string }
+        Returns: string
+      }
       create_work_schedule: {
         Args: {
           p_friday_hours?: number
@@ -1301,6 +1582,17 @@ export type Database = {
           p_reason?: string
         }
         Returns: number
+      }
+      set_employee_remuneration: {
+        Args: {
+          p_daily_rate_override?: number
+          p_effective_from: string
+          p_employee_id: string
+          p_gross_amount: number
+          p_pay_frequency: string
+          p_reason?: string
+        }
+        Returns: string
       }
       submit_leave_request: {
         Args: {
