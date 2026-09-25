@@ -314,3 +314,31 @@
 .decision-note-field textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,128,128,.08)}
 .expanded-decision .approval-actions button{display:flex;align-items:center;justify-content:center;gap:7px}
 .expanded-decision .approval-actions button span{font-size:10px;font-weight:800}
+
+
+/* Bulk employee import */
+.csv-import-card{padding:18px;margin:16px 0}
+.csv-import-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.csv-file-button{position:relative;overflow:hidden}
+.csv-file-button input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.csv-file-name{font-size:9px;color:#718096}
+.csv-import-summary{display:flex;gap:18px;align-items:center;margin:14px 0 8px;padding:10px 12px;background:#f7f9f9;border:1px solid var(--border);border-radius:8px}
+.csv-import-summary span{font-size:9px;color:#64748b}
+.csv-import-summary strong{color:#26323d}
+.csv-import-summary .has-errors strong{color:#a66516}
+.csv-preview{border:1px solid var(--border);border-radius:8px}
+.csv-row-status{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700}
+.csv-row-status.ready{color:#217147}
+.csv-row-status.error{color:#a54444}
+.csv-more-rows{font-size:9px;color:#7a8793;margin:7px 0 0}
+.csv-import-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.csv-import-footer>span{font-size:9px;color:#718096}
+.csv-results{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
+.csv-results h3{font-size:13px;margin:0}
+.csv-result-row{display:grid;grid-template-columns:auto 1fr;gap:8px;padding:9px 0;border-bottom:1px solid #edf1f2;color:#217147}
+.csv-result-row:has(svg+div span){align-items:flex-start}
+.csv-result-row>div{display:flex;flex-direction:column;gap:2px}
+.csv-result-row strong{font-size:9px;color:#334155}
+.csv-result-row span{font-size:8px;color:#718096;line-height:1.45}
+.csv-result-row svg[data-lucide="x-circle"]{color:#a54444}
+@media(max-width:650px){.csv-import-footer{align-items:stretch;flex-direction:column}.csv-import-footer .btn{width:100%}.csv-import-summary{align-items:flex-start;flex-direction:column;gap:5px}}
