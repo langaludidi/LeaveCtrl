@@ -14,6 +14,7 @@ export function AddEmployeeForm() {
   const router = useRouter();
   const [link, setLink] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteDelivery, setInviteDelivery] = useState<"sent" | "fallback" | "">("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -25,11 +26,13 @@ export function AddEmployeeForm() {
     setError("");
     setNotice("");
     setLink("");
+    setInviteDelivery("");
     setCopied(false);
 
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     const openingBalance = String(form.get("openingAnnualBalance") ?? "").trim();
+    const prepareAccess = form.get("prepareAccess") === "on";
     const supabase = createClient();
 
     const { data, error: rpcError } = await supabase.rpc("add_employee_record", {
@@ -42,7 +45,7 @@ export function AddEmployeeForm() {
       p_manager_employee_id: undefined,
       p_work_schedule_id: undefined,
       p_grant_manager_role: form.get("managerRole") === "on",
-      p_prepare_invitation: form.get("prepareAccess") === "on",
+      p_prepare_invitation: prepareAccess,
     });
 
     if (rpcError || !data) {
@@ -56,6 +59,7 @@ export function AddEmployeeForm() {
     }
 
     const result = data as AddEmployeeResult;
+    let balanceMessage = "Current policy entitlements were provisioned automatically.";
 
     if (openingBalance && result.employee_id) {
       const numericBalance = Number(openingBalance);
@@ -72,16 +76,33 @@ export function AddEmployeeForm() {
         if (balanceError) {
           setError("Employee added, but the opening annual leave balance needs review.");
         } else {
-          setNotice(`Employee added with an opening annual leave balance of ${numericBalance} days.`);
+          balanceMessage = `Opening annual leave balance confirmed at ${numericBalance} days.`;
         }
       }
-    } else {
-      setNotice("Employee added and current policy entitlements were provisioned automatically.");
     }
 
-    if (result.invitation_token) {
-      setLink(`${window.location.origin}/join?token=${result.invitation_token}`);
+    if (prepareAccess && result.invitation_token && result.employee_id) {
+      const invitationLink = `${window.location.origin}/join?token=${result.invitation_token}`;
+      setLink(invitationLink);
       setInviteEmail(email);
+
+      const { error: sendError } = await supabase.functions.invoke("send-employee-invite", {
+        body: {
+          employeeId: result.employee_id,
+          email,
+          token: result.invitation_token,
+        },
+      });
+
+      if (sendError) {
+        setInviteDelivery("fallback");
+        setNotice(`Employee added. ${balanceMessage} Automatic email delivery was unavailable, so use the invitation action below.`);
+      } else {
+        setInviteDelivery("sent");
+        setNotice(`Employee added. ${balanceMessage} The activation email was sent automatically.`);
+      }
+    } else {
+      setNotice(`Employee added. ${balanceMessage} System access can be activated later.`);
     }
 
     setSaving(false);
@@ -110,7 +131,7 @@ export function AddEmployeeForm() {
         <div>
           <h2>Add employee</h2>
           <p className="card-subtitle">
-            Add the person once. LeaveCtrl provisions the current leave policy automatically.
+            Add the person once. LeaveCtrl provisions policy and can send access automatically.
           </p>
         </div>
         <span className="summary-icon"><UserPlus size={19}/></span>
@@ -150,8 +171,8 @@ export function AddEmployeeForm() {
         <label className="checkbox-row">
           <input name="prepareAccess" type="checkbox" defaultChecked />
           <span>
-            <strong>Prepare system access now</strong>
-            <small>The employee record and leave position exist even before access is activated.</small>
+            <strong>Send system access now</strong>
+            <small>LeaveCtrl will email an activation link. The employee record exists even before activation.</small>
           </span>
         </label>
 
@@ -171,16 +192,22 @@ export function AddEmployeeForm() {
       {link ? (
         <div className="invite-result invite-result-stacked">
           <div>
-            <strong>Access invitation ready</strong>
-            <span>The employee is already part of the workforce; this only activates login access.</span>
+            <strong>{inviteDelivery === "sent" ? "Activation email sent" : "Access invitation ready"}</strong>
+            <span>
+              {inviteDelivery === "sent"
+                ? "No manual invitation step is required. Keep the link only as a recovery option."
+                : "Automatic delivery did not complete. Send or copy the secure activation link below."}
+            </span>
           </div>
           <div className="invite-result-actions">
-            <button className="btn primary" onClick={emailInvitation} type="button">
-              <Mail size={16}/> Email invitation
-            </button>
+            {inviteDelivery === "fallback" ? (
+              <button className="btn primary" onClick={emailInvitation} type="button">
+                <Mail size={16}/> Email invitation
+              </button>
+            ) : null}
             <button className="btn secondary" onClick={copyLink} type="button">
               {copied ? <Check size={16}/> : <Copy size={16}/>}
-              {copied ? "Copied" : "Copy link"}
+              {copied ? "Copied" : "Copy recovery link"}
             </button>
           </div>
         </div>
