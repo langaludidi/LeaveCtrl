@@ -795,7 +795,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      bootstrap_organisation: {
+        Args: {
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_name: string
+          p_start_date?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       approval_action_type:
