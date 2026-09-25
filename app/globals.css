@@ -39,3 +39,10 @@
 .calendar-card{padding:18px}.calendar-legend{display:flex;align-items:center;gap:7px;font-size:11px;color:#64748b}.legend-dot{width:8px;height:8px;border-radius:50%}.teal-dot{background:var(--teal)}
 @media(max-width:1000px){.people-admin-grid{grid-template-columns:1fr}.manager-form{grid-template-columns:1fr 1fr auto}}
 @media(max-width:650px){.manager-form{grid-template-columns:1fr}.invite-result{align-items:flex-start;flex-direction:column}.invite-result .btn{width:100%}}
+
+.invite-result-stacked{align-items:flex-start;flex-direction:column}
+.invite-result-actions{display:flex;gap:8px;flex-wrap:wrap}
+.access-pill{display:inline-flex;padding:5px 8px;border-radius:7px;font-size:9px;font-weight:650}
+.access-pill.active{background:#e8f5f2;color:#176b62}
+.access-pill.pending{background:#fff4da;color:#8a5a00}
+.access-pill.neutral{background:#eef2f3;color:#66717c}
