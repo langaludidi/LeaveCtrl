@@ -30,6 +30,7 @@ export default async function RequestsPage({
     { data: coverageChecks },
     { data: myToilRequests },
     { data: visibleToilWork },
+    { data: toilCoverageChecks },
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -68,6 +69,11 @@ export default async function RequestsPage({
       .eq("organisation_id", employee.organisation_id)
       .in("status", ["pending_approval", "cancellation_requested"])
       .order("submitted_at", { ascending: true }),
+    supabase
+      .from("toil_request_coverage_checks")
+      .select("request_id, outcome")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("outcome", "warning"),
   ]);
 
   const typeMap = new Map((leaveTypes ?? []).map((item) => [item.id, item.name]));
@@ -86,6 +92,14 @@ export default async function RequestsPage({
     coverageWarningMap.set(
       check.request_id,
       (coverageWarningMap.get(check.request_id) ?? 0) + 1
+    );
+  }
+
+  const toilCoverageWarningMap = new Map<string, number>();
+  for (const check of toilCoverageChecks ?? []) {
+    toilCoverageWarningMap.set(
+      check.request_id,
+      (toilCoverageWarningMap.get(check.request_id) ?? 0) + 1
     );
   }
 
@@ -210,6 +224,9 @@ export default async function RequestsPage({
                     {request.status === "cancellation_requested"
                       ? "TOIL cancellation"
                       : "TOIL request"}
+                    {toilCoverageWarningMap.get(request.id)
+                      ? " · Coverage warning"
+                      : ""}
                   </span>
                 </div>
                 <div className="approval-date">
