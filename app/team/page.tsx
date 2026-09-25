@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { AddEmployeeForm } from "@/components/AddEmployeeForm";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
 import { OvertimeControls } from "@/components/OvertimeControls";
+import { EmployeeExitControl } from "@/components/EmployeeExitControl";
 import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
@@ -130,7 +131,11 @@ export default async function TeamPage() {
       .filter((id): id is string => Boolean(id))
   );
 
-  const assignmentPeople = (people ?? []).map((person) => {
+  const activePeople = (people ?? []).filter(
+    (person) => person.employment_status === "active"
+  );
+
+  const assignmentPeople = activePeople.map((person) => {
     const condition = conditionMap.get(person.id);
     return {
       id: person.id,
@@ -139,7 +144,7 @@ export default async function TeamPage() {
     };
   });
 
-  const workforcePeople = (people ?? []).map((person) => ({
+  const workforcePeople = activePeople.map((person) => ({
     id: person.id,
     name: `${person.first_name} ${person.last_name}`,
   }));
@@ -181,6 +186,10 @@ export default async function TeamPage() {
             departments={departments ?? []}
             schedules={(schedules ?? []).map((schedule) => ({ id: schedule.id, name: schedule.name }))}
             locations={locations ?? []}
+          />
+
+          <EmployeeExitControl
+            people={workforcePeople.filter((person) => person.id !== employee.id)}
           />
 
           <OvertimeControls
@@ -242,11 +251,13 @@ export default async function TeamPage() {
                 const schedule = condition?.work_schedule_id
                   ? scheduleMap.get(condition.work_schedule_id)
                   : undefined;
-                const access = person.user_id
-                  ? "Active"
-                  : pendingAccess.has(person.id)
-                    ? "Invitation ready"
-                    : "Not invited";
+                const access = person.employment_status !== "active"
+                  ? "Disabled"
+                  : person.user_id
+                    ? "Active"
+                    : pendingAccess.has(person.id)
+                      ? "Invitation ready"
+                      : "Not invited";
                 const annualBalance = annualBalanceMap.get(person.id);
 
                 return (
@@ -272,7 +283,7 @@ export default async function TeamPage() {
                     <td>{(toilBalanceMap.get(person.id) ?? 0).toFixed(2)} h</td>
                     {canAdminPeople ? (
                       <td>
-                        <span className={`access-pill ${person.user_id ? "active" : pendingAccess.has(person.id) ? "pending" : "neutral"}`}>
+                        <span className={`access-pill ${person.employment_status !== "active" ? "neutral" : person.user_id ? "active" : pendingAccess.has(person.id) ? "pending" : "neutral"}`}>
                           {access}
                         </span>
                       </td>
