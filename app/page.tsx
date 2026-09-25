@@ -77,7 +77,7 @@ export default async function HomePage() {
       .from("leave_requests")
       .select("id, employee_id, leave_type_id, start_date, end_date, quantity, status")
       .eq("organisation_id", employee.organisation_id)
-      .eq("status", "pending_approval")
+      .in("status", ["pending_approval", "cancellation_requested"])
       .order("submitted_at", { ascending: true }),
     supabase
       .from("employees")
@@ -91,14 +91,14 @@ export default async function HomePage() {
       .from("leave_requests")
       .select("id, employee_id")
       .eq("organisation_id", employee.organisation_id)
-      .eq("status", "approved")
+      .in("status", ["approved", "cancellation_requested"])
       .lte("start_date", today)
       .gte("end_date", today),
     supabase
       .from("leave_requests")
       .select("id, employee_id, leave_type_id, start_date, end_date, quantity")
       .eq("organisation_id", employee.organisation_id)
-      .eq("status", "approved")
+      .in("status", ["approved", "cancellation_requested"])
       .gte("end_date", today)
       .order("start_date", { ascending: true })
       .limit(8),
@@ -112,7 +112,7 @@ export default async function HomePage() {
   const employeeMap = new Map((employees ?? []).map((item) => [item.id, item]));
   const departmentMap = new Map((departments ?? []).map((item) => [item.id, item.name]));
   const approvals = (pendingVisible ?? []).filter((request) => request.employee_id !== employee.id);
-  const pendingMine = (myRequests ?? []).filter((request) => request.status === "pending_approval").length;
+  const pendingMine = (myRequests ?? []).filter((request) => ["pending_approval", "cancellation_requested"].includes(request.status)).length;
   const awayCount = new Set((awayToday ?? []).map((item) => item.employee_id)).size;
 
   return (
@@ -198,9 +198,9 @@ export default async function HomePage() {
               return (
                 <div className="approval-row" key={request.id}>
                   <div className="mini-avatar">{initials}</div>
-                  <div className="approval-person"><strong>{name}</strong><span>{typeMap.get(request.leave_type_id) ?? "Leave"}</span></div>
+                  <div className="approval-person"><strong>{name}</strong><span>{request.status === "cancellation_requested" ? "Cancellation · " : ""}{typeMap.get(request.leave_type_id) ?? "Leave"}</span></div>
                   <div className="approval-date"><strong>{formatDate(request.start_date)}</strong><span>{Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}</span></div>
-                  <DecisionButtons requestId={request.id}/>
+                  <DecisionButtons requestId={request.id} kind={request.status === "cancellation_requested" ? "cancellation" : "leave"}/>
                 </div>
               );
             })}
