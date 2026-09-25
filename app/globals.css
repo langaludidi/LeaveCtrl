@@ -304,3 +304,13 @@
 .readiness-check span{font-size:8px;color:#7a8793;line-height:1.4}
 @media(max-width:1000px){.readiness-checks{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.readiness-overview{grid-template-columns:auto 1fr}.readiness-overview .btn{grid-column:1/-1;width:100%}.readiness-checks{grid-template-columns:1fr}}
+
+
+/* Audited decision notes */
+.expanded-decision{gap:10px}
+.decision-note-field{display:flex;flex-direction:column;gap:5px;font-size:9px;font-weight:800;color:#45545f}
+.decision-note-field>span{font-weight:500;color:#8a96a0}
+.decision-note-field textarea{width:100%;min-height:88px;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;resize:vertical;outline:none;font:inherit;color:#26323d;background:#fff}
+.decision-note-field textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,128,128,.08)}
+.expanded-decision .approval-actions button{display:flex;align-items:center;justify-content:center;gap:7px}
+.expanded-decision .approval-actions button span{font-size:10px;font-weight:800}
