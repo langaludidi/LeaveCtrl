@@ -9,7 +9,12 @@ export default async function TeamPage() {
 
   const canAdminPeople = roles.includes("org_admin") || roles.includes("hr_admin");
 
-  const [{ data: people }, { data: departments }] = await Promise.all([
+  const [
+    { data: people },
+    { data: departments },
+    { data: leaveTypes },
+    { data: balances },
+  ] = await Promise.all([
     supabase
       .from("employees")
       .select("id, user_id, first_name, last_name, email, department_id, manager_employee_id, employment_status")
@@ -18,6 +23,15 @@ export default async function TeamPage() {
     supabase
       .from("departments")
       .select("id, name")
+      .eq("organisation_id", employee.organisation_id),
+    supabase
+      .from("leave_types")
+      .select("id, code")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true),
+    supabase
+      .from("leave_balances")
+      .select("employee_id, leave_type_id, available_balance")
       .eq("organisation_id", employee.organisation_id),
   ]);
 
@@ -33,6 +47,13 @@ export default async function TeamPage() {
 
     activeInvitations = data ?? [];
   }
+
+  const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
+  const annualBalanceMap = new Map(
+    (balances ?? [])
+      .filter((balance) => balance.leave_type_id === annualType?.id)
+      .map((balance) => [balance.employee_id, Number(balance.available_balance ?? 0)])
+  );
 
   const departmentMap = new Map(
     (departments ?? []).map((department) => [department.id, department.name])
@@ -60,8 +81,8 @@ export default async function TeamPage() {
       <section className="page-head">
         <h1>Team</h1>
         <p>
-          People exist independently of login access. Reporting lines drive approvals;
-          invitations only activate the employee's account.
+          People exist independently of login access. Leave positions are provisioned
+          from policy, while reporting lines drive approvals.
         </p>
       </section>
 
@@ -86,6 +107,7 @@ export default async function TeamPage() {
                 <th>Email</th>
                 <th>Department</th>
                 <th>Manager</th>
+                <th>Annual leave</th>
                 {canAdminPeople ? <th>Access</th> : null}
                 <th>Status</th>
               </tr>
@@ -97,6 +119,7 @@ export default async function TeamPage() {
                   : pendingAccess.has(person.id)
                     ? "Invitation ready"
                     : "Not invited";
+                const annualBalance = annualBalanceMap.get(person.id);
 
                 return (
                   <tr key={person.id}>
@@ -111,6 +134,11 @@ export default async function TeamPage() {
                       {person.manager_employee_id
                         ? managerMap.get(person.manager_employee_id) ?? "—"
                         : "Not assigned"}
+                    </td>
+                    <td>
+                      {annualBalance === undefined
+                        ? <span className="muted">Not configured</span>
+                        : <strong>{annualBalance} days</strong>}
                     </td>
                     {canAdminPeople ? (
                       <td>
