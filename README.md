@@ -41,3 +41,12 @@ Environment configuration completed for Vercel preview on 25 Sep 2026.
 ## Current acceptance checkpoint
 
 The first governed vertical slice now covers organisation bootstrap, employee-first onboarding, access invitations, manager assignment, leave submission, approval, withdrawal, cancellation, immutable ledger reconciliation, and live calendar/request projection.
+
+
+### V1 checkpoint — entitlement and jurisdiction slice
+- employee records inherit active leave-policy entitlements automatically
+- administrator-confirmed opening balances reconcile through the immutable ledger
+- South African public holidays for 2026–2027 are seeded with provenance
+- observed holidays and the 4 November 2026 election-day proclamation are represented explicitly
+- public holidays are excluded from chargeable leave days by the booking engine
+- employee activation email delivery is now attempted automatically, with recovery-link fallback
