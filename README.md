@@ -59,3 +59,13 @@ The first governed vertical slice now covers organisation bootstrap, employee-fi
 - confidential remuneration history with schedule-aware daily liability rate
 - annual-leave liability reporting and authorised CSV export
 - four-week colour-coded company leave calendar with pending, approved and public-holiday states
+
+
+### Overtime, TOIL and variable earnings checkpoint
+- overtime is recorded separately from ordinary work schedules
+- paid overtime creates confidential variable-earnings records
+- TOIL credits are held in a separate hours ledger
+- ordinary employees and managers cannot read overtime payment amounts or variable-earnings values
+- configurable liability averaging period and inclusion rules
+- leave-liability reporting uses base daily remuneration plus averaged includable variable earnings
+- overtime does not make an extra shift or Saturday part of the permanent schedule
