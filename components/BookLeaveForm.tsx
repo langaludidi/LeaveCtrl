@@ -80,6 +80,7 @@ export function BookLeaveForm({
         overlapping_leave_request: "You already have leave covering part of these dates.",
         overlapping_toil_request: "You already have TOIL covering part of these dates.",
         employee_profile_required: "Your active employment access could not be confirmed.",
+        request_spans_leave_cycles: "This request crosses two leave cycles. Split it into separate requests at the cycle boundary.",
       };
       setError(
         friendly[rpcError.message] ??
