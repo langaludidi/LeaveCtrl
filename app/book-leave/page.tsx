@@ -7,40 +7,39 @@ export default async function BookLeavePage() {
   const { supabase, employee, displayName, roles } = await getCurrentContext();
   if (!employee) return null;
 
-  const { data: leaveTypes } = await supabase
-    .from("leave_types")
-    .select("id, name, code")
-    .eq("organisation_id", employee.organisation_id)
-    .eq("active", true)
-    .order("name");
+  const [{ data: leaveTypes }, { data: balances }] = await Promise.all([
+    supabase
+      .from("leave_types")
+      .select("id, name, code")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true)
+      .order("name"),
+    supabase
+      .from("leave_balances")
+      .select("leave_type_id, available_balance")
+      .eq("employee_id", employee.id),
+  ]);
 
   const activeTypes = leaveTypes ?? [];
-  const firstType = activeTypes[0];
-
-  let balance = 0;
-  if (firstType) {
-    const { data: balanceRow } = await supabase
-      .from("leave_balances")
-      .select("available_balance")
-      .eq("employee_id", employee.id)
-      .eq("leave_type_id", firstType.id)
-      .maybeSingle();
-
-    balance = Number(balanceRow?.available_balance ?? 0);
-  }
+  const balancesByType = Object.fromEntries(
+    (balances ?? []).map((row) => [
+      row.leave_type_id ?? "",
+      Number(row.available_balance ?? 0),
+    ])
+  );
 
   return (
     <AppShell displayName={displayName} role={roleLabel(roles)}>
       <section className="page-head">
         <Link className="back-link" href="/">← Back to Home</Link>
         <h1>Book Leave</h1>
-        <p>Submit a leave request using your organisation's configured policy and work schedule.</p>
+        <p>Submit a leave request using your organisation&apos;s configured policy and work schedule.</p>
       </section>
 
       {activeTypes.length ? (
         <BookLeaveForm
           leaveTypes={activeTypes}
-          initialBalance={balance}
+          balancesByType={balancesByType}
         />
       ) : (
         <section className="card empty-state-card">
