@@ -18,10 +18,12 @@ export function OrganisationControls({
   people,
   departments,
   schedules,
+  businessDate,
 }: {
   people: Person[];
   departments: Department[];
   schedules: Schedule[];
+  businessDate: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -95,7 +97,7 @@ export function OrganisationControls({
         : await supabase.rpc("assign_employee_schedule", {
             p_employee_id: personId,
             p_work_schedule_id: value,
-            p_effective_from: new Date().toISOString().slice(0, 10),
+            p_effective_from: businessDate,
           });
 
     setSaving("");
