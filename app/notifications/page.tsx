@@ -4,15 +4,16 @@ import { NotificationList } from "@/components/NotificationList";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 export default async function NotificationsPage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, user, employee, displayName, roles } = await getCurrentContext();
   if (!employee) return null;
 
+  // RLS is the primary boundary. Keep the recipient predicate explicit as
+  // defence in depth and to make the privacy contract obvious at the call site.
   const { data: notifications } = await supabase
     .from("notifications")
-    .select(
-      "id, title, body, kind, entity_type, entity_id, read_at, created_at"
-    )
+    .select("id, title, body, kind, entity_type, entity_id, read_at, created_at")
     .eq("organisation_id", employee.organisation_id)
+    .eq("recipient_user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(80);
 
@@ -23,14 +24,14 @@ export default async function NotificationsPage() {
           <p className="eyebrow">COMMUNICATIONS</p>
           <h1>Notifications</h1>
           <p>
-            Approval work and decisions generated from LeaveCtrl's governed request
+            Approval work and decisions generated from LeaveCtrl&apos;s governed request
             workflows.
           </p>
         </div>
         <span className="page-context-icon"><Bell size={20}/></span>
       </section>
 
-      <NotificationList items={notifications ?? []}/>
+      <NotificationList items={notifications ?? []} recipientUserId={user.id}/>
     </AppShell>
   );
 }
