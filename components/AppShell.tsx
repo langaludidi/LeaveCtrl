@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarDays,
   CalendarPlus,
+  ClipboardList,
   FileText,
   Gauge,
   Home,
@@ -68,6 +69,7 @@ export function AppShell({
   const canManagePeople = ["Organisation Admin", "HR Admin", "Manager"].includes(role);
   const canReport = ["Organisation Admin", "HR Admin", "Manager", "Reporter", "Auditor"].includes(role);
   const canAdmin = ["Organisation Admin", "HR Admin"].includes(role);
+  const canAudit = ["Organisation Admin", "HR Admin", "Auditor"].includes(role);
 
   const nav = [
     { href: "/", label: "Home", icon: Home, visible: true },
@@ -77,6 +79,7 @@ export function AppShell({
     { href: "/requests", label: "Requests", icon: FileText, visible: true },
     { href: "/team", label: "Team", icon: Users, visible: canManagePeople },
     { href: "/reports", label: "Reports", icon: BarChart3, visible: canReport },
+    { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: canAudit },
     { href: "/setup", label: "Administration", icon: Settings, visible: canAdmin },
   ].filter((item) => item.visible);
 
