@@ -2096,6 +2096,18 @@ export type Database = {
         }
         Returns: string
       }
+      configure_employer_leave_type: {
+        Args: {
+          p_code: string
+          p_colour_token?: string
+          p_cycle_basis?: string
+          p_cycle_months?: number
+          p_effective_from?: string
+          p_entitlement_days: number
+          p_name: string
+        }
+        Returns: string
+      }
       configure_initial_leave_policy: {
         Args: {
           p_annual_days: number
