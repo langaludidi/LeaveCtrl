@@ -20,6 +20,12 @@ export function ToilDecisionButtons({
   const [note, setNote] = useState("");
 
   async function decide(decision: "approve" | "decline") {
+    const trimmedNote = note.trim();
+    if (showNote && decision === "decline" && !trimmedNote) {
+      setError("Add a short reason before declining so the employee and audit trail have context.");
+      return;
+    }
+
     setWorking(decision);
     setError("");
 
@@ -27,12 +33,12 @@ export function ToilDecisionButtons({
       ? await createClient().rpc("decide_toil_cancellation", {
           p_request_id: requestId,
           p_decision: decision,
-          p_note: note.trim() || undefined,
+          p_note: trimmedNote || undefined,
         })
       : await createClient().rpc("decide_toil_request", {
           p_request_id: requestId,
           p_decision: decision,
-          p_note: note.trim() || undefined,
+          p_note: trimmedNote || undefined,
         });
 
     if (result.error) {
@@ -52,10 +58,13 @@ export function ToilDecisionButtons({
     <div className={showNote ? "decision-stack expanded-decision" : "decision-stack"}>
       {showNote ? (
         <label className="decision-note-field">
-          Decision note <span>(optional)</span>
+          Decision note <span>(required when declining)</span>
           <textarea
             value={note}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => {
+              setNote(event.target.value);
+              if (error.startsWith("Add a short reason")) setError("");
+            }}
             placeholder="Add context for the employee and audit trail"
             maxLength={600}
           />
@@ -67,6 +76,7 @@ export function ToilDecisionButtons({
           disabled={working !== null}
           aria-label={kind === "cancellation" ? "Approve TOIL cancellation" : "Approve TOIL request"}
           onClick={() => decide("approve")}
+          type="button"
         >
           <Check size={18}/>
           {showNote ? <span>Approve</span> : null}
@@ -76,6 +86,7 @@ export function ToilDecisionButtons({
           disabled={working !== null}
           aria-label={kind === "cancellation" ? "Decline TOIL cancellation" : "Decline TOIL request"}
           onClick={() => decide("decline")}
+          type="button"
         >
           <X size={18}/>
           {showNote ? <span>Decline</span> : null}
