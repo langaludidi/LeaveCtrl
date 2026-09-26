@@ -43,28 +43,18 @@ export async function GET() {
     ["org_admin", "hr_admin", "reporter"].includes(role)
   );
 
-  let peopleQuery = supabase
-    .from("employees")
-    .select("id, first_name, last_name, department_id")
-    .eq("organisation_id", employee.organisation_id)
-    .eq("employment_status", "active")
-    .order("first_name");
-
-  if (managerScope) {
-    peopleQuery = peopleQuery.or(
-      `id.eq.${employee.id},manager_employee_id.eq.${employee.id}`
-    );
-  } else if (!adminScope) {
-    peopleQuery = peopleQuery.eq("id", employee.id);
-  }
-
   const [
-    { data: people },
+    { data: allPeople },
     { data: departments },
     { data: annualType },
     { data: currentConditions },
   ] = await Promise.all([
-    peopleQuery,
+    supabase
+      .from("employees")
+      .select("id, first_name, last_name, department_id, manager_employee_id")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("employment_status", "active")
+      .order("first_name"),
     supabase
       .from("departments")
       .select("id, name")
@@ -77,11 +67,24 @@ export async function GET() {
       .maybeSingle(),
     supabase
       .from("employee_current_conditions")
-      .select("employee_id, department_id")
+      .select("employee_id, department_id, manager_employee_id")
       .eq("organisation_id", employee.organisation_id),
   ]);
 
-  const employeeIds = (people ?? []).map((person) => person.id);
+  const conditionMap = new Map(
+    (currentConditions ?? []).map((row) => [row.employee_id, row])
+  );
+  const people = adminScope
+    ? allPeople ?? []
+    : managerScope
+      ? (allPeople ?? []).filter((person) => {
+          if (person.id === employee.id) return true;
+          const condition = conditionMap.get(person.id);
+          return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
+        })
+      : (allPeople ?? []).filter((person) => person.id === employee.id);
+
+  const employeeIds = people.map((person) => person.id);
   const today = dateInTimeZone(
     new Date(),
     organisation?.timezone ?? "UTC"
@@ -216,7 +219,7 @@ export async function GET() {
       : []),
   ];
 
-  const rows = (people ?? []).map((person) => {
+  const rows = people.map((person) => {
     const departmentId = currentDepartmentMap.get(person.id) ?? person.department_id;
     const balance = balanceMap.get(person.id) ?? 0;
     const pending = pendingMap.get(person.id) ?? 0;
