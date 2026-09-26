@@ -1,22 +1,50 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 const appUrl = Deno.env.get("LEAVECTRL_APP_URL") ?? "https://leave-ctrl-2eqn.vercel.app";
+const allowedOrigin = new URL(appUrl).origin;
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin");
+  return {
+    ...(origin === allowedOrigin ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+function json(req: Request, body: Record<string, unknown>, status = 200) {
+  return Response.json(body, {
+    status,
+    headers: {
+      ...corsHeaders(req),
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
 Deno.serve(async (req: Request) => {
+  const headers = corsHeaders(req);
+  const origin = req.headers.get("Origin");
+
+  if (origin && origin !== allowedOrigin) {
+    return json(req, { error: "origin_not_allowed" }, 403);
+  }
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers });
+  }
+
+  if (req.method !== "POST") {
+    return json(req, { error: "method_not_allowed" }, 405);
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return Response.json({ error: "authentication_required" }, { status: 401, headers: corsHeaders });
+      return json(req, { error: "authentication_required" }, 401);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -24,7 +52,8 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-      throw new Error("supabase_function_configuration_missing");
+      console.error("send-employee-invite: required Supabase configuration is missing");
+      return json(req, { error: "service_unavailable" }, 503);
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -38,16 +67,26 @@ Deno.serve(async (req: Request) => {
     } = await userClient.auth.getUser();
 
     if (userError || !user) {
-      return Response.json({ error: "authentication_required" }, { status: 401, headers: corsHeaders });
+      return json(req, { error: "authentication_required" }, 401);
     }
 
-    const body = await req.json();
-    const employeeId = String(body.employeeId ?? "");
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return json(req, { error: "invalid_json" }, 400);
+    }
+
+    const employeeId = String(body.employeeId ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const token = String(body.token ?? "").trim();
 
     if (!employeeId || !email || !token) {
-      return Response.json({ error: "required_fields_missing" }, { status: 400, headers: corsHeaders });
+      return json(req, { error: "required_fields_missing" }, 400);
+    }
+
+    if (employeeId.length > 64 || email.length > 320 || token.length > 256) {
+      return json(req, { error: "invalid_request" }, 400);
     }
 
     const { data: employee, error: employeeError } = await userClient
@@ -57,18 +96,18 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (employeeError || !employee) {
-      return Response.json({ error: "employee_not_found" }, { status: 404, headers: corsHeaders });
+      return json(req, { error: "employee_not_found" }, 404);
     }
 
     if (employee.user_id) {
-      return Response.json({ error: "employee_already_has_access" }, { status: 409, headers: corsHeaders });
+      return json(req, { error: "employee_already_has_access" }, 409);
     }
 
     if (String(employee.email).toLowerCase() !== email) {
-      return Response.json({ error: "email_mismatch" }, { status: 400, headers: corsHeaders });
+      return json(req, { error: "email_mismatch" }, 400);
     }
 
-    const { data: membership } = await userClient
+    const { data: membership, error: membershipError } = await userClient
       .from("organisation_memberships")
       .select("role")
       .eq("organisation_id", employee.organisation_id)
@@ -76,8 +115,8 @@ Deno.serve(async (req: Request) => {
       .eq("is_active", true)
       .in("role", ["org_admin", "hr_admin"]);
 
-    if (!membership?.length) {
-      return Response.json({ error: "not_authorised" }, { status: 403, headers: corsHeaders });
+    if (membershipError || !membership?.length) {
+      return json(req, { error: "not_authorised" }, 403);
     }
 
     const { data: tokenValid, error: tokenError } = await userClient.rpc(
@@ -89,10 +128,7 @@ Deno.serve(async (req: Request) => {
     );
 
     if (tokenError || tokenValid !== true) {
-      return Response.json(
-        { error: "invitation_token_invalid_or_expired" },
-        { status: 400, headers: corsHeaders }
-      );
+      return json(req, { error: "invitation_token_invalid_or_expired" }, 400);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -111,17 +147,17 @@ Deno.serve(async (req: Request) => {
     });
 
     if (inviteError) {
-      return Response.json(
-        { error: "invite_send_failed", detail: inviteError.message },
-        { status: 400, headers: corsHeaders }
-      );
+      console.error("send-employee-invite: Supabase Auth invite failed", {
+        employeeId,
+        organisationId: employee.organisation_id,
+        code: inviteError.code,
+      });
+      return json(req, { error: "invite_send_failed" }, 400);
     }
 
-    return Response.json({ sent: true }, { headers: corsHeaders });
+    return json(req, { sent: true });
   } catch (error) {
-    return Response.json(
-      { error: "unexpected_error", detail: error instanceof Error ? error.message : String(error) },
-      { status: 500, headers: corsHeaders }
-    );
+    console.error("send-employee-invite: unexpected failure", error);
+    return json(req, { error: "unexpected_error" }, 500);
   }
 });
