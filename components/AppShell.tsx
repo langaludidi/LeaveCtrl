@@ -49,9 +49,16 @@ export function AppShell({
     const supabase = createClient();
 
     async function loadUnread() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        if (active) setUnreadNotifications(0);
+        return;
+      }
+
       const { count } = await supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
+        .eq("recipient_user_id", user.id)
         .is("read_at", null);
 
       if (active) setUnreadNotifications(count ?? 0);
