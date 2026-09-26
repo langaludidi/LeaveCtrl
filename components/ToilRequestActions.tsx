@@ -18,10 +18,12 @@ export function ToilDecisionButtons({
   const [working, setWorking] = useState<"approve" | "decline" | null>(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
+  const [declineMode, setDeclineMode] = useState(false);
 
   async function decide(decision: "approve" | "decline") {
     const trimmedNote = note.trim();
-    if (showNote && decision === "decline" && !trimmedNote) {
+    if (decision === "decline" && !trimmedNote) {
+      setDeclineMode(true);
       setError("Add a short reason before declining so the employee and audit trail have context.");
       return;
     }
@@ -54,9 +56,11 @@ export function ToilDecisionButtons({
     router.refresh();
   }
 
+  const expanded = showNote || declineMode;
+
   return (
-    <div className={showNote ? "decision-stack expanded-decision" : "decision-stack"}>
-      {showNote ? (
+    <div className={expanded ? "decision-stack expanded-decision" : "decision-stack"}>
+      {expanded ? (
         <label className="decision-note-field">
           Decision note <span>(required when declining)</span>
           <textarea
@@ -67,6 +71,7 @@ export function ToilDecisionButtons({
             }}
             placeholder="Add context for the employee and audit trail"
             maxLength={600}
+            autoFocus={declineMode && !showNote}
           />
         </label>
       ) : null}
@@ -79,7 +84,7 @@ export function ToilDecisionButtons({
           type="button"
         >
           <Check size={18}/>
-          {showNote ? <span>Approve</span> : null}
+          {expanded ? <span>Approve</span> : null}
         </button>
         <button
           className="reject"
@@ -89,7 +94,7 @@ export function ToilDecisionButtons({
           type="button"
         >
           <X size={18}/>
-          {showNote ? <span>Decline</span> : null}
+          {expanded ? <span>Decline</span> : null}
         </button>
       </div>
       {error ? <small className="inline-error">{error}</small> : null}
