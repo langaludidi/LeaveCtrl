@@ -23,6 +23,10 @@ export default async function RequestsPage({
   const { supabase, employee, displayName, roles } = await getCurrentContext();
   if (!employee) return null;
 
+  const canApprove = roles.some((role) =>
+    ["org_admin", "hr_admin", "manager"].includes(role)
+  );
+
   const [
     { data: leaveTypes },
     { data: employees },
@@ -86,12 +90,12 @@ export default async function RequestsPage({
   const employeeMap = new Map(
     (employees ?? []).map((item) => [item.id, `${item.first_name} ${item.last_name}`])
   );
-  const approvals = (visibleWork ?? []).filter(
-    (request) => request.employee_id !== employee.id
-  );
-  const toilApprovals = (visibleToilWork ?? []).filter(
-    (request) => request.employee_id !== employee.id
-  );
+  const approvals = canApprove
+    ? (visibleWork ?? []).filter((request) => request.employee_id !== employee.id)
+    : [];
+  const toilApprovals = canApprove
+    ? (visibleToilWork ?? []).filter((request) => request.employee_id !== employee.id)
+    : [];
 
   const coverageWarningMap = new Map<string, number>();
   for (const check of coverageChecks ?? []) {
@@ -279,8 +283,12 @@ export default async function RequestsPage({
 
             {!approvals.length && !toilApprovals.length ? (
               <div className="empty-work-state">
-                <strong>Nothing needs your approval</strong>
-                <span>New leave, cancellation and TOIL requests will appear here.</span>
+                <strong>{canApprove ? "Nothing needs your approval" : "No approval work assigned"}</strong>
+                <span>
+                  {canApprove
+                    ? "New leave, cancellation and TOIL requests will appear here."
+                    : "Approval actions are available only to authorised managers and administrators."}
+                </span>
               </div>
             ) : null}
           </div>
