@@ -26,23 +26,34 @@ function formatTimestamp(value: string) {
   }).format(new Date(value));
 }
 
-export function NotificationList({
-  items,
-}: {
-  items: NotificationItem[];
-}) {
+function notificationHref(item: NotificationItem) {
+  if (!item.entity_id) return null;
+
+  switch (item.entity_type) {
+    case "leave_request":
+    case "leave_requests":
+      return `/requests/leave/${item.entity_id}`;
+    case "toil_request":
+    case "toil_requests":
+      return `/requests/toil/${item.entity_id}`;
+    default:
+      return null;
+  }
+}
+
+export function NotificationList({ items }: { items: NotificationItem[] }) {
   const router = useRouter();
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
 
-  async function markOne(id: string, open = false) {
-    setWorking(id);
+  async function markOne(item: NotificationItem, open = false) {
+    setWorking(item.id);
     setError("");
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", item.id);
 
     setWorking("");
     if (updateError) {
@@ -53,7 +64,7 @@ export function NotificationList({
     window.dispatchEvent(new Event("leavectrl-notifications-changed"));
 
     if (open) {
-      router.push("/requests");
+      router.push(notificationHref(item) ?? "/requests");
     } else {
       router.refresh();
     }
@@ -87,12 +98,7 @@ export function NotificationList({
           <span>{unread ? `${unread} unread` : "You're up to date"}</span>
         </div>
         {unread ? (
-          <button
-            className="btn secondary"
-            type="button"
-            onClick={markAll}
-            disabled={working === "all"}
-          >
+          <button className="btn secondary" type="button" onClick={markAll} disabled={working === "all"}>
             <CheckCheck size={15}/>
             {working === "all" ? "Updating…" : "Mark all read"}
           </button>
@@ -102,52 +108,40 @@ export function NotificationList({
       {error ? <div className="auth-alert error">{error}</div> : null}
 
       <div className="notification-list">
-        {items.map((item) => (
-          <article
-            className={`notification-row ${item.read_at ? "" : "unread"}`}
-            key={item.id}
-          >
-            <div className="notification-state">
-              <Circle size={9} fill={item.read_at ? "transparent" : "currentColor"}/>
-            </div>
-            <div className="notification-copy">
-              <div className="notification-heading">
-                <strong>{item.title}</strong>
-                <span>{formatTimestamp(item.created_at)}</span>
+        {items.map((item) => {
+          const href = notificationHref(item);
+          return (
+            <article className={`notification-row ${item.read_at ? "" : "unread"}`} key={item.id}>
+              <div className="notification-state">
+                <Circle size={9} fill={item.read_at ? "transparent" : "currentColor"}/>
               </div>
-              <p>{item.body}</p>
-            </div>
-            <div className="notification-actions">
-              {!item.read_at ? (
-                <button
-                  className="request-text-action"
-                  type="button"
-                  disabled={working === item.id}
-                  onClick={() => markOne(item.id)}
-                >
-                  Mark read
-                </button>
-              ) : null}
-              {item.entity_type ? (
-                <button
-                  className="request-text-action"
-                  type="button"
-                  disabled={working === item.id}
-                  onClick={() => markOne(item.id, true)}
-                >
-                  Open <ExternalLink size={12}/>
-                </button>
-              ) : null}
-            </div>
-          </article>
-        ))}
+              <div className="notification-copy">
+                <div className="notification-heading">
+                  <strong>{item.title}</strong>
+                  <span>{formatTimestamp(item.created_at)}</span>
+                </div>
+                <p>{item.body}</p>
+              </div>
+              <div className="notification-actions">
+                {!item.read_at ? (
+                  <button className="request-text-action" type="button" disabled={working === item.id} onClick={() => markOne(item)}>
+                    Mark read
+                  </button>
+                ) : null}
+                {item.entity_id ? (
+                  <button className="request-text-action" type="button" disabled={working === item.id} onClick={() => markOne(item, true)} title={href ? "Open request details" : "Open requests"}>
+                    Open <ExternalLink size={12}/>
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
 
         {!items.length ? (
           <div className="empty-work-state">
             <strong>No notifications yet</strong>
-            <span>
-              Leave and TOIL approval activity will appear here as it happens.
-            </span>
+            <span>Leave and TOIL approval activity will appear here as it happens.</span>
           </div>
         ) : null}
       </div>
