@@ -41,7 +41,13 @@ function notificationHref(item: NotificationItem) {
   }
 }
 
-export function NotificationList({ items }: { items: NotificationItem[] }) {
+export function NotificationList({
+  items,
+  recipientUserId,
+}: {
+  items: NotificationItem[];
+  recipientUserId: string;
+}) {
   const router = useRouter();
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -53,7 +59,8 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
     const { error: updateError } = await supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
-      .eq("id", item.id);
+      .eq("id", item.id)
+      .eq("recipient_user_id", recipientUserId);
 
     setWorking("");
     if (updateError) {
@@ -77,6 +84,7 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
     const { error: updateError } = await supabase
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
+      .eq("recipient_user_id", recipientUserId)
       .is("read_at", null);
 
     setWorking("");
