@@ -43,7 +43,9 @@ Verified with rolled-back one-day Annual Leave transactions:
 - cancellation decline requires a reason;
 - declined cancellation preserves approved leave and balance;
 - approved cancellation restores entitlement;
-- pending leave withdrawal releases the reservation.
+- pending leave withdrawal releases the reservation;
+- duplicate/stale leave decisions are rejected without a second ledger effect;
+- leave/TOIL mutual-exclusion is enforced in both directions on the same working date.
 
 ### TOIL lifecycle — PASS
 
@@ -61,6 +63,7 @@ Verified using rolled-back overtime-to-TOIL credits:
 - organisation-admin fallback decision works;
 - declined TOIL request releases reservation;
 - pending TOIL withdrawal releases reservation;
+- duplicate/stale TOIL decisions are rejected without a second ledger effect;
 - workflow notifications are generated across submit/decision/cancellation events.
 
 ### Invitation and access boundary — PASS
@@ -97,7 +100,7 @@ These are not code defects but remain before production sign-off:
 
 1. Enable **Supabase Auth leaked-password protection**.
 2. Resolve the duplicate Vercel production project connection. Both `leave-ctrl` and `leave-ctrl-2eqn` currently deploy the same GitHub `main` branch. One should be retained as the authoritative production project and the duplicate disconnected/decommissioned.
-3. Complete practical responsive/mobile and cross-browser UI regression.
+3. Complete practical cross-browser/device UI regression. Static responsive review is complete and identified/fixed mobile navigation reachability plus mobile touch-target issues; browser automation is still required for final visual sign-off.
 4. Run controlled human UAT for the principal Employee, Manager, HR/Admin, Reporter and Auditor journeys.
 5. Complete the final release checklist and production sign-off.
 
@@ -106,3 +109,14 @@ These are not code defects but remain before production sign-off:
 The Supabase security advisor currently reports authenticated-executable `SECURITY DEFINER` RPC warnings. These functions are intentionally exposed application commands/read models. They are not being mass-revoked merely to silence the advisor. Current review confirms the exposed functions authenticate through `auth.uid()`; mutations additionally enforce organisation/role/manager ownership as appropriate.
 
 The remaining Auth advisor warning is leaked-password protection, which requires the external Auth setting noted above.
+
+
+## Responsive static audit — PASS WITH VISUAL UAT REMAINING
+
+- All authorised mobile navigation destinations remain reachable through a horizontally scrollable navigation rail.
+- The prior <=480px rule that hid navigation destinations after the fourth item has been removed.
+- Mobile notification, sign-out, approve/decline and request-review controls now preserve practical touch targets.
+- Tables and the workforce calendar retain horizontal overflow containers rather than forcing destructive column compression.
+- CI includes a responsive-shell contract test that prevents positional hiding of navigation links and protects the main mobile touch-target rules.
+
+This is a static implementation audit, not a claim of cross-browser visual certification. Final physical/device or browser-driven UAT remains a release gate.
