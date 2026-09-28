@@ -57,6 +57,8 @@
 - [x] Production Next.js build runs in CI.
 - [x] Recent production deployments are READY.
 - [x] Recent Vercel runtime-error check found no runtime errors.
+- [x] Canonical production alias is publicly reachable.
+- [x] Unauthenticated protected routes resolve to the login surface with no-store caching.
 - [ ] Select one authoritative Vercel production project and disconnect/decommission the duplicate.
 
 ## Responsive and usability
@@ -64,6 +66,8 @@
 - [x] Static responsive breakpoints reviewed.
 - [x] Mobile navigation no longer hides authorised destinations.
 - [x] Key mobile touch targets hardened.
+- [x] Visible keyboard focus states added for interactive controls.
+- [x] Narrow-phone topbar collision risk removed.
 - [x] Wide tables/calendars use horizontal overflow.
 - [ ] Browser-driven desktop regression.
 - [ ] Browser-driven tablet regression.

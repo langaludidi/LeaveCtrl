@@ -120,3 +120,17 @@ The remaining Auth advisor warning is leaked-password protection, which requires
 - CI includes a responsive-shell contract test that prevents positional hiding of navigation links and protects the main mobile touch-target rules.
 
 This is a static implementation audit, not a claim of cross-browser visual certification. Final physical/device or browser-driven UAT remains a release gate.
+
+
+## Production alias and unauthenticated route guard — PASS
+
+- The canonical production alias `https://leave-ctrl.vercel.app` is publicly reachable; Vercel Authentication on generated deployment URLs does not block the production alias.
+- Unauthenticated requests to `/`, `/team`, `/reports`, `/audit` and `/setup` resolve to the LeaveCtrl login route.
+- Login responses are served with private/no-cache/no-store semantics.
+- The same source repository is still connected to two Vercel production projects; duplicate-project cleanup remains an operational release gate, not a public-access blocker.
+
+## Keyboard and narrow-phone static audit — PASS WITH HUMAN VISUAL UAT REMAINING
+
+- Global `:focus-visible` styling now covers links, buttons, inputs, selects and textareas.
+- At narrow phone widths the decorative topbar context is removed so notification/profile/sign-out controls do not collide.
+- These protections are covered by the responsive-shell CI contract.
