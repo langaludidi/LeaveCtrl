@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -21,7 +22,7 @@ export async function signIn(formData: FormData) {
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
+    redirect(`/login?error=${encodeURIComponent(signInErrorMessage(error.message))}&next=${encodeURIComponent(next)}`);
   }
 
   redirect(next);
@@ -60,7 +61,7 @@ export async function signUp(formData: FormData) {
 
   if (error) {
     redirect(
-      `/login?mode=signup&error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`
+      `/login?mode=signup&error=${encodeURIComponent(signUpErrorMessage(error.message))}&next=${encodeURIComponent(next)}`
     );
   }
 
