@@ -55,3 +55,16 @@ test("keyboard users receive a persistent visible focus treatment", async () => 
   assert.match(css, /outline\s*:\s*3px\s+solid/i);
   assert.match(css, /outline-offset\s*:\s*2px/i);
 });
+
+test("narrow phone header prioritises reachable actions over decorative context", async () => {
+  const css = await readFile("app/globals.css", "utf8");
+
+  assert.match(
+    css,
+    /@media\(max-width:520px\)[\s\S]*?\.topbar-context\{display:none\}/i
+  );
+  assert.match(
+    css,
+    /@media\(max-width:520px\)[\s\S]*?\.top-actions\{[^}]*justify-content:flex-end/i
+  );
+});

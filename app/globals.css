@@ -391,3 +391,8 @@ textarea:focus-visible{
   outline:3px solid rgba(0,128,128,.32);
   outline-offset:2px;
 }
+@media(max-width:520px){
+  .topbar-context{display:none}
+  .topbar{justify-content:flex-end}
+  .top-actions{width:100%;justify-content:flex-end}
+}
