@@ -57,7 +57,7 @@ export function ManagerAssignment({ people }: { people: Person[] }) {
       <div className="card-title">
         <div>
           <h2>Manager assignment</h2>
-          <p className="card-subtitle">Reporting lines control who can see and approve a direct report's requests.</p>
+          <p className="card-subtitle">Reporting lines control who can see and approve a direct report's requests. Manager access is granted automatically when required.</p>
         </div>
       </div>
 
