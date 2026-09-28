@@ -119,21 +119,25 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "not_authorised" }, 403);
     }
 
-    const { data: tokenValid, error: tokenError } = await userClient.rpc(
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Invitation-token validation is deliberately service-role only. The caller's
+    // authenticated user ID is passed explicitly and re-authorised by the RPC so
+    // the browser cannot invoke this privileged validation helper directly.
+    const { data: tokenValid, error: tokenError } = await supabaseAdmin.rpc(
       "validate_employee_invitation_for_delivery",
       {
         p_employee_id: employeeId,
         p_token: token,
+        p_actor_user_id: user.id,
       }
     );
 
     if (tokenError || tokenValid !== true) {
       return json(req, { error: "invitation_token_invalid_or_expired" }, 400);
     }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
 
     const next = `/activate?token=${encodeURIComponent(token)}`;
     const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`;
