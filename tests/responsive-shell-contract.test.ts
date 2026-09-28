@@ -38,3 +38,20 @@ test("primary mobile controls keep practical touch targets", async () => {
     /@media\(max-width:760px\)[\s\S]*?\.request-text-action\{[^}]*min-height:44px/i
   );
 });
+
+test("keyboard users receive a persistent visible focus treatment", async () => {
+  const css = await readFile("app/globals.css", "utf8");
+
+  for (const selector of [
+    "a:focus-visible",
+    "button:focus-visible",
+    "input:focus-visible",
+    "select:focus-visible",
+    "textarea:focus-visible",
+  ]) {
+    assert.match(css, new RegExp(selector.replace(":", "\\:")));
+  }
+
+  assert.match(css, /outline\s*:\s*3px\s+solid/i);
+  assert.match(css, /outline-offset\s*:\s*2px/i);
+});

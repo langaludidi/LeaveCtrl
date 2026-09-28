@@ -383,3 +383,11 @@
   .decision-card .approval-actions button{min-height:44px}
   .request-text-action{min-height:44px;padding:0 10px;align-items:center}
 }
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible{
+  outline:3px solid rgba(0,128,128,.32);
+  outline-offset:2px;
+}
