@@ -116,6 +116,8 @@ export function AppShell({
                 key={href}
                 href={href}
                 className={`nav-item ${active ? "active" : ""}`}
+                aria-label={label}
+                title={label}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{label}</span>
