@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
 import { safeInternalPath } from "@/lib/safe-internal-path";
+import { resolveAppBaseUrl } from "@/lib/app-base-url";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -38,10 +39,14 @@ export async function signUp(formData: FormData) {
   }
 
   const headerStore = await headers();
-  const origin = headerStore.get("origin");
-  const forwardedHost = headerStore.get("x-forwarded-host");
-  const forwardedProto = headerStore.get("x-forwarded-proto") ?? "https";
-  const baseUrl = origin ?? (forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined);
+  const baseUrl = resolveAppBaseUrl({
+    configuredUrl:
+      process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.LEAVECTRL_APP_URL,
+    vercelProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    requestOrigin: headerStore.get("origin"),
+    production: process.env.NODE_ENV === "production",
+  });
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
