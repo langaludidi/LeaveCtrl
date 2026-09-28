@@ -4,20 +4,16 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
+import { safeInternalPath } from "@/lib/safe-internal-path";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function safeNext(value: string) {
-  if (!value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-}
-
 export async function signIn(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
   const password = read(formData, "password");
-  const next = safeNext(read(formData, "next") || "/");
+  const next = safeInternalPath(read(formData, "next"), "/");
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -33,7 +29,7 @@ export async function signUp(formData: FormData) {
   const lastName = read(formData, "lastName");
   const email = read(formData, "email").toLowerCase();
   const password = read(formData, "password");
-  const next = safeNext(read(formData, "next") || "/onboarding");
+  const next = safeInternalPath(read(formData, "next"), "/onboarding");
 
   if (!firstName || !lastName || !email || password.length < 8) {
     redirect(
