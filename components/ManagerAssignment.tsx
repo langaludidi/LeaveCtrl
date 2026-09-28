@@ -40,7 +40,9 @@ export function ManagerAssignment({ people }: { people: Person[] }) {
       setError(
         rpcError.message === "employee_cannot_manage_self"
           ? "An employee cannot be assigned as their own manager."
-          : "We could not update this reporting line."
+          : rpcError.message === "manager_cycle_not_allowed"
+            ? "This assignment would create a circular reporting line."
+            : "We could not update this reporting line."
       );
       setSaving(false);
       return;
