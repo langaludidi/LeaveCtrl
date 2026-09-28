@@ -27,12 +27,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const nextStart = dateKey(addDays(start, 28));
 
   const [
-    { data: employees }, { data: departments }, { data: currentConditions }, { data: leaveTypes },
+    { data: workforceDirectory }, { data: departments }, { data: leaveTypes },
     { data: calendarFeed }, { data: holidays },
   ] = await Promise.all([
-    supabase.from("employees").select("id, first_name, last_name, department_id, employment_status").eq("organisation_id", employee.organisation_id).eq("employment_status", "active").order("first_name"),
+    supabase.rpc("get_workforce_directory"),
     supabase.from("departments").select("id, name").eq("organisation_id", employee.organisation_id),
-    supabase.from("employee_current_conditions").select("employee_id, department_id").eq("organisation_id", employee.organisation_id),
     supabase.from("leave_types").select("id, code, name, colour_token").eq("organisation_id", employee.organisation_id).eq("active", true).order("name"),
     supabase.rpc("get_workforce_calendar", { p_start_date: startKey, p_end_date: endKey }),
     supabase.from("public_holidays").select("holiday_date, name").eq("organisation_id", employee.organisation_id).gte("holiday_date", startKey).lte("holiday_date", endKey),
@@ -54,7 +53,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     : { data: [] };
 
   const departmentMap = new Map((departments ?? []).map((department) => [department.id, department.name]));
-  const currentDepartmentMap = new Map((currentConditions ?? []).map((condition) => [condition.employee_id, condition.department_id]));
   const typeMap = new Map((leaveTypes ?? []).map((type) => [type.id, type]));
   const pendingRequestMap = new Map((pendingLeave ?? []).map((request) => [request.id, request]));
   const holidayMap = new Map((holidays ?? []).map((holiday) => [holiday.holiday_date, holiday.name]));
@@ -70,13 +68,18 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   }
   const pendingToilByEmployeeDate = new Map((pendingToil ?? []).map((request) => [`${request.employee_id}:${request.leave_date}`, request]));
 
-  const visibleEmployees = [...(employees ?? [])].sort((a, b) => {
-    const departmentAId = currentDepartmentMap.get(a.id) ?? a.department_id;
-    const departmentBId = currentDepartmentMap.get(b.id) ?? b.department_id;
-    const departmentA = departmentAId ? departmentMap.get(departmentAId) ?? "" : "";
-    const departmentB = departmentBId ? departmentMap.get(departmentBId) ?? "" : "";
-    return departmentA.localeCompare(departmentB) || `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-  });
+  const visibleEmployees = (workforceDirectory ?? [])
+    .map((person) => ({
+      id: person.employee_id,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      department_id: person.department_id,
+    }))
+    .sort((a, b) => {
+      const departmentA = a.department_id ? departmentMap.get(a.department_id) ?? "" : "";
+      const departmentB = b.department_id ? departmentMap.get(b.department_id) ?? "" : "";
+      return departmentA.localeCompare(departmentB) || `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+    });
 
   return <AppShell displayName={displayName} role={roleLabel(roles)}>
     <section className="page-head split"><div><p className="eyebrow">WORKFORCE AVAILABILITY</p><h1>Company Calendar</h1><p>A privacy-aware four-week view of approved absence{canApprove ? ", actionable pending requests" : ""} and public holidays.</p></div>
@@ -94,7 +97,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       <div className="company-calendar-scroll"><div className="company-calendar-grid" style={{ gridTemplateColumns: `220px repeat(${days.length}, 42px)` }}>
         <div className="calendar-corner">Employee</div>
         {days.map((day) => { const key = dateKey(day); const holiday = holidayMap.get(key); const weekend = day.getUTCDay() === 0 || day.getUTCDay() === 6; const today = key === businessDate; return <div className={["calendar-day-head", weekend ? "weekend" : "", holiday ? "holiday" : "", today ? "today-column" : ""].filter(Boolean).join(" ")} key={key} title={holiday ?? undefined}><span>{new Intl.DateTimeFormat("en-ZA", { timeZone: "UTC", weekday: "short" }).format(day).slice(0, 2)}</span><strong>{day.getUTCDate()}</strong></div>; })}
-        {visibleEmployees.map((person) => { const departmentId = currentDepartmentMap.get(person.id) ?? person.department_id; return <div className="calendar-row-fragment" key={person.id}><div className="calendar-person"><strong>{person.first_name} {person.last_name}</strong><span>{departmentId ? departmentMap.get(departmentId) ?? "No department" : "No department"}</span></div>
+        {visibleEmployees.map((person) => { const departmentId = person.department_id; return <div className="calendar-row-fragment" key={person.id}><div className="calendar-person"><strong>{person.first_name} {person.last_name}</strong><span>{departmentId ? departmentMap.get(departmentId) ?? "No department" : "No department"}</span></div>
           {days.map((day) => { const key = dateKey(day); const mapKey = `${person.id}:${key}`; const pendingLeaveRequest = pendingLeaveByEmployeeDate.get(mapKey); const pendingToilRequest = pendingToilByEmployeeDate.get(mapKey); const approved = approvedByEmployeeDate.get(mapKey); const holiday = holidayMap.get(key); const weekend = day.getUTCDay() === 0 || day.getUTCDay() === 6; const today = key === businessDate;
             if (pendingLeaveRequest) { const type = typeMap.get(pendingLeaveRequest.leave_type_id); return <div key={key} className={`calendar-cell calendar-leave leave-${safeColour(type?.colour_token ?? null)} is-pending ${today ? "today-column" : ""}`} title={`${person.first_name} ${person.last_name} · ${type?.name ?? "Leave"} · Pending`}><span>{type?.code?.slice(0, 2) ?? "L"}</span></div>; }
             if (pendingToilRequest) return <div key={key} className={`calendar-cell calendar-leave toil-cell is-pending ${today ? "today-column" : ""}`} title={`${person.first_name} ${person.last_name} · TOIL · Pending`}><span>T</span></div>;

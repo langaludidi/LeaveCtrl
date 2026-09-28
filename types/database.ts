@@ -2208,6 +2208,15 @@ export type Database = {
           status: string
         }[]
       }
+      get_workforce_directory: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          department_id: string | null
+          employee_id: string
+          first_name: string
+          last_name: string
+        }[]
+      }
       liability_scheduled_days: {
         Args: {
           p_employee_id: string
