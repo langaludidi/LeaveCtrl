@@ -376,3 +376,10 @@
 .summary-icon{background:#edf5f4;color:var(--teal-800)}
 .text-link,.request-text-action{color:var(--teal-800)}
 .approval-person strong,.approval-date strong,.table-scroll strong{color:#26323d}
+@media(max-width:760px){
+  .notification-button{width:44px;height:44px}
+  .icon-btn{min-width:44px;min-height:44px;display:grid;place-items:center}
+  .approval-actions button{width:44px;height:44px}
+  .decision-card .approval-actions button{min-height:44px}
+  .request-text-action{min-height:44px;padding:0 10px;align-items:center}
+}
