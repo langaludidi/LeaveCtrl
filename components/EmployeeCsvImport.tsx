@@ -91,9 +91,19 @@ function boolValue(value: string, fallback = false) {
 }
 
 function validIsoDate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T12:00:00Z`);
-  return !Number.isNaN(date.getTime());
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 export function EmployeeCsvImport({
@@ -173,6 +183,12 @@ export function EmployeeCsvImport({
     if (!file) return;
 
     setFileName(file.name);
+    if (file.size > 2_000_000) {
+      setRows([]);
+      setError("The CSV is too large. Keep each V1 import under 2 MB and 300 employees.");
+      return;
+    }
+
     const text = await file.text();
     const parsed = parseCsv(text);
 
@@ -183,6 +199,15 @@ export function EmployeeCsvImport({
     }
 
     const headers = parsed[0].map(normaliseHeader);
+    const duplicateHeaders = headers.filter(
+      (header, position) => header && headers.indexOf(header) !== position
+    );
+    if (duplicateHeaders.length) {
+      setRows([]);
+      setError(`Duplicate CSV column: ${Array.from(new Set(duplicateHeaders)).join(", ")}.`);
+      return;
+    }
+
     const index = new Map(headers.map((header, position) => [header, position]));
     const required = ["first_name", "last_name", "email", "start_date"];
     const missing = required.filter((header) => !index.has(header));
@@ -205,12 +230,19 @@ export function EmployeeCsvImport({
     }
 
     const seenEmails = new Set<string>();
+    const seenEmployeeNumbers = new Set<string>();
+    const existingEmailSet = new Set(
+      existingPeople.map((person) => person.email.trim().toLowerCase()).filter(Boolean)
+    );
+
     const importedRows: ImportRow[] = parsed.slice(1).map((line, offset) => {
       const email = value(line, "email").toLowerCase();
       const startDate = value(line, "start_date");
       const openingAnnualBalance = value(line, "opening_annual_balance");
       const remuneration = value(line, "remuneration");
       const payFrequency = value(line, "pay_frequency") || "monthly";
+      const employeeNumber = value(line, "employee_number");
+      const managerEmail = value(line, "manager_email").toLowerCase();
       const errors: string[] = [];
 
       if (!value(line, "first_name")) errors.push("First name is required.");
@@ -218,7 +250,23 @@ export function EmployeeCsvImport({
       if (!email || !/^\S+@\S+\.\S+$/.test(email)) errors.push("Valid email is required.");
       if (!validIsoDate(startDate)) errors.push("Start date must be YYYY-MM-DD.");
       if (seenEmails.has(email)) errors.push("Duplicate email in this file.");
+      if (existingEmailSet.has(email)) errors.push("Employee email already exists.");
       if (email) seenEmails.add(email);
+
+      if (employeeNumber) {
+        const employeeNumberKey = employeeNumber.toLowerCase();
+        if (seenEmployeeNumbers.has(employeeNumberKey)) {
+          errors.push("Duplicate employee number in this file.");
+        }
+        seenEmployeeNumbers.add(employeeNumberKey);
+      }
+
+      if (managerEmail && !/^\S+@\S+\.\S+$/.test(managerEmail)) {
+        errors.push("Manager email is invalid.");
+      }
+      if (managerEmail && managerEmail === email) {
+        errors.push("An employee cannot be their own manager.");
+      }
 
       if (
         openingAnnualBalance &&
@@ -264,9 +312,9 @@ export function EmployeeCsvImport({
         lastName: value(line, "last_name"),
         email,
         startDate,
-        employeeNumber: value(line, "employee_number"),
+        employeeNumber,
         department,
-        managerEmail: value(line, "manager_email").toLowerCase(),
+        managerEmail,
         workSchedule: schedule,
         openingAnnualBalance,
         remuneration,
@@ -276,6 +324,29 @@ export function EmployeeCsvImport({
         errors,
       };
     });
+
+    const importedEmailSet = new Set(
+      importedRows.map((row) => row.email).filter(Boolean)
+    );
+    const referencedManagerEmails = new Set(
+      importedRows.map((row) => row.managerEmail).filter(Boolean)
+    );
+
+    for (const row of importedRows) {
+      if (
+        row.managerEmail &&
+        !existingEmailSet.has(row.managerEmail) &&
+        !importedEmailSet.has(row.managerEmail)
+      ) {
+        row.errors.push(`Manager email was not found: ${row.managerEmail}.`);
+      }
+
+      // If an imported employee is referenced as a manager, ensure the invitation
+      // grants the Manager role needed to access team/approval work.
+      if (referencedManagerEmails.has(row.email)) {
+        row.managerRole = true;
+      }
+    }
 
     setRows(importedRows);
   }
