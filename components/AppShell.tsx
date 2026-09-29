@@ -13,8 +13,10 @@ import {
   Gauge,
   Home,
   LogOut,
+  Menu,
   Settings,
   Users,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,6 +45,7 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +76,10 @@ export function AppShell({
     };
   }, [pathname]);
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
   const canManagePeople = ["Organisation Admin", "HR Admin", "Manager"].includes(role);
   const canReport = ["Organisation Admin", "HR Admin", "Manager", "Reporter", "Auditor"].includes(role);
   const canAdmin = ["Organisation Admin", "HR Admin"].includes(role);
@@ -99,12 +106,23 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
         <Link href="/" className="brand" aria-label="LeaveCtrl home">
           <span>Leave</span>Ctrl
         </Link>
 
-        <nav className="nav-list">
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={mobileNavOpen}
+          aria-controls="primary-navigation"
+          onClick={() => setMobileNavOpen((open) => !open)}
+        >
+          {mobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+
+        <nav id="primary-navigation" className="nav-list">
           {nav.map(({ href, label, icon: Icon }) => {
             const active =
               pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -118,6 +136,7 @@ export function AppShell({
                 className={`nav-item ${active ? "active" : ""}`}
                 aria-label={label}
                 title={label}
+                onClick={() => setMobileNavOpen(false)}
               >
                 <Icon size={20} strokeWidth={1.8} />
                 <span>{label}</span>
@@ -132,6 +151,15 @@ export function AppShell({
           <span>South Africa</span>
         </div>
       </aside>
+
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          className="mobile-nav-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
 
       <div className="app-main">
         <header className="topbar">

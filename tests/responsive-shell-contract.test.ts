@@ -14,10 +14,17 @@ test("mobile navigation keeps every authorised destination reachable", async () 
 
   assert.match(
     css,
-    /@media\(max-width:760px\)[\s\S]*?\.nav-list\{[^}]*overflow-x:auto/i,
-    "Mobile navigation must remain horizontally reachable"
+    /@media\(max-width:760px\)[\s\S]*?\.nav-list\{[^}]*display:none[^}]*position:absolute[^}]*flex-direction:column/i,
+    "Mobile navigation should be a compact drawer rather than a full-height stacked sidebar"
   );
-
+  assert.match(
+    css,
+    /\.sidebar\.mobile-nav-open \.nav-list\{display:flex\}/i
+  );
+  assert.match(shell, /className="mobile-nav-toggle"/);
+  assert.match(shell, /aria-expanded=\{mobileNavOpen\}/);
+  assert.match(shell, /aria-controls="primary-navigation"/);
+  assert.match(shell, /className="mobile-nav-backdrop"/);
   assert.match(shell, /aria-label=\{label\}/);
   assert.match(shell, /title=\{label\}/);
 });
@@ -25,6 +32,10 @@ test("mobile navigation keeps every authorised destination reachable", async () 
 test("primary mobile controls keep practical touch targets", async () => {
   const css = await readFile("app/globals.css", "utf8");
 
+  assert.match(
+    css,
+    /@media\(max-width:760px\)[\s\S]*?\.mobile-nav-toggle\{[^}]*width:44px;[^}]*height:44px/i
+  );
   assert.match(
     css,
     /@media\(max-width:760px\)[\s\S]*?\.notification-button\{[^}]*width:44px;[^}]*height:44px/i
