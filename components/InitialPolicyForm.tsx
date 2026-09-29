@@ -102,6 +102,7 @@ export function InitialPolicyForm({
           </span>
         </div>
         <select
+          aria-label="Leave cycle basis"
           className="native-field policy-cycle-select"
           value={cycleBasis}
           onChange={(event) =>

@@ -199,6 +199,7 @@ export function OrganisationControls({
                   <td>{person.name}</td>
                   <td>
                     <select
+                      aria-label={`Department for ${person.name}`}
                       className="inline-table-select"
                       value={person.departmentId ?? ""}
                       onChange={(event) =>
@@ -216,6 +217,7 @@ export function OrganisationControls({
                   </td>
                   <td>
                     <select
+                      aria-label={`Work schedule for ${person.name}`}
                       className="inline-table-select"
                       value={person.scheduleId ?? ""}
                       onChange={(event) =>
