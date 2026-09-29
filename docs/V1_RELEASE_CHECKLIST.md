@@ -57,15 +57,17 @@
 - [x] Unit/security contract tests run in CI.
 - [x] Dependency audit runs in CI.
 - [x] Production Next.js build runs in CI.
-- [x] Recent production deployments are READY.
-- [x] Recent Vercel runtime-error check found no runtime errors.
-- [x] Canonical production alias is publicly reachable.
+- [x] Canonical production domain is publicly reachable.
 - [x] Unauthenticated protected routes resolve to the login surface with no-store caching.
 - [x] Baseline browser security headers verified live in production.
-- [x] Latest production deployment is READY on the authoritative Vercel project.
-- [x] Recent production runtime-error check is clean.
-- [x] Authoritative Vercel production project selected: `leave-ctrl` (`leave-ctrl.vercel.app`).
-- [ ] Disconnect/decommission duplicate Vercel project `leave-ctrl-2eqn` (requires Vercel project-admin write capability).
+- [x] Canonical production project selected on deployment/domain evidence: `leave-ctrl`.
+- [x] Last known-good production deployment identified: `dpl_Cej6MeE3U6s4GRESLzTHgbEZ6HUj` at commit `47a78c9c0675efc8d5698aae3a966a75efbef6db`.
+- [ ] Complete project-admin settings/environment comparison between `leave-ctrl` and `leave-ctrl-2eqn`; current connected Vercel capability does not expose those settings safely.
+- [ ] Deploy the exact approved current `main` commit through canonical project `leave-ctrl`.
+- [ ] Verify `https://www.leavectrl.co.za` serves that exact approved commit.
+- [ ] Complete post-deployment authenticated production smoke tests.
+- [ ] Stop duplicate project `leave-ctrl-2eqn` from creating competing Git production deployments after canonical production is verified.
+- [ ] Disconnect/archive/decommission `leave-ctrl-2eqn` only after confirming no unique configuration or rollback dependency remains.
 
 ## Responsive and usability
 
@@ -100,6 +102,22 @@
 - [ ] Re-test password recovery after SMTP correction and confirm Auth `/recover` returns 200.
 - [ ] Confirm a recovery email is received and completes the reset flow.
 
+## P0 deployment reconciliation gate
+
+- [x] Production-domain divergence reproduced and documented.
+- [x] `www.leavectrl.co.za` confirmed to resolve to `leave-ctrl` deployment `dpl_Cej6MeE3U6s4GRESLzTHgbEZ6HUj` at commit `47a78c9c0675efc8d5698aae3a966a75efbef6db`.
+- [x] Both Vercel projects confirmed to receive deployments from `langaludidi/LeaveCtrl`.
+- [x] Duplicate-project split deployment behaviour reproduced: a newer `main` commit succeeded on `leave-ctrl-2eqn` while `leave-ctrl` was rate-limited.
+- [x] Repository/deployed Supabase migration parity restored on the P0 branch.
+- [x] Cross-tenant, self-approval, manager-authorization and HR-mutation negative gates re-run successfully.
+- [x] Annual leave and TOIL approval/cancellation/balance-restoration lifecycles re-run in rollback-only transactions.
+- [x] Event-based leave direct-RPC balance-semantics defect fixed and regression-tested.
+- [ ] Vercel free-plan build-rate limit has reset, allowing an exact release-candidate deployment.
+- [ ] Canonical-project environment/settings presence and target scoping verified without revealing secret values.
+- [ ] Exact approved `main` commit deployed to `leave-ctrl`.
+- [ ] Production domain verified against exact commit and deployment ID.
+- [ ] Post-deployment production smoke and browser/device regression complete.
+
 ## Go-live gate
 
-Production sign-off requires all unchecked security/deployment items resolved and controlled human UAT completed without an unresolved P0/P1 issue.
+Production sign-off requires the P0 deployment reconciliation gate above, all other unchecked release items, and controlled human UAT to pass without an unresolved P0/P1 issue.

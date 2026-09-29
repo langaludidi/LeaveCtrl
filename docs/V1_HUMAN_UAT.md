@@ -6,7 +6,7 @@
 
 Use the authoritative production project:
 
-- Application: `https://leave-ctrl.vercel.app`
+- Application: `https://www.leavectrl.co.za` (use only after the P0 deployment reconciliation verifies the exact approved commit on this domain)
 - Git branch: `main`
 - Supabase project: LeaveCtrl / Leave Hub
 

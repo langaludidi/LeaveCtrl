@@ -179,14 +179,16 @@ Verified on the live production alias after deployment:
 
 The header contract is enforced in CI.
 
-## Current release-head verification
+## Current release-head verification — P0 reconciliation in progress
 
-- CI: PASS (install, unit/security tests, dependency audit, production build).
-- Authoritative Vercel project: `leave-ctrl`.
-- Latest production deployment: READY.
-- Recent Vercel runtime errors: none.
-- Recent production request statuses observed: normal 200 and 307 responses only.
-- Supabase performance advisor: informational unused-index notices only; no indexes removed at this stage because usage volume is still too low for safe pruning.
+- GitHub CI on the current pre-P0 `main` head `b5caaaeeb9e6cc7e06ba2f63c2d8fe5611577db0`: **PASS** (clean install, unit/security tests, dependency audit, production Next.js build).
+- Selected canonical Vercel production project: `leave-ctrl`.
+- The production domain is **not current**: `www.leavectrl.co.za` resolves to deployment `dpl_Cej6MeE3U6s4GRESLzTHgbEZ6HUj`, commit `47a78c9c0675efc8d5698aae3a966a75efbef6db`.
+- `leave-ctrl-2eqn` has newer READY deployments, but those do not satisfy production release because it does not own the production domain.
+- New `main` deployments are presently blocked on both projects by the Vercel free-plan deployment-rate limit.
+- Canonical `leave-ctrl` runtime-error aggregation is clean for the recent seven-day window.
+- A project-admin comparison of Vercel environment/settings remains required because the connected Vercel capability does not expose environment variables, Git/root/build overrides, protection settings or secret target scoping.
+- Supabase migration parity is restored on the P0 branch and must be rechecked after that branch merges.
 
 
 ## Backup and recovery posture
@@ -212,3 +214,28 @@ Release validation after correction:
 3. confirm the recovery email arrives;
 4. complete reset using a strong password;
 5. confirm global sign-out and successful sign-in with the new password.
+
+
+## 30 September 2026 — P0 Vercel production-path reconciliation
+
+A production-path divergence was confirmed. Two Vercel projects were created approximately 59 seconds apart and both receive Git deployments from the same `langaludidi/LeaveCtrl` repository. The evidence available does not prove the precise console action that created the duplicate; it is consistent with a duplicate import/project creation rather than an intentional two-environment architecture.
+
+The production-domain owner is `leave-ctrl`. Its last known-good custom-domain deployment is `dpl_Cej6MeE3U6s4GRESLzTHgbEZ6HUj` at `47a78c9c0675efc8d5698aae3a966a75efbef6db`. A newer commit, `f71254ba197a6f096e38d4de8bb58faedcb6ab67`, deployed successfully to `leave-ctrl-2eqn` while the equivalent `leave-ctrl` deployment was rate-limited. This demonstrates why READY on the duplicate project cannot be treated as production deployment evidence.
+
+The canonical project decision is therefore `leave-ctrl`, subject to one remaining pre-promotion configuration gate: compare project-level environment/settings presence and target scoping without exposing secret contents. Current connected Vercel tooling can inspect projects, deployments, aliases and runtime evidence but does not expose the environment/settings surfaces required for this comparison.
+
+Release-gate work completed during this reconciliation:
+- two-way tenant-isolation negative tests passed;
+- direct cross-tenant table mutation remained denied;
+- legitimate manager authorization passed;
+- self-approval remained rejected;
+- cross-tenant decision authority remained rejected;
+- manager HR/remuneration mutation remained rejected;
+- privileged authenticated `SECURITY DEFINER` exposure remained closed to anonymous/PUBLIC execution and retained authentication/search-path guards;
+- annual leave submit → approve → cancellation → cancellation approval restored the original balance in a rollback-only transaction;
+- TOIL submit → approve → cancellation → cancellation approval restored the original balance in a rollback-only transaction;
+- statutory Annual and Sick previews, Family Responsibility eligibility/blocker behaviour, Unpaid no-balance semantics, employer-defined leave, and manually allocated Parental Leave were exercised;
+- a direct-RPC defect was found for true event-based leave: Adoption, Maternity/Birth-Parent and Commissioning Parental Leave could reach ordinary insufficient-balance handling. Migration `20260929225910_event_based_leave_self_service_guard_v1` now fails closed with `event_based_eligibility_required` before ordinary entitlement/balance processing;
+- repository/deployed migration history is 64/64 with zero version mismatches on the P0 branch.
+
+This P0 remains **open** until the exact approved P0 merge commit is deployed through `leave-ctrl`, `www.leavectrl.co.za` is verified to serve it, production smoke/browser gates pass, and duplicate-project deployment ambiguity is removed.
