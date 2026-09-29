@@ -237,8 +237,10 @@ export function OvertimeControls({
 
           <label>
             Employee
-            <select className="native-field" name="employee" required>
-              {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+            <select className="native-field" name="employee" required disabled={!people.length}>
+              {!people.length ? (
+                <option value="">No active employees available</option>
+              ) : people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
             </select>
           </label>
 
@@ -276,7 +278,7 @@ export function OvertimeControls({
             </span>
           </label>
 
-          <button className="btn primary" disabled={saving === "overtime"} type="submit">
+          <button className="btn primary" disabled={saving === "overtime" || !people.length} type="submit">
             <TimerReset size={16}/>{saving === "overtime" ? "Recording…" : "Record overtime"}
           </button>
         </form>
@@ -294,8 +296,10 @@ export function OvertimeControls({
 
           <label>
             Employee
-            <select className="native-field" name="employee" required>
-              {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+            <select className="native-field" name="employee" required disabled={!people.length}>
+              {!people.length ? (
+                <option value="">No active employees available</option>
+              ) : people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
             </select>
           </label>
 
@@ -325,7 +329,7 @@ export function OvertimeControls({
             </span>
           </label>
 
-          <button className="btn primary" disabled={saving === "earning"} type="submit">
+          <button className="btn primary" disabled={saving === "earning" || !people.length} type="submit">
             <Coins size={16}/>{saving === "earning" ? "Saving…" : "Record earning"}
           </button>
         </form>
@@ -341,8 +345,10 @@ export function OvertimeControls({
 
           <label>
             Employee
-            <select className="native-field" name="employee" required>
-              {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+            <select className="native-field" name="employee" required disabled={!people.length}>
+              {!people.length ? (
+                <option value="">No active employees available</option>
+              ) : people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
             </select>
           </label>
 
@@ -356,7 +362,7 @@ export function OvertimeControls({
             <input name="reason" required />
           </label>
 
-          <button className="btn secondary" disabled={saving === "toil"} type="submit">
+          <button className="btn secondary" disabled={saving === "toil" || !people.length} type="submit">
             <TimerReset size={16}/>{saving === "toil" ? "Saving…" : "Adjust TOIL"}
           </button>
 
