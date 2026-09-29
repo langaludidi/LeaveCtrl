@@ -32,6 +32,20 @@ export default async function HomePage() {
   const hasOperationalHome = roles.some((role) =>
     ["org_admin", "hr_admin", "manager", "reporter", "auditor"].includes(role)
   );
+  const welcomeRequired = !roles.some((role) =>
+    ["org_admin", "hr_admin"].includes(role)
+  );
+
+  if (welcomeRequired) {
+    const { data: welcomeState } = await supabase
+      .from("employees")
+      .select("welcome_completed_at")
+      .eq("id", employee.id)
+      .maybeSingle();
+
+    if (!welcomeState?.welcome_completed_at) redirect("/welcome");
+  }
+
   if (!hasOperationalHome) redirect("/my-leave");
 
   const today = businessDate;
