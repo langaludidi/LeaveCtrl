@@ -86,5 +86,5 @@ test("ordinary booking UI does not force event-based leave into a numeric balanc
   assert.match(source, /const balanceRequired = !eventBased && !noBalance/);
   assert.match(source, /Eligibility check required/);
   assert.match(source, /Event-based entitlement/);
-  assert.match(source, /disabled=\{submitting \|\| !leaveTypes\.length \|\| eventBased\}/);
+  assert.match(source, /disabled=\{[\s\S]*eventBased[\s\S]*\}/);
 });

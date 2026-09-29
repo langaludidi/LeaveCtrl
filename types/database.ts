@@ -2687,6 +2687,15 @@ export type Database = {
         Args: { p_employee_id: string; p_grant_manager_role?: boolean }
         Returns: string
       }
+      preview_leave_request_v1: {
+        Args: {
+          p_day_fraction?: number
+          p_end_date: string
+          p_leave_type_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       record_organisation_data_export: {
         Args: { p_format?: string }
         Returns: string
