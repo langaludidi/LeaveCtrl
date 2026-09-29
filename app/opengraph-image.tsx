@@ -7,55 +7,55 @@ export const size = {
 };
 export const contentType = "image/png";
 
-function MatrixMark() {
-  const cells = [
-    [0, 0], [1, 0], [2, 0],
-    [0, 1], [1, 1], [2, 1],
-    [0, 2], [1, 2], [2, 2],
-  ];
-
+function MatrixCell({
+  centre = false,
+  partial = false,
+}: {
+  centre?: boolean;
+  partial?: boolean;
+}) {
   return (
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 30px)",
-        gridTemplateRows: "repeat(3, 30px)",
-        gap: "10px",
+        width: 30,
+        height: 30,
+        borderRadius: 7,
+        border: centre ? "2px solid #008080" : "2px solid #B8C4C7",
+        background: centre ? "#008080" : "#FFFFFF",
+        position: "relative",
+        overflow: "hidden",
+        display: "flex",
       }}
     >
-      {cells.map(([x, y]) => {
-        const centre = x === 1 && y === 1;
-        const partial = x === 2 && y === 2;
+      {partial ? (
+        <div
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            width: 14,
+            height: 30,
+            background: "#008080",
+            display: "flex",
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
 
-        return (
-          <div
-            key={`${x}-${y}`}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 7,
-              border: centre ? "2px solid #008080" : "2px solid #B8C4C7",
-              background: centre ? "#008080" : "#FFFFFF",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {partial ? (
-              <div
-                style={{
-                  position: "absolute",
-                  right: 0,
-                  bottom: 0,
-                  width: 18,
-                  height: 18,
-                  background: "#008080",
-                  clipPath: "polygon(100% 0,100% 100%,0 100%)",
-                }}
-              />
-            ) : null}
-          </div>
-        );
-      })}
+function MatrixMark() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10 }}>
+        <MatrixCell /><MatrixCell /><MatrixCell />
+      </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <MatrixCell /><MatrixCell centre /><MatrixCell />
+      </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <MatrixCell /><MatrixCell /><MatrixCell partial />
+      </div>
     </div>
   );
 }
