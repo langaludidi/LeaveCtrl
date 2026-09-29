@@ -56,14 +56,15 @@ test("mobile shell consolidates brand, notifications, avatar and menu", async ()
   assert.match(css, /\.mobile-header-notifications\{width:44px;height:44px/);
 });
 
-test("ordinary employees land directly on My Leave", async () => {
+test("returning employees land directly on My Leave after one-time welcome", async () => {
   const home = await readFile("app/page.tsx", "utf8");
   const activate = await readFile("app/activate/page.tsx", "utf8");
   const activateForm = await readFile("components/ActivateAccountForm.tsx", "utf8");
 
+  assert.match(home, /welcome_completed_at/);
   assert.match(home, /if \(!hasOperationalHome\) redirect\("\/my-leave"\)/);
-  assert.match(activate, /redirect\("\/my-leave"\)/);
-  assert.match(activateForm, /router\.push\("\/my-leave"\)/);
+  assert.match(activate, /welcome_completed_at \? "\/my-leave" : "\/welcome"/);
+  assert.match(activateForm, /router\.push\("\/welcome"\)/);
 });
 
 test("landing remains compact on narrow phones and accessible", async () => {
