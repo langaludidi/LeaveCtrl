@@ -15,13 +15,13 @@ test("configured application URL wins and is normalised", () => {
   );
 });
 
-test("Vercel production URL is accepted without an explicit protocol", () => {
+test("production ignores obsolete Vercel hostnames and uses the canonical domain", () => {
   assert.equal(
     resolveAppBaseUrl({
       vercelProductionUrl: "leave-ctrl-2eqn.vercel.app",
       production: true,
     }),
-    "https://leave-ctrl-2eqn.vercel.app"
+    "https://www.leavectrl.co.za"
   );
 });
 
@@ -31,7 +31,7 @@ test("production never trusts a request-controlled origin", () => {
       requestOrigin: "https://attacker.example",
       production: true,
     }),
-    undefined
+    "https://www.leavectrl.co.za"
   );
 });
 
