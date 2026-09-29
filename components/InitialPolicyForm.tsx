@@ -78,7 +78,7 @@ export function InitialPolicyForm({
       <div className="setting-row">
         <div>
           <strong>Annual leave allocation</strong>
-          <span>Employer-configured annual entitlement. Opening balances can still be reconciled per employee.</span>
+          <span>Employer-configured entitlement. LeaveCtrl always enforces the higher schedule-aware South African statutory floor.</span>
         </div>
         <label className="compact-field">
           <input
@@ -170,8 +170,7 @@ export function InitialPolicyForm({
         <div>
           <strong>Governed configuration</strong>
           <p>
-            Policy effectivity is separate from leave-cycle dates. The ledger remains
-            append-only and historical entitlement periods are preserved.
+            Policy effectivity is separate from leave-cycle dates. The statutory floor remains protected, the ledger stays append-only and historical entitlement periods are preserved.
           </p>
         </div>
       </div>
