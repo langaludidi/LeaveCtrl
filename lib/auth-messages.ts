@@ -28,5 +28,18 @@ export function signUpErrorMessage(message: string) {
     return "Too many account requests. Please try again shortly.";
   }
 
+  if (
+    normalised.includes("smtp") ||
+    normalised.includes("mailer") ||
+    normalised.includes("confirmation") ||
+    normalised.includes("email") && (
+      normalised.includes("send") ||
+      normalised.includes("dial tcp") ||
+      normalised.includes("no such host")
+    )
+  ) {
+    return "We could not send the confirmation email, so the account was not created. Please try again shortly or contact your LeaveCtrl administrator.";
+  }
+
   return "We could not create the account. Please check the details and try again.";
 }
