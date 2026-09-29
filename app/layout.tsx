@@ -28,10 +28,22 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: "/opengraph-image",
+        url: "/api/social-image",
         width: 1200,
         height: 630,
-        alt: "LeaveCtrl — Leave & Workforce Availability",
+        alt: "LeaveCtrl — Smarter Leave Management for Modern Teams",
+      },
+      {
+        url: "/social/leavectrl-social-dark.jpg",
+        width: 1200,
+        height: 630,
+        alt: "LeaveCtrl dark social sharing card",
+      },
+      {
+        url: "/social/leavectrl-social-light.jpg",
+        width: 1200,
+        height: 630,
+        alt: "LeaveCtrl light social sharing card",
       },
     ],
   },
@@ -39,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: ["/opengraph-image"],
+    images: ["/api/social-image"],
   },
   robots: {
     index: false,
