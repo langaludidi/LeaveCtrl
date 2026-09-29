@@ -29,45 +29,38 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
     email: typeof claims?.email === "string" ? claims.email : null,
   };
 
-  const { data: employee } = await supabase
-    .from("employees")
-    .select("id, organisation_id, first_name, last_name, email, department_id, manager_employee_id, start_date")
-    .eq("user_id", userId)
-    .eq("employment_status", "active")
+  const { data: contextRow } = await supabase
+    .rpc("get_current_context_v1")
     .maybeSingle();
+
+  const employee = contextRow
+    ? {
+        id: contextRow.employee_id,
+        organisation_id: contextRow.organisation_id,
+        first_name: contextRow.first_name,
+        last_name: contextRow.last_name,
+        email: contextRow.email,
+        department_id: contextRow.department_id,
+        manager_employee_id: contextRow.manager_employee_id,
+        start_date: contextRow.start_date,
+      }
+    : null;
 
   if (!employee && options?.requireEmployee !== false) {
     redirect("/onboarding");
   }
 
-  let roles: string[] = [];
-  let organisation: {
-    id: string;
-    name: string;
-    timezone: string;
-    country_code: string;
-    currency_code: string;
-  } | null = null;
+  const organisation = contextRow
+    ? {
+        id: contextRow.organisation_id,
+        name: contextRow.organisation_name,
+        timezone: contextRow.timezone,
+        country_code: contextRow.country_code,
+        currency_code: contextRow.currency_code,
+      }
+    : null;
 
-  if (employee) {
-    const [{ data: memberships }, { data: organisationRow }] = await Promise.all([
-      supabase
-        .from("organisation_memberships")
-        .select("role")
-        .eq("organisation_id", employee.organisation_id)
-        .eq("user_id", userId)
-        .eq("is_active", true),
-      supabase
-        .from("organisations")
-        .select("id, name, timezone, country_code, currency_code")
-        .eq("id", employee.organisation_id)
-        .maybeSingle(),
-    ]);
-
-    roles = memberships?.map((membership) => membership.role) ?? [];
-    organisation = organisationRow ?? null;
-  }
-
+  const roles = contextRow?.roles ?? [];
   const timezone = organisation?.timezone ?? "UTC";
   const businessDate = dateInTimeZone(new Date(), timezone);
 
@@ -79,7 +72,9 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
     timezone,
     businessDate,
     roles,
-    displayName: employee ? `${employee.first_name} ${employee.last_name}` : user.email ?? "User",
+    displayName: employee
+      ? `${employee.first_name} ${employee.last_name}`
+      : user.email ?? "User",
   };
 }
 

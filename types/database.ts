@@ -2195,6 +2195,24 @@ export type Database = {
         Args: { p_employee_id: string; p_end_date: string; p_reason: string }
         Returns: Json
       }
+      get_current_context_v1: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          country_code: string
+          currency_code: string
+          department_id: string | null
+          email: string
+          employee_id: string
+          first_name: string
+          last_name: string
+          manager_employee_id: string | null
+          organisation_id: string
+          organisation_name: string
+          roles: Database["public"]["Enums"]["member_role"][]
+          start_date: string
+          timezone: string
+        }[]
+      }
       get_workforce_calendar: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
