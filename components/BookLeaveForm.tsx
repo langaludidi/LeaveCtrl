@@ -114,11 +114,17 @@ export function BookLeaveForm({
             value={leaveTypeId}
             onChange={(event) => setLeaveTypeId(event.target.value)}
             required
+            disabled={!leaveTypes.length}
           >
-            {leaveTypes.map((type) => (
+            {!leaveTypes.length ? (
+              <option value="">No leave types available</option>
+            ) : leaveTypes.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
             ))}
           </select>
+          {!leaveTypes.length ? (
+            <span className="field-help">Ask HR to configure at least one active leave type before booking leave.</span>
+          ) : null}
         </label>
 
         <div className="field-row">
