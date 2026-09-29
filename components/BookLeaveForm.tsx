@@ -52,7 +52,9 @@ export function BookLeaveForm({
 
   const selectedType = leaveTypes.find((type) => type.id === leaveTypeId) ?? leaveTypes[0];
   const currentBalance = balancesByType[leaveTypeId] ?? 0;
-  const balanceRequired = selectedType?.entitlementMethod !== "no_balance";
+  const eventBased = selectedType?.entitlementMethod === "event_based";
+  const noBalance = selectedType?.entitlementMethod === "no_balance";
+  const balanceRequired = !eventBased && !noBalance;
   const manualAllocation = selectedType?.entitlementMethod === "manual_allocation";
   const projected = balanceRequired ? Math.max(currentBalance - estimate, 0) : currentBalance;
 
@@ -62,8 +64,13 @@ export function BookLeaveForm({
         return "Your statutory sick balance is calculated from service length and your work schedule. A medical certificate may be required for longer or repeated absences.";
       case "FAMILY_RESPONSIBILITY":
         return "Eligibility is based on service length and working pattern. The employer may request reasonable proof of the qualifying event.";
-      case "PARENTAL_INTERIM":
-        return "HR must first record the parental allocation confirmed for the qualifying event under the current interim regime.";
+      case "PARENTAL":
+      case "ADOPTION":
+      case "MATERNITY":
+      case "COMMISSIONING_PARENTAL":
+        return eventBased
+          ? "This is an event-based entitlement. Eligibility must be confirmed for the qualifying event before an ordinary leave request is created."
+          : "HR records the applicable allocation for the qualifying event before the balance can be used.";
       case "UNPAID":
         return "Unpaid leave does not consume an entitlement balance. Approval is still required and payroll may be affected.";
       case "ANNUAL":
@@ -240,8 +247,12 @@ export function BookLeaveForm({
           <button className="btn secondary" type="button" onClick={() => router.back()}>
             Cancel
           </button>
-          <button className="btn primary" type="submit" disabled={submitting || !leaveTypes.length}>
-            {submitting ? "Submitting…" : "Submit request"}
+          <button
+            className="btn primary"
+            type="submit"
+            disabled={submitting || !leaveTypes.length || eventBased}
+          >
+            {submitting ? "Submitting…" : eventBased ? "Eligibility check required" : "Submit request"}
           </button>
         </div>
       </form>
@@ -252,18 +263,22 @@ export function BookLeaveForm({
           <div className="balance-highlight">
             <span className="summary-icon"><CalendarDays size={20}/></span>
             <div>
-              <span>{balanceRequired ? "Available balance" : "Balance treatment"}</span>
+              <span>{balanceRequired ? "Available balance" : "Entitlement treatment"}</span>
               {balanceRequired ? (
                 <strong>{currentBalance} <small>days</small></strong>
               ) : (
-                <strong className="balance-text-value">No balance required</strong>
+                <strong className="balance-text-value">
+                  {eventBased ? "Event-based entitlement" : "No balance required"}
+                </strong>
               )}
               <small>
                 {balanceRequired
                   ? manualAllocation
                     ? "HR-confirmed event allocation, less pending reservations."
                     : "Current ledger balance, including pending reservations."
-                  : "This leave type is governed by approval and dates rather than an entitlement balance."}
+                  : eventBased
+                    ? "Eligibility is assessed for the qualifying event rather than from a running balance."
+                    : "This leave type is governed by approval and dates rather than an entitlement balance."}
               </small>
             </div>
           </div>

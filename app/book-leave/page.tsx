@@ -57,7 +57,7 @@ export default async function BookLeavePage() {
   return (
     <AppShell displayName={displayName} role={roleLabel(roles)}>
       <section className="page-head">
-        <Link className="back-link" href="/">← Back to Home</Link>
+        <Link className="back-link" href="/my-leave">← Back to My Leave</Link>
         <h1>Book Leave</h1>
         <p>
           Submit annual or other configured leave, or use earned TOIL when you have a
