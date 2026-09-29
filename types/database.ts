@@ -14,6 +14,88 @@ export type Database = {
   }
   public: {
     Tables: {
+      absence_events: {
+        Row: {
+          absence_type_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string
+          external_reference: string | null
+          id: string
+          incident_date: string | null
+          note: string | null
+          organisation_id: string
+          payroll_impact: boolean
+          scheduled_quantity: number | null
+          start_date: string
+          status: string
+          unit: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          absence_type_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          end_date: string
+          external_reference?: string | null
+          id?: string
+          incident_date?: string | null
+          note?: string | null
+          organisation_id: string
+          payroll_impact?: boolean
+          scheduled_quantity?: number | null
+          start_date: string
+          status?: string
+          unit?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          absence_type_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          end_date?: string
+          external_reference?: string | null
+          id?: string
+          incident_date?: string | null
+          note?: string | null
+          organisation_id?: string
+          payroll_impact?: boolean
+          scheduled_quantity?: number | null
+          start_date?: string
+          status?: string
+          unit?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absence_events_absence_type_id_fkey"
+            columns: ["absence_type_id"]
+            isOneToOne: false
+            referencedRelation: "absence_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_events_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       absence_request_warnings: {
         Row: {
           created_at: string
@@ -68,6 +150,74 @@ export type Database = {
             columns: ["toil_request_id"]
             isOneToOne: false
             referencedRelation: "toil_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      absence_types: {
+        Row: {
+          active: boolean
+          category: string
+          code: string
+          confidentiality_level: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          employee_requestable: boolean
+          id: string
+          name: string
+          organisation_id: string
+          paid_status: string
+          payroll_effect: string
+          requires_evidence: boolean
+          system_defined: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          code: string
+          confidentiality_level?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_requestable?: boolean
+          id?: string
+          name: string
+          organisation_id: string
+          paid_status?: string
+          payroll_effect?: string
+          requires_evidence?: boolean
+          system_defined?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          code?: string
+          confidentiality_level?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_requestable?: boolean
+          id?: string
+          name?: string
+          organisation_id?: string
+          paid_status?: string
+          payroll_effect?: string
+          requires_evidence?: boolean
+          system_defined?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absence_types_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
         ]
@@ -821,6 +971,173 @@ export type Database = {
           },
         ]
       }
+      leave_events: {
+        Row: {
+          agreed_allocation: number | null
+          allocation_unit: string
+          birth_parent: boolean
+          confidentiality_level: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          employer_paid_portion: number | null
+          event_date: string | null
+          event_type: string
+          expected_date: string | null
+          id: string
+          organisation_id: string
+          other_parent_employed: boolean | null
+          partner_shared_declaration: Json
+          protected_recovery_end: string | null
+          protected_recovery_start: string | null
+          requested_allocation: number | null
+          status: string
+          unpaid_uif_portion: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          agreed_allocation?: number | null
+          allocation_unit?: string
+          birth_parent?: boolean
+          confidentiality_level?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          employer_paid_portion?: number | null
+          event_date?: string | null
+          event_type: string
+          expected_date?: string | null
+          id?: string
+          organisation_id: string
+          other_parent_employed?: boolean | null
+          partner_shared_declaration?: Json
+          protected_recovery_end?: string | null
+          protected_recovery_start?: string | null
+          requested_allocation?: number | null
+          status?: string
+          unpaid_uif_portion?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          agreed_allocation?: number | null
+          allocation_unit?: string
+          birth_parent?: boolean
+          confidentiality_level?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          employer_paid_portion?: number | null
+          event_date?: string | null
+          event_type?: string
+          expected_date?: string | null
+          id?: string
+          organisation_id?: string
+          other_parent_employed?: boolean | null
+          partner_shared_declaration?: Json
+          protected_recovery_end?: string | null
+          protected_recovery_start?: string | null
+          requested_allocation?: number | null
+          status?: string
+          unpaid_uif_portion?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_events_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_evidence: {
+        Row: {
+          access_roles: Database["public"]["Enums"]["member_role"][]
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          evidence_kind: string
+          file_name: string | null
+          id: string
+          leave_event_id: string | null
+          leave_request_id: string | null
+          mime_type: string | null
+          organisation_id: string
+          received_at: string
+          storage_path: string | null
+        }
+        Insert: {
+          access_roles?: Database["public"]["Enums"]["member_role"][]
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          evidence_kind: string
+          file_name?: string | null
+          id?: string
+          leave_event_id?: string | null
+          leave_request_id?: string | null
+          mime_type?: string | null
+          organisation_id: string
+          received_at?: string
+          storage_path?: string | null
+        }
+        Update: {
+          access_roles?: Database["public"]["Enums"]["member_role"][]
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          evidence_kind?: string
+          file_name?: string | null
+          id?: string
+          leave_event_id?: string | null
+          leave_request_id?: string | null
+          mime_type?: string | null
+          organisation_id?: string
+          received_at?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_evidence_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_evidence_leave_event_id_fkey"
+            columns: ["leave_event_id"]
+            isOneToOne: false
+            referencedRelation: "leave_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_evidence_leave_request_id_fkey"
+            columns: ["leave_request_id"]
+            isOneToOne: false
+            referencedRelation: "leave_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_evidence_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_ledger_entries: {
         Row: {
           created_at: string
@@ -914,67 +1231,151 @@ export type Database = {
       }
       leave_policy_versions: {
         Row: {
+          accrual_rate: number | null
+          approval_required: boolean
           approval_rule: Json
+          approval_workflow: Json
+          balance_required: boolean
+          birth_parent_specific: boolean
+          carry_over_allowed: boolean
           carry_over_cap: number | null
           carry_over_expiry_date_rule: string | null
+          change_reason: string | null
+          confidentiality_level: string
+          coverage_blocking: boolean
+          coverage_check_required: boolean
           created_at: string
+          created_by: string | null
           cycle_anchor_day: number | null
           cycle_anchor_month: number | null
           cycle_basis: string
           cycle_months: number | null
+          day_calculation: string
           effective_from: string
           effective_to: string | null
+          eligibility_rules: Json
           entitlement_amount: number | null
           entitlement_method: string
+          evidence_access_roles: Database["public"]["Enums"]["member_role"][]
+          evidence_requirement: string
           evidence_rule: Json
+          evidence_trigger_rules: Json
+          expiry_rule: Json
+          gender_neutral: boolean
           id: string
           leave_type_id: string
+          manager_override_allowed: boolean
+          minimum_service_days: number
           negative_balance_allowed: boolean
           organisation_id: string
+          paid_status: string
+          parental_event_type: string | null
+          payroll_effect: string
+          public_holiday_treatment: string
           statutory_source: Json
+          uif_related: boolean
+          updated_at: string
+          updated_by: string | null
           version: number
+          weekend_treatment: string
         }
         Insert: {
+          accrual_rate?: number | null
+          approval_required?: boolean
           approval_rule?: Json
+          approval_workflow?: Json
+          balance_required?: boolean
+          birth_parent_specific?: boolean
+          carry_over_allowed?: boolean
           carry_over_cap?: number | null
           carry_over_expiry_date_rule?: string | null
+          change_reason?: string | null
+          confidentiality_level?: string
+          coverage_blocking?: boolean
+          coverage_check_required?: boolean
           created_at?: string
+          created_by?: string | null
           cycle_anchor_day?: number | null
           cycle_anchor_month?: number | null
           cycle_basis?: string
           cycle_months?: number | null
+          day_calculation?: string
           effective_from: string
           effective_to?: string | null
+          eligibility_rules?: Json
           entitlement_amount?: number | null
           entitlement_method: string
+          evidence_access_roles?: Database["public"]["Enums"]["member_role"][]
+          evidence_requirement?: string
           evidence_rule?: Json
+          evidence_trigger_rules?: Json
+          expiry_rule?: Json
+          gender_neutral?: boolean
           id?: string
           leave_type_id: string
+          manager_override_allowed?: boolean
+          minimum_service_days?: number
           negative_balance_allowed?: boolean
           organisation_id: string
+          paid_status?: string
+          parental_event_type?: string | null
+          payroll_effect?: string
+          public_holiday_treatment?: string
           statutory_source?: Json
+          uif_related?: boolean
+          updated_at?: string
+          updated_by?: string | null
           version: number
+          weekend_treatment?: string
         }
         Update: {
+          accrual_rate?: number | null
+          approval_required?: boolean
           approval_rule?: Json
+          approval_workflow?: Json
+          balance_required?: boolean
+          birth_parent_specific?: boolean
+          carry_over_allowed?: boolean
           carry_over_cap?: number | null
           carry_over_expiry_date_rule?: string | null
+          change_reason?: string | null
+          confidentiality_level?: string
+          coverage_blocking?: boolean
+          coverage_check_required?: boolean
           created_at?: string
+          created_by?: string | null
           cycle_anchor_day?: number | null
           cycle_anchor_month?: number | null
           cycle_basis?: string
           cycle_months?: number | null
+          day_calculation?: string
           effective_from?: string
           effective_to?: string | null
+          eligibility_rules?: Json
           entitlement_amount?: number | null
           entitlement_method?: string
+          evidence_access_roles?: Database["public"]["Enums"]["member_role"][]
+          evidence_requirement?: string
           evidence_rule?: Json
+          evidence_trigger_rules?: Json
+          expiry_rule?: Json
+          gender_neutral?: boolean
           id?: string
           leave_type_id?: string
+          manager_override_allowed?: boolean
+          minimum_service_days?: number
           negative_balance_allowed?: boolean
           organisation_id?: string
+          paid_status?: string
+          parental_event_type?: string | null
+          payroll_effect?: string
+          public_holiday_treatment?: string
           statutory_source?: Json
+          uif_related?: boolean
+          updated_at?: string
+          updated_by?: string | null
           version?: number
+          weekend_treatment?: string
         }
         Relationships: [
           {
@@ -1182,42 +1583,72 @@ export type Database = {
       leave_types: {
         Row: {
           active: boolean
+          category: string
           code: string
           colour_token: string
           created_at: string
+          created_by: string | null
+          description: string | null
+          employee_visible: boolean
           id: string
           is_statutory: boolean
+          manager_visible: boolean
           name: string
           organisation_id: string
+          protected_system_type: boolean
           requires_approval: boolean
           requires_evidence: boolean
+          statutory_status: string
+          system_defined: boolean
           unit: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           active?: boolean
+          category?: string
           code: string
           colour_token?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_visible?: boolean
           id?: string
           is_statutory?: boolean
+          manager_visible?: boolean
           name: string
           organisation_id: string
+          protected_system_type?: boolean
           requires_approval?: boolean
           requires_evidence?: boolean
+          statutory_status?: string
+          system_defined?: boolean
           unit?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           active?: boolean
+          category?: string
           code?: string
           colour_token?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_visible?: boolean
           id?: string
           is_statutory?: boolean
+          manager_visible?: boolean
           name?: string
           organisation_id?: string
+          protected_system_type?: boolean
           requires_approval?: boolean
           requires_evidence?: boolean
+          statutory_status?: string
+          system_defined?: boolean
           unit?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -2026,15 +2457,6 @@ export type Database = {
       }
     }
     Functions: {
-      adjust_manual_leave_allocation: {
-        Args: {
-          p_adjustment: number
-          p_employee_id: string
-          p_leave_type_code: string
-          p_reason: string
-        }
-        Returns: number
-      }
       add_employee_record: {
         Args: {
           p_department_id?: string
@@ -2049,6 +2471,15 @@ export type Database = {
           p_work_schedule_id?: string
         }
         Returns: Json
+      }
+      adjust_manual_leave_allocation: {
+        Args: {
+          p_adjustment: number
+          p_employee_id: string
+          p_leave_type_code: string
+          p_reason: string
+        }
+        Returns: number
       }
       adjust_toil_balance: {
         Args: { p_employee_id: string; p_hours: number; p_reason: string }
@@ -2205,16 +2636,16 @@ export type Database = {
         Returns: Json
       }
       get_current_context_v1: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           country_code: string
           currency_code: string
-          department_id: string | null
+          department_id: string
           email: string
           employee_id: string
           first_name: string
           last_name: string
-          manager_employee_id: string | null
+          manager_employee_id: string
           organisation_id: string
           organisation_name: string
           roles: Database["public"]["Enums"]["member_role"][]
@@ -2236,9 +2667,9 @@ export type Database = {
         }[]
       }
       get_workforce_directory: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
-          department_id: string | null
+          department_id: string
           employee_id: string
           first_name: string
           last_name: string
@@ -2345,10 +2776,16 @@ export type Database = {
         }
         Returns: undefined
       }
-      validate_employee_invitation_for_delivery: {
-        Args: { p_employee_id: string; p_token: string }
-        Returns: boolean
-      }
+      validate_employee_invitation_for_delivery:
+        | { Args: { p_employee_id: string; p_token: string }; Returns: boolean }
+        | {
+            Args: {
+              p_actor_user_id: string
+              p_employee_id: string
+              p_token: string
+            }
+            Returns: boolean
+          }
       withdraw_leave_request: {
         Args: { p_note?: string; p_request_id: string }
         Returns: Database["public"]["Enums"]["leave_request_status"]
