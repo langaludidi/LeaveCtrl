@@ -58,7 +58,7 @@ export function ActivateAccountForm({ token }: { token: string }) {
       return;
     }
 
-    router.push("/");
+    router.push("/my-leave");
     router.refresh();
   }
 
