@@ -62,6 +62,6 @@ test("release dependency installation stays deterministic", async () => {
   const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 
   assert.equal(lock.lockfileVersion, 3);
-  assert.match(workflow, /run:\s*npm ci\b/);
-  assert.doesNotMatch(workflow, /run:\s*npm install\b/);
+  assert.match(workflow, /\bnpm ci\b/);
+  assert.doesNotMatch(workflow, /\bnpm install\b/);
 });
