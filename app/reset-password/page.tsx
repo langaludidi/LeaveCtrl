@@ -1,0 +1,90 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") ?? "");
+    const confirmPassword = String(form.get("confirmPassword") ?? "");
+
+    if (password.length < 8) {
+      setError("Use at least 8 characters.");
+      setSaving(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("The passwords do not match.");
+      setSaving(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+
+    if (updateError) {
+      setError("We could not update your password. Request a new reset link and try again.");
+      setSaving(false);
+      return;
+    }
+
+    await supabase.auth.signOut();
+    router.push("/login?message=Password%20updated.%20Sign%20in%20with%20your%20new%20password.");
+    router.refresh();
+  }
+
+  return (
+    <main className="auth-page auth-page-single">
+      <section className="auth-panel auth-panel-compact">
+        <div className="auth-brand"><span>Leave</span>Ctrl</div>
+
+        <div className="auth-copy">
+          <p className="eyebrow">ACCOUNT RECOVERY</p>
+          <h1>Choose a new password</h1>
+          <p>Use a password you do not use elsewhere. After updating it, sign in again.</p>
+        </div>
+
+        {error ? <div className="auth-alert error">{error}</div> : null}
+
+        <form className="auth-form" onSubmit={submit}>
+          <label>
+            New password
+            <input
+              name="password"
+              type="password"
+              minLength={8}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+
+          <label>
+            Confirm new password
+            <input
+              name="confirmPassword"
+              type="password"
+              minLength={8}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+
+          <button className="btn primary auth-submit" type="submit" disabled={saving}>
+            {saving ? "Updating password…" : "Update password"}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
