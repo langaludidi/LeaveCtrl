@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useMemo, useState } from "react";
-import { CheckCircle2, FileSpreadsheet, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { boolValue, normaliseHeader, parseCsv, validIsoDate } from "@/lib/employee-csv";
@@ -31,7 +31,7 @@ type RowResult = {
   rowNumber: number;
   email: string;
   name: string;
-  status: "imported" | "failed";
+  status: "imported" | "partial" | "failed";
   detail: string;
 };
 
@@ -357,6 +357,7 @@ export function EmployeeCsvImport({
       personByEmail.set(row.email, employeeId);
 
       let detail = "Employee created.";
+      let setupIncomplete = false;
 
       if (row.openingAnnualBalance) {
         const balance = await supabase.rpc("set_employee_opening_balance", {
@@ -365,7 +366,10 @@ export function EmployeeCsvImport({
           p_balance: Number(row.openingAnnualBalance),
           p_reason: "Opening annual leave balance confirmed by CSV import",
         });
-        if (balance.error) detail += " Opening annual balance needs review.";
+        if (balance.error) {
+          detail += " Opening annual balance needs review.";
+          setupIncomplete = true;
+        }
       }
 
       if (row.remuneration) {
@@ -377,14 +381,17 @@ export function EmployeeCsvImport({
           p_daily_rate_override: undefined,
           p_reason: "Remuneration captured by CSV import",
         } as never);
-        if (remuneration.error) detail += " Remuneration needs review.";
+        if (remuneration.error) {
+          detail += " Remuneration needs review.";
+          setupIncomplete = true;
+        }
       }
 
       rowResults.set(row.rowNumber, {
         rowNumber: row.rowNumber,
         email: row.email,
         name: `${row.firstName} ${row.lastName}`,
-        status: "imported",
+        status: setupIncomplete ? "partial" : "imported",
         detail,
       });
       setProgress(index + 1);
@@ -406,7 +413,10 @@ export function EmployeeCsvImport({
 
       if (managerResult.error) {
         const previous = rowResults.get(row.rowNumber);
-        if (previous) previous.detail += " Manager assignment needs review.";
+        if (previous) {
+          previous.status = "partial";
+          previous.detail += " Manager assignment needs review.";
+        }
       }
     }
 
@@ -423,7 +433,10 @@ export function EmployeeCsvImport({
 
       const previous = rowResults.get(row.rowNumber);
       if (inviteError || !token) {
-        if (previous) previous.detail += " Access invitation needs review.";
+        if (previous) {
+          previous.status = "partial";
+          previous.detail += " Access invitation needs review.";
+        }
         continue;
       }
 
@@ -439,6 +452,7 @@ export function EmployeeCsvImport({
       );
 
       if (previous) {
+        if (deliveryError) previous.status = "partial";
         previous.detail += deliveryError
           ? " Employee created; activation email delivery needs review."
           : " Activation email sent.";
@@ -571,16 +585,19 @@ export function EmployeeCsvImport({
           <div className="card-title">
             <h3>Import results</h3>
             <span className="muted-count">
-              {results.filter((result) => result.status === "imported").length} imported ·{" "}
-              {results.filter((result) => result.status === "failed").length} need review
+              {results.filter((result) => result.status === "imported").length} complete ·{" "}
+              {results.filter((result) => result.status === "partial").length} partial ·{" "}
+              {results.filter((result) => result.status === "failed").length} failed
             </span>
           </div>
           <div className="compact-rule-list">
             {results.map((result) => (
-              <div className="csv-result-row" key={result.rowNumber}>
+              <div className={`csv-result-row ${result.status}`} key={result.rowNumber}>
                 {result.status === "imported"
                   ? <CheckCircle2 size={15}/>
-                  : <XCircle size={15}/>}
+                  : result.status === "partial"
+                    ? <AlertTriangle size={15}/>
+                    : <XCircle size={15}/>}
                 <div>
                   <strong>Row {result.rowNumber} · {result.name}</strong>
                   <span>{result.email || "No valid email"} · {result.detail}</span>
