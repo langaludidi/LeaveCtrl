@@ -12,6 +12,10 @@ function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function readSecret(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "");
+}
+
 async function emailRedirect(next: string) {
   const headerStore = await headers();
   const baseUrl = resolveAppBaseUrl({
@@ -30,7 +34,7 @@ async function emailRedirect(next: string) {
 
 export async function signIn(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
-  const password = read(formData, "password");
+  const password = readSecret(formData, "password");
   const next = safeInternalPath(read(formData, "next"), "/");
   const supabase = await createClient();
 
@@ -46,7 +50,7 @@ export async function signUp(formData: FormData) {
   const firstName = read(formData, "firstName");
   const lastName = read(formData, "lastName");
   const email = read(formData, "email").toLowerCase();
-  const password = read(formData, "password");
+  const password = readSecret(formData, "password");
   const next = safeInternalPath(read(formData, "next"), "/onboarding");
 
   const passwordPolicy = validatePassword(password);

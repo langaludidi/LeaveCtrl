@@ -55,3 +55,11 @@ test("account recovery fields and messages are accessible", async () => {
   assert.match(login, /className="auth-alert error" role="alert"/);
   assert.match(login, /className="auth-alert success" role="status" aria-live="polite"/);
 });
+
+test("passwords are treated as opaque secrets rather than trimmed text", async () => {
+  const actions = await readFile("app/auth/actions.ts", "utf8");
+
+  assert.match(actions, /function readSecret\(formData: FormData, key: string\)/);
+  assert.match(actions, /return String\(formData\.get\(key\) \?\? ""\);/);
+  assert.equal((actions.match(/readSecret\(formData, "password"\)/g) ?? []).length, 2);
+});
