@@ -159,6 +159,7 @@ export default async function SetupPage() {
     name: `${person.first_name} ${person.last_name}`,
     departmentId: person.department_id,
     scheduleId: scheduleMap.get(person.id) ?? null,
+    managerEmployeeId: person.manager_employee_id,
   }));
 
   const currentPolicyByType = new Map<string, {
