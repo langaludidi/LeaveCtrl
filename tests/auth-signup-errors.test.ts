@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { signUpErrorMessage } from "../lib/auth-messages";
+import { signUpErrorMessage } from "../lib/auth-messages.ts";
 
 test("signup reports confirmation-email delivery failures clearly", () => {
   assert.equal(
