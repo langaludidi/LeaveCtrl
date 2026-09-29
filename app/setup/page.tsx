@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckCircle2, Circle, Download, Scale, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, Circle, Download, Scale, ShieldCheck, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { OrganisationControls } from "@/components/OrganisationControls";
@@ -17,7 +17,7 @@ function formatHolidayDate(value: string) {
 }
 
 export default async function SetupPage() {
-  const { supabase, employee, displayName, roles, businessDate } = await getCurrentContext();
+  const { supabase, employee, organisation, displayName, roles, businessDate } = await getCurrentContext();
   if (!employee) return null;
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
@@ -32,12 +32,14 @@ export default async function SetupPage() {
     { data: statutoryRules },
     { data: departments },
     { data: schedules },
+    { data: locations },
     { data: people },
     { data: assignments },
     { data: leaveTypes },
     { data: policyVersions },
     { data: blockedPeriods },
     { data: coverageRules },
+    { data: leaveBalances },
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -70,8 +72,14 @@ export default async function SetupPage() {
       .eq("organisation_id", employee.organisation_id)
       .order("name"),
     supabase
+      .from("locations")
+      .select("id, name")
+      .eq("organisation_id", employee.organisation_id)
+      .eq("active", true)
+      .order("name"),
+    supabase
       .from("employees")
-      .select("id, first_name, last_name, department_id")
+      .select("id, first_name, last_name, department_id, manager_employee_id")
       .eq("organisation_id", employee.organisation_id)
       .eq("employment_status", "active")
       .order("first_name"),
@@ -106,6 +114,10 @@ export default async function SetupPage() {
       .eq("organisation_id", employee.organisation_id)
       .eq("active", true)
       .order("name"),
+    supabase
+      .from("leave_balances")
+      .select("employee_id, leave_type_id, available_balance")
+      .eq("organisation_id", employee.organisation_id),
   ]);
 
   let existingDays = 15;
@@ -147,6 +159,7 @@ export default async function SetupPage() {
     name: `${person.first_name} ${person.last_name}`,
     departmentId: person.department_id,
     scheduleId: scheduleMap.get(person.id) ?? null,
+    managerEmployeeId: person.manager_employee_id,
   }));
 
   const currentPolicyByType = new Map<string, {
@@ -216,6 +229,97 @@ export default async function SetupPage() {
 
   const readinessComplete = readinessChecks.filter((check) => check.done).length;
 
+  const managerAssignedCount = assignmentPeople.filter(
+    (person) => person.managerEmployeeId
+  ).length;
+  const managerStructureReady =
+    activePeopleCount <= 1 ||
+    managerAssignedCount >= Math.max(activePeopleCount - 1, 1);
+  const annualBalanceEmployeeIds = new Set(
+    (leaveBalances ?? [])
+      .filter((row) => row.leave_type_id === annualType?.id)
+      .map((row) => row.employee_id)
+  );
+  const annualBalanceCoverageCount = assignmentPeople.filter((person) =>
+    annualBalanceEmployeeIds.has(person.id)
+  ).length;
+  const structureReady =
+    (departments?.length ?? 0) > 0 || (locations?.length ?? 0) > 0;
+
+  const setupPath = [
+    {
+      step: 1,
+      label: "Organisation details",
+      detail: organisation
+        ? `${organisation.name} · ${organisation.country_code} · ${organisation.timezone}`
+        : "Complete the organisation profile",
+      done: Boolean(organisation?.name && organisation.country_code && organisation.timezone),
+      href: "#setup-path",
+    },
+    {
+      step: 2,
+      label: "Leave policy",
+      detail: hasAnnualPolicy ? "Annual leave policy is configured" : "Configure the annual leave policy",
+      done: hasAnnualPolicy,
+      href: "#leave-policy",
+    },
+    {
+      step: 3,
+      label: "Working patterns",
+      detail: allPeopleScheduled
+        ? "Every active employee has a work schedule"
+        : `${assignedScheduleCount} of ${activePeopleCount} active employees scheduled`,
+      done: allPeopleScheduled,
+      href: "#organisation-structure",
+    },
+    {
+      step: 4,
+      label: "Departments & locations",
+      detail: `${departments?.length ?? 0} departments · ${locations?.length ?? 0} locations`,
+      done: structureReady,
+      href: "#organisation-structure",
+    },
+    {
+      step: 5,
+      label: "Employees",
+      detail: activePeopleCount
+        ? `${activePeopleCount} active employee${activePeopleCount === 1 ? "" : "s"}`
+        : "Add your first employee",
+      done: activePeopleCount > 0,
+      href: "/team",
+    },
+    {
+      step: 6,
+      label: "Managers & approvals",
+      detail: managerStructureReady
+        ? "Reporting structure is sufficient for the current team"
+        : `${managerAssignedCount} manager assignment${managerAssignedCount === 1 ? "" : "s"} recorded`,
+      done: managerStructureReady,
+      href: "/team",
+    },
+    {
+      step: 7,
+      label: "Opening leave positions",
+      detail: activePeopleCount
+        ? `${annualBalanceCoverageCount} of ${activePeopleCount} annual positions provisioned`
+        : "Add employees before reviewing opening positions",
+      done:
+        activePeopleCount > 0 &&
+        annualBalanceCoverageCount === activePeopleCount,
+      href: "#leave-policy",
+    },
+    {
+      step: 8,
+      label: "Coverage rules",
+      detail: coverageRules?.length
+        ? `${coverageRules.length} operational rule${coverageRules.length === 1 ? "" : "s"} active`
+        : "Optional, but recommended for workforce availability control",
+      done: Boolean(coverageRules?.length),
+      href: "#availability-rules",
+    },
+  ];
+  const setupPathComplete = setupPath.filter((item) => item.done).length;
+
   return (
     <AppShell displayName={displayName} role={roleLabel(roles)}>
       <section className="page-head setup-head">
@@ -275,7 +379,39 @@ export default async function SetupPage() {
             </div>
           </section>
 
-          <section className="setup-grid">
+          <section className="card admin-setup-path" id="setup-path">
+            <div className="setup-path-head">
+              <div>
+                <span className="liability-kicker">ADMIN ONBOARDING</span>
+                <h2>{setupPathComplete} of {setupPath.length} setup steps complete</h2>
+                <p>
+                  Complete the operating setup in sequence. Each step links to the existing
+                  governed control rather than creating a separate setup system.
+                </p>
+              </div>
+              <strong>{Math.round((setupPathComplete / setupPath.length) * 100)}%</strong>
+            </div>
+            <div className="setup-path-grid">
+              {setupPath.map((item) => (
+                <Link
+                  key={item.step}
+                  href={item.href}
+                  className={`setup-path-item ${item.done ? "done" : ""}`}
+                >
+                  <span className="setup-step-number">
+                    {item.done ? <CheckCircle2 size={16} aria-hidden="true" /> : item.step}
+                  </span>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.detail}</span>
+                  </div>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="setup-grid" id="leave-policy">
             <InitialPolicyForm
               existingDays={existingDays}
               existingCycleBasis={existingCycleBasis}
@@ -303,12 +439,15 @@ export default async function SetupPage() {
             </aside>
           </section>
 
-          <OrganisationControls
-            people={assignmentPeople}
-            departments={departments ?? []}
-            schedules={schedules ?? []}
-            businessDate={businessDate}
-          />
+          <div id="organisation-structure">
+            <OrganisationControls
+              people={assignmentPeople}
+              departments={departments ?? []}
+              locations={locations ?? []}
+              schedules={schedules ?? []}
+              businessDate={businessDate}
+            />
+          </div>
 
           <LeavePolicyControls
             people={assignmentPeople.map(({ id, name }) => ({ id, name }))}
@@ -316,12 +455,14 @@ export default async function SetupPage() {
             businessDate={businessDate}
           />
 
-          <AvailabilityControls
+          <div id="availability-rules">
+            <AvailabilityControls
             departments={departments ?? []}
             leaveTypes={leaveTypes ?? []}
             blockedPeriods={blockedPeriods ?? []}
             coverageRules={coverageRules ?? []}
-          />
+            />
+          </div>
         </>
       ) : null}
 
