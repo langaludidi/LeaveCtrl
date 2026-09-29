@@ -134,3 +134,33 @@ This is a static implementation audit, not a claim of cross-browser visual certi
 - Global `:focus-visible` styling now covers links, buttons, inputs, selects and textareas.
 - At narrow phone widths the decorative topbar context is removed so notification/profile/sign-out controls do not collide.
 - These protections are covered by the responsive-shell CI contract.
+
+
+## Account recovery — PASS
+
+- Password reset and confirmation resend flows are merged into `main`.
+- Password reset completion is handled by the dedicated `/reset-password` page.
+- Login rendering and server actions use the shared hardened internal-path validator.
+- Password changes explicitly sign out with global scope, revoking refresh sessions across devices after recovery.
+- New account and recovered passwords use a shared application policy: at least 12 characters with uppercase, lowercase, numeric and symbol variety.
+- Existing users are not blocked at sign-in merely because their historical password predates the stronger new-password policy.
+- Recovery contract and password-policy tests are enforced by CI.
+
+## Supabase Free-plan security disposition
+
+The authoritative Supabase organisation `Leave Hub` is on the **Free** plan. Supabase leaked-password protection is a Pro-plan feature, so the advisor warning cannot be cleared without a plan upgrade. This is therefore treated as an external plan limitation rather than an unresolved V1 code defect.
+
+Compensating controls currently implemented:
+- stronger new/reset password policy in LeaveCtrl;
+- generic authentication error messages;
+- production-safe callback origin validation;
+- hardened internal redirect validation;
+- global session revocation after password recovery.
+
+An upgrade to Supabase Pro would still be beneficial later because it would add server-side leaked-password rejection and additional session-control options.
+
+## Authoritative Vercel project decision
+
+The production project is **`leave-ctrl`** because the public production alias `leave-ctrl.vercel.app` resolves there. The second project, **`leave-ctrl-2eqn`**, is a duplicate deployment target and should be disconnected/decommissioned after final verification.
+
+The connected Vercel capability available in this build session exposes project/deployment reads but not project deletion/disconnection, so duplicate cleanup remains an external project-admin action rather than an application build task.

@@ -19,7 +19,9 @@
 - [x] Self-approval is rejected.
 - [x] Invitation email/linkage boundaries verified.
 - [x] Invitation delivery validation is service-role only.
-- [ ] Supabase Auth leaked-password protection enabled.
+- [x] Supabase Free-plan limitation documented: leaked-password protection is Pro-only.
+- [x] Compensating application password policy added for new/reset passwords (12+ characters, upper/lower/number/symbol).
+- [x] Password recovery revokes refresh sessions globally after reset.
 
 ## Leave workflow
 
@@ -59,7 +61,8 @@
 - [x] Recent Vercel runtime-error check found no runtime errors.
 - [x] Canonical production alias is publicly reachable.
 - [x] Unauthenticated protected routes resolve to the login surface with no-store caching.
-- [ ] Select one authoritative Vercel production project and disconnect/decommission the duplicate.
+- [x] Authoritative Vercel production project selected: `leave-ctrl` (`leave-ctrl.vercel.app`).
+- [ ] Disconnect/decommission duplicate Vercel project `leave-ctrl-2eqn` (requires Vercel project-admin write capability).
 
 ## Responsive and usability
 
