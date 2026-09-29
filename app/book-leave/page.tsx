@@ -5,10 +5,10 @@ import { ToilRequestForm } from "@/components/ToilRequestForm";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 export default async function BookLeavePage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, employee, displayName, roles, businessDate } = await getCurrentContext();
   if (!employee) return null;
 
-  const [{ data: leaveTypes }, { data: balances }, { data: toilBalance }] = await Promise.all([
+  const [{ data: leaveTypes }, { data: balances }, { data: toilBalance }, { data: policyVersions }] = await Promise.all([
     supabase
       .from("leave_types")
       .select("id, name, code")
@@ -24,9 +24,27 @@ export default async function BookLeavePage() {
       .select("available_hours")
       .eq("employee_id", employee.id)
       .maybeSingle(),
+    supabase
+      .from("leave_policy_versions")
+      .select("leave_type_id, entitlement_method, effective_from, effective_to")
+      .eq("organisation_id", employee.organisation_id)
+      .lte("effective_from", businessDate)
+      .or(`effective_to.is.null,effective_to.gte.${businessDate}`)
+      .order("effective_from", { ascending: false })
+      .order("version", { ascending: false }),
   ]);
 
-  const activeTypes = leaveTypes ?? [];
+  const policyByType = new Map<string, string>();
+  for (const policy of policyVersions ?? []) {
+    if (!policyByType.has(policy.leave_type_id)) {
+      policyByType.set(policy.leave_type_id, policy.entitlement_method);
+    }
+  }
+
+  const activeTypes = (leaveTypes ?? []).map((type) => ({
+    ...type,
+    entitlementMethod: policyByType.get(type.id) ?? "fixed_days",
+  }));
   const balancesByType = Object.fromEntries(
     (balances ?? []).map((row) => [
       row.leave_type_id ?? "",
