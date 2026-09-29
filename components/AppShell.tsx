@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { BrandLogo } from "@/components/BrandLogo";
 
 function initials(name: string) {
   return (
@@ -109,7 +110,7 @@ export function AppShell({
     <div className="app-shell">
       <aside className={`sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
         <Link href="/" className="brand" aria-label="LeaveCtrl home">
-          <span>Leave</span>Ctrl
+          <BrandLogo className="shell-brand-logo" />
         </Link>
 
         <button
