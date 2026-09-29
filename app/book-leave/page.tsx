@@ -14,6 +14,7 @@ export default async function BookLeavePage() {
       .select("id, name, code")
       .eq("organisation_id", employee.organisation_id)
       .eq("active", true)
+      .eq("employee_visible", true)
       .order("name"),
     supabase
       .from("leave_balances")
