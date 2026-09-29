@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const appUrl = Deno.env.get("LEAVECTRL_APP_URL") ?? "https://leave-ctrl-2eqn.vercel.app";
+const appUrl = Deno.env.get("LEAVECTRL_APP_URL") ?? "https://leave-ctrl.vercel.app";
 const allowedOrigin = new URL(appUrl).origin;
 
 function corsHeaders(req: Request) {
