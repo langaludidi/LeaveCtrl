@@ -31,7 +31,7 @@ export default async function TeamPage() {
   ] = await Promise.all([
     supabase
       .from("employees")
-      .select("id, user_id, first_name, last_name, email, department_id, manager_employee_id, employment_status")
+      .select("id, user_id, first_name, last_name, email, employee_number, department_id, manager_employee_id, employment_status")
       .eq("organisation_id", employee.organisation_id)
       .order("first_name"),
     supabase
@@ -209,10 +209,12 @@ export default async function TeamPage() {
               id: schedule.id,
               name: schedule.name,
             }))}
-            existingPeople={activePeople.map((person) => ({
+            existingPeople={(people ?? []).map((person) => ({
               id: person.id,
               name: `${person.first_name} ${person.last_name}`,
               email: person.email,
+              employeeNumber: person.employee_number,
+              active: person.employment_status === "active",
             }))}
           />
 

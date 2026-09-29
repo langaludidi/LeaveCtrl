@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { boolValue, normaliseHeader, parseCsv, validIsoDate } from "@/lib/employee-csv";
 
 type Option = { id: string; name: string };
-type ExistingPerson = { id: string; name: string; email: string };
+type ExistingPerson = { id: string; name: string; email: string; employeeNumber: string | null; active: boolean };
 
 type ImportRow = {
   rowNumber: number;
@@ -80,7 +80,7 @@ export function EmployeeCsvImport({
       "2026-09-01",
       "EMP-001",
       departments[0]?.name ?? "Operations",
-      existingPeople[0]?.email ?? "",
+      existingPeople.find((person) => person.active)?.email ?? "",
       schedules[0]?.name ?? "Standard Monday to Friday",
       "15",
       "35000",
@@ -163,6 +163,17 @@ export function EmployeeCsvImport({
     const existingEmailSet = new Set(
       existingPeople.map((person) => person.email.trim().toLowerCase()).filter(Boolean)
     );
+    const existingEmployeeNumberSet = new Set(
+      existingPeople
+        .map((person) => person.employeeNumber?.trim().toLowerCase() ?? "")
+        .filter(Boolean)
+    );
+    const activeManagerEmailSet = new Set(
+      existingPeople
+        .filter((person) => person.active)
+        .map((person) => person.email.trim().toLowerCase())
+        .filter(Boolean)
+    );
 
     const importedRows: ImportRow[] = parsed.slice(1).map((line, offset) => {
       const email = value(line, "email").toLowerCase();
@@ -186,6 +197,9 @@ export function EmployeeCsvImport({
         const employeeNumberKey = employeeNumber.toLowerCase();
         if (seenEmployeeNumbers.has(employeeNumberKey)) {
           errors.push("Duplicate employee number in this file.");
+        }
+        if (existingEmployeeNumberSet.has(employeeNumberKey)) {
+          errors.push("Employee number already exists.");
         }
         seenEmployeeNumbers.add(employeeNumberKey);
       }
@@ -264,7 +278,7 @@ export function EmployeeCsvImport({
     for (const row of importedRows) {
       if (
         row.managerEmail &&
-        !existingEmailSet.has(row.managerEmail) &&
+        !activeManagerEmailSet.has(row.managerEmail) &&
         !importedEmailSet.has(row.managerEmail)
       ) {
         row.errors.push(`Manager email was not found: ${row.managerEmail}.`);
@@ -296,7 +310,9 @@ export function EmployeeCsvImport({
       schedules.map((item) => [item.name.toLowerCase(), item.id])
     );
     const personByEmail = new Map(
-      existingPeople.map((item) => [item.email.toLowerCase(), item.id])
+      existingPeople
+        .filter((item) => item.active)
+        .map((item) => [item.email.toLowerCase(), item.id])
     );
     const created = new Map<string, { id: string; row: ImportRow }>();
     const rowResults = new Map<number, RowResult>();
