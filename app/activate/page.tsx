@@ -27,7 +27,7 @@ export default async function ActivatePage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (existingEmployee) redirect("/");
+  if (existingEmployee) redirect("/my-leave");
 
   return (
     <main className="join-page">
