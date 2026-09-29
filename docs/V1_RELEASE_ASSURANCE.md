@@ -164,3 +164,26 @@ An upgrade to Supabase Pro would still be beneficial later because it would add 
 The production project is **`leave-ctrl`** because the public production alias `leave-ctrl.vercel.app` resolves there. The second project, **`leave-ctrl-2eqn`**, is a duplicate deployment target and should be disconnected/decommissioned after final verification.
 
 The connected Vercel capability available in this build session exposes project/deployment reads but not project deletion/disconnection, so duplicate cleanup remains an external project-admin action rather than an application build task.
+
+
+## Browser security headers — PASS
+
+Verified on the live production alias after deployment:
+
+- `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+- `Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+
+The header contract is enforced in CI.
+
+## Current release-head verification
+
+- CI: PASS (install, unit/security tests, dependency audit, production build).
+- Authoritative Vercel project: `leave-ctrl`.
+- Latest production deployment: READY.
+- Recent Vercel runtime errors: none.
+- Recent production request statuses observed: normal 200 and 307 responses only.
+- Supabase performance advisor: informational unused-index notices only; no indexes removed at this stage because usage volume is still too low for safe pruning.

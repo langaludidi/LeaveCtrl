@@ -61,6 +61,9 @@
 - [x] Recent Vercel runtime-error check found no runtime errors.
 - [x] Canonical production alias is publicly reachable.
 - [x] Unauthenticated protected routes resolve to the login surface with no-store caching.
+- [x] Baseline browser security headers verified live in production.
+- [x] Latest production deployment is READY on the authoritative Vercel project.
+- [x] Recent production runtime-error check is clean.
 - [x] Authoritative Vercel production project selected: `leave-ctrl` (`leave-ctrl.vercel.app`).
 - [ ] Disconnect/decommission duplicate Vercel project `leave-ctrl-2eqn` (requires Vercel project-admin write capability).
 
