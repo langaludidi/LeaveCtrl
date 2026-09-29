@@ -94,6 +94,12 @@
 - [ ] Fresh logical database backup taken and stored off-site before production sign-off.
 - [ ] Recovery copy inspected/tested in a disposable environment.
 
+## Email delivery
+
+- [ ] Correct Supabase Auth SMTP host from `smtp-reply.brevo.com` to `smtp-relay.brevo.com`.
+- [ ] Re-test password recovery after SMTP correction and confirm Auth `/recover` returns 200.
+- [ ] Confirm a recovery email is received and completes the reset flow.
+
 ## Go-live gate
 
 Production sign-off requires all unchecked security/deployment items resolved and controlled human UAT completed without an unresolved P0/P1 issue.

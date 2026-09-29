@@ -196,3 +196,19 @@ The Supabase organisation is on the Free plan. Current Supabase documentation re
 A dedicated `docs/V1_BACKUP_RECOVERY.md` runbook now defines the minimum V1 backup and recovery procedure. The existing LeaveCtrl organisation JSON export is explicitly not treated as a full database backup.
 
 The remaining release operation is to take and verify a fresh logical backup before final production sign-off. This requires database credentials in a trusted operator/CI environment and is therefore not performed from the application runtime or committed into the repository.
+
+
+## Auth email delivery — BLOCKED BY SMTP HOST CONFIGURATION
+
+Recent Supabase Auth logs show password recovery requests reaching `/recover` but returning HTTP 500 with DNS resolution failure for `smtp-reply.brevo.com`.
+
+Brevo's documented SMTP relay hostname is `smtp-relay.brevo.com`. The current Supabase Auth SMTP host therefore contains a configuration error and must be corrected in the Supabase Auth SMTP settings.
+
+This is not an application-code defect. The connected Supabase tooling available to this build session can inspect Auth logs but does not expose Auth SMTP configuration writes.
+
+Release validation after correction:
+1. request recovery for a UAT account;
+2. confirm Supabase Auth `/recover` returns 200;
+3. confirm the recovery email arrives;
+4. complete reset using a strong password;
+5. confirm global sign-out and successful sign-in with the new password.
