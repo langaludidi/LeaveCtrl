@@ -31,12 +31,13 @@ export function resolveAppBaseUrl({
   const configured = normaliseHttpUrl(configuredUrl);
   if (configured) return configured;
 
+  // Production email links must always return to the canonical customer-facing
+  // LeaveCtrl domain, not a Vercel project/preview hostname.
+  if (production) return "https://www.leavectrl.co.za";
+
   const vercelProduction = normaliseHttpUrl(vercelProductionUrl);
   if (vercelProduction) return vercelProduction;
 
-  // Request headers are useful for localhost/dev previews, but must not determine
-  // production email redirects because they are request-controlled input.
-  if (!production) return normaliseHttpUrl(requestOrigin);
-
-  return undefined;
+  // Request headers are useful for localhost/dev previews.
+  return normaliseHttpUrl(requestOrigin);
 }
