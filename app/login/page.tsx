@@ -73,12 +73,12 @@ export default async function LoginPage({
         </p>
 
         <details className="auth-recovery">
-          <summary>Can&apos;t access your account?</summary>
+          <summary>Need help signing in?</summary>
           <div className="auth-recovery-options">
             <form action={requestPasswordReset} className="auth-recovery-form">
               <div>
-                <strong>Forgot password</strong>
-                <span>We&apos;ll request a secure password reset link.</span>
+                <strong>Reset password</strong>
+                <span>We&apos;ll email you a secure reset link.</span>
               </div>
               <input
                 name="email"
@@ -94,8 +94,8 @@ export default async function LoginPage({
             <form action={resendConfirmation} className="auth-recovery-form">
               <input type="hidden" name="next" value={next} />
               <div>
-                <strong>Confirmation email missing</strong>
-                <span>Use this only if your account still requires email confirmation.</span>
+                <strong>Resend confirmation</strong>
+                <span>For accounts still waiting for email confirmation.</span>
               </div>
               <input
                 name="email"

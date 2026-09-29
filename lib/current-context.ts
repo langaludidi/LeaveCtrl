@@ -18,14 +18,21 @@ export function dateInTimeZone(date: Date, timeZone: string) {
 
 export async function getCurrentContext(options?: { requireEmployee?: boolean }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
+  const userId = claims?.sub ?? null;
 
-  if (!user) redirect("/login");
+  if (!userId) redirect("/login");
+
+  const user = {
+    id: userId,
+    email: typeof claims?.email === "string" ? claims.email : null,
+  };
 
   const { data: employee } = await supabase
     .from("employees")
     .select("id, organisation_id, first_name, last_name, email, department_id, manager_employee_id, start_date")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("employment_status", "active")
     .maybeSingle();
 
@@ -48,7 +55,7 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
         .from("organisation_memberships")
         .select("role")
         .eq("organisation_id", employee.organisation_id)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("is_active", true),
       supabase
         .from("organisations")
