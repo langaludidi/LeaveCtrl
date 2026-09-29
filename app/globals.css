@@ -422,3 +422,37 @@ textarea:focus-visible{
   .auth-recovery-form>div{grid-column:auto}
   .auth-recovery-form .btn{width:100%}
 }
+/* Locked LeaveCtrl Availability Matrix brand */
+.brand-logo{display:inline-flex;align-items:center;gap:9px;max-width:100%;line-height:1}
+.brand-mark{width:32px;height:32px;display:block;flex:0 0 auto}
+.brand-wordmark{display:inline-flex;align-items:baseline;font-size:25px;font-weight:800;letter-spacing:-1.25px;white-space:nowrap}
+.brand-word-leave,.brand-word-ctrl{color:inherit}
+.shell-brand-logo .brand-mark{width:31px;height:31px}
+.shell-brand-logo .brand-wordmark{font-size:22px}
+.auth-brand{font-size:inherit}
+.auth-brand .brand-logo{gap:11px}
+.auth-brand .brand-mark{width:39px;height:39px}
+.auth-brand .brand-wordmark{font-size:31px;letter-spacing:-1.6px}
+
+/* Mobile production hardening */
+@media(max-width:760px){
+  input,select,textarea{font-size:16px}
+  .inline-table-select{font-size:16px;min-height:44px}
+  .admin-mini-card,.workforce-change-card,.remuneration-card,.employee-exit-card{padding:15px}
+  .admin-mini-card .btn,.workforce-change-form>.btn,.remuneration-card>.btn,.employee-exit-form>.btn{width:100%}
+  .setup-head-actions{align-items:stretch}
+  .setup-head-actions .btn{width:100%}
+}
+@media(max-width:520px){
+  .brand{padding:0}
+  .shell-brand-logo{gap:7px}
+  .shell-brand-logo .brand-mark{width:30px;height:30px}
+  .shell-brand-logo .brand-wordmark{font-size:20px;letter-spacing:-1px}
+  .auth-brand .brand-mark{width:34px;height:34px}
+  .auth-brand .brand-wordmark{font-size:27px}
+  .schedule-hours-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .page-wrap{padding:14px 12px 28px}
+  .page-head h1{font-size:27px}
+  .card-title{gap:10px;align-items:flex-start}
+  .setup-head-actions{display:flex;flex-direction:column;gap:8px}
+}
