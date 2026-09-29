@@ -77,3 +77,14 @@ test("landing remains compact on narrow phones and accessible", async () => {
   assert.match(source, /aria-label="Calendar legend"/);
   assert.match(source, /aria-label=\{label\}/);
 });
+
+
+test("ordinary booking UI does not force event-based leave into a numeric balance", async () => {
+  const source = await readFile("components/BookLeaveForm.tsx", "utf8");
+
+  assert.match(source, /const eventBased = selectedType\?\.entitlementMethod === "event_based"/);
+  assert.match(source, /const balanceRequired = !eventBased && !noBalance/);
+  assert.match(source, /Eligibility check required/);
+  assert.match(source, /Event-based entitlement/);
+  assert.match(source, /disabled=\{submitting \|\| !leaveTypes\.length \|\| eventBased\}/);
+});
