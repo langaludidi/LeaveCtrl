@@ -456,3 +456,8 @@ textarea:focus-visible{
   .card-title{gap:10px;align-items:flex-start}
   .setup-head-actions{display:flex;flex-direction:column;gap:8px}
 }
+.summary-card-link{display:block;cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.summary-card-link:hover{border-color:#b7c7c9;box-shadow:0 5px 16px rgba(15,23,42,.07);transform:translateY(-1px)}
+.summary-card-link:focus-visible{outline:3px solid rgba(0,128,128,.24);outline-offset:2px}
+.summary-card-link .summary-foot svg{transition:transform .16s ease}
+.summary-card-link:hover .summary-foot svg,.summary-card-link:focus-visible .summary-foot svg{transform:translateX(3px)}
