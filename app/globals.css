@@ -461,3 +461,19 @@ textarea:focus-visible{
 .summary-card-link:focus-visible{outline:3px solid rgba(0,128,128,.24);outline-offset:2px}
 .summary-card-link .summary-foot svg{transition:transform .16s ease}
 .summary-card-link:hover .summary-foot svg,.summary-card-link:focus-visible .summary-foot svg{transform:translateX(3px)}
+/* Leave policy administration */
+.leave-policy-controls{display:grid;gap:18px;margin-top:18px}
+.leave-engine-grid{display:grid;gap:8px;margin-top:14px}
+.leave-engine-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(260px,1.5fr) auto;gap:18px;align-items:center;padding:14px 0;border-top:1px solid var(--border)}
+.leave-engine-row:first-child{border-top:0}
+.leave-engine-row>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.leave-engine-row span{color:#718096;font-size:11px}
+.configured-leave-list{display:flex;flex-direction:column;gap:5px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:#fafcfc}
+.configured-leave-list strong{font-size:11px}
+.configured-leave-list span{font-size:10px;color:#66778a}
+.balance-text-value{font-size:20px!important;line-height:1.2}
+.leave-guidance{margin:0}
+@media(max-width:760px){
+  .leave-engine-row{grid-template-columns:1fr;gap:8px;padding:14px 0}
+  .leave-engine-row>.verified-pill,.leave-engine-row>.status-pill{justify-self:start}
+}
