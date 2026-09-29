@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const migrationPath =
-  "supabase/migrations/20260929183000_security_definer_rpc_contract.sql";
+  "supabase/migrations/20260929183209_security_definer_rpc_contract.sql";
 
 const expectedRpcNames = [
   "add_employee_record",
