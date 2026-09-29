@@ -2026,6 +2026,15 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_manual_leave_allocation: {
+        Args: {
+          p_adjustment: number
+          p_employee_id: string
+          p_leave_type_code: string
+          p_reason: string
+        }
+        Returns: number
+      }
       add_employee_record: {
         Args: {
           p_department_id?: string
