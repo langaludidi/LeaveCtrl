@@ -40,3 +40,9 @@ test("signup and reset flows share the strong password policy", async () => {
   assert.match(resetPage, /validatePassword\(password\)/);
   assert.match(resetPage, /minLength=\{12\}/);
 });
+
+test("strong password minimum applies to account creation but does not block legacy sign-in", async () => {
+  const login = await readFile("app/login/page.tsx", "utf8");
+
+  assert.match(login, /minLength=\{signingUp \? 12 : undefined\}/);
+});

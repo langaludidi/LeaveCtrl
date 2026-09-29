@@ -52,7 +52,7 @@ export default async function LoginPage({
             <input
               name="password"
               type="password"
-              minLength={8}
+              minLength={signingUp ? 12 : undefined}
               autoComplete={signingUp ? "new-password" : "current-password"}
               required
             />
