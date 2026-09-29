@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, ChevronRight, Clock3, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -27,6 +28,11 @@ function SummaryCard({ tone, icon, label, value, unit, sub, href }: { tone: stri
 export default async function HomePage() {
   const { supabase, employee, displayName, roles, businessDate } = await getCurrentContext();
   if (!employee) return null;
+
+  const hasOperationalHome = roles.some((role) =>
+    ["org_admin", "hr_admin", "manager", "reporter", "auditor"].includes(role)
+  );
+  if (!hasOperationalHome) redirect("/my-leave");
 
   const today = businessDate;
   const canApprove = roles.some((role) => ["org_admin", "hr_admin", "manager"].includes(role));
