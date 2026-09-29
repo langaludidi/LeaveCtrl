@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 import { resolveAppBaseUrl } from "@/lib/app-base-url";
+import { validatePassword } from "@/lib/password-policy";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -48,9 +49,13 @@ export async function signUp(formData: FormData) {
   const password = read(formData, "password");
   const next = safeInternalPath(read(formData, "next"), "/onboarding");
 
-  if (!firstName || !lastName || !email || password.length < 8) {
+  const passwordPolicy = validatePassword(password);
+  if (!firstName || !lastName || !email || !passwordPolicy.valid) {
+    const message = !firstName || !lastName || !email
+      ? "Please complete all fields."
+      : passwordPolicy.message;
     redirect(
-      `/login?mode=signup&error=${encodeURIComponent("Please complete all fields and use at least 8 characters.")}&next=${encodeURIComponent(next)}`
+      `/login?mode=signup&error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`
     );
   }
 

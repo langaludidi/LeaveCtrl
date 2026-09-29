@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { validatePassword } from "@/lib/password-policy";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -18,8 +19,9 @@ export default function ResetPasswordPage() {
     const password = String(form.get("password") ?? "");
     const confirmPassword = String(form.get("confirmPassword") ?? "");
 
-    if (password.length < 8) {
-      setError("Use at least 8 characters.");
+    const passwordPolicy = validatePassword(password);
+    if (!passwordPolicy.valid) {
+      setError(passwordPolicy.message);
       setSaving(false);
       return;
     }
@@ -64,7 +66,7 @@ export default function ResetPasswordPage() {
             <input
               name="password"
               type="password"
-              minLength={8}
+              minLength={12}
               autoComplete="new-password"
               required
             />
@@ -75,7 +77,7 @@ export default function ResetPasswordPage() {
             <input
               name="confirmPassword"
               type="password"
-              minLength={8}
+              minLength={12}
               autoComplete="new-password"
               required
             />

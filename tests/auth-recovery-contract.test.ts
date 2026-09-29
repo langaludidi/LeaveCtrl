@@ -31,3 +31,12 @@ test("login rendering uses the same hardened internal-path validator as auth act
     /params\.next\?\.startsWith\("\/"\)/
   );
 });
+
+test("signup and reset flows share the strong password policy", async () => {
+  const actions = await readFile("app/auth/actions.ts", "utf8");
+  const resetPage = await readFile("app/reset-password/page.tsx", "utf8");
+
+  assert.match(actions, /validatePassword\(password\)/);
+  assert.match(resetPage, /validatePassword\(password\)/);
+  assert.match(resetPage, /minLength=\{12\}/);
+});
