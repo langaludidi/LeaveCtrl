@@ -87,6 +87,13 @@
 - [ ] Controlled human UAT for Reporter.
 - [ ] Controlled human UAT for Auditor.
 
+## Backup and recovery
+
+- [x] Free-tier backup limitation documented.
+- [x] Backup/recovery runbook committed.
+- [ ] Fresh logical database backup taken and stored off-site before production sign-off.
+- [ ] Recovery copy inspected/tested in a disposable environment.
+
 ## Go-live gate
 
 Production sign-off requires all unchecked security/deployment items resolved and controlled human UAT completed without an unresolved P0/P1 issue.

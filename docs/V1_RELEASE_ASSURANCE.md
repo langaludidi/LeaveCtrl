@@ -187,3 +187,12 @@ The header contract is enforced in CI.
 - Recent Vercel runtime errors: none.
 - Recent production request statuses observed: normal 200 and 307 responses only.
 - Supabase performance advisor: informational unused-index notices only; no indexes removed at this stage because usage volume is still too low for safe pruning.
+
+
+## Backup and recovery posture
+
+The Supabase organisation is on the Free plan. Current Supabase documentation recommends Free-tier projects regularly export their database using the Supabase CLI and maintain off-site backups. Paid tiers provide dashboard-accessible scheduled backups and can add PITR.
+
+A dedicated `docs/V1_BACKUP_RECOVERY.md` runbook now defines the minimum V1 backup and recovery procedure. The existing LeaveCtrl organisation JSON export is explicitly not treated as a full database backup.
+
+The remaining release operation is to take and verify a fresh logical backup before final production sign-off. This requires database credentials in a trusted operator/CI environment and is therefore not performed from the application runtime or committed into the repository.
