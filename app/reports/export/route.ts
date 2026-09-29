@@ -1,10 +1,9 @@
 import { dateInTimeZone } from "@/lib/current-context";
 import { createClient } from "@/lib/supabase/server";
 
-function csvCell(value: string | number) {
-  const text = String(value ?? "");
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
+import { safeCsvCell } from "@/lib/csv-export";
+
+const csvCell = safeCsvCell;
 
 export async function GET() {
   const supabase = await createClient();

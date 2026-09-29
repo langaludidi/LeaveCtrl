@@ -238,10 +238,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error: "export_incomplete",
-        sections: failed.map(([name, result]) => ({
-          name,
-          message: result.error?.message ?? "Unknown export error",
-        })),
+        sections: failed.map(([name]) => name),
       },
       { status: 500 }
     );
@@ -303,6 +300,7 @@ export async function GET() {
       "Content-Type": "application/json; charset=utf-8",
       "Content-Disposition": `attachment; filename="${safeName || "leavectrl"}-leavectrl-export-${exportedAt.slice(0, 10)}.json"`,
       "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
