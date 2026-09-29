@@ -13,3 +13,10 @@ test("health endpoint is safe, dynamic and non-cached", async () => {
   assert.doesNotMatch(route, /key\s*:/);
   assert.doesNotMatch(route, /url\s*:/);
 });
+
+test("auth middleware allows only the dedicated health route as a public API path", async () => {
+  const middleware = await readFile("lib/supabase/middleware.ts", "utf8");
+
+  assert.match(middleware, /pathname === "\/api\/health"/);
+  assert.doesNotMatch(middleware, /pathname\.startsWith\("\/api\/"\)/);
+});
