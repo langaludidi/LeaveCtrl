@@ -46,3 +46,12 @@ test("strong password minimum applies to account creation but does not block leg
 
   assert.match(login, /minLength=\{signingUp \? 12 : undefined\}/);
 });
+
+test("account recovery fields and messages are accessible", async () => {
+  const login = await readFile("app/login/page.tsx", "utf8");
+
+  assert.match(login, /aria-label="Email address for password reset"/);
+  assert.match(login, /aria-label="Email address for confirmation resend"/);
+  assert.match(login, /className="auth-alert error" role="alert"/);
+  assert.match(login, /className="auth-alert success" role="status" aria-live="polite"/);
+});

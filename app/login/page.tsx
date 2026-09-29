@@ -33,8 +33,8 @@ export default async function LoginPage({
           </p>
         </div>
 
-        {params.error && <div className="auth-alert error">{params.error}</div>}
-        {params.message && <div className="auth-alert success">{params.message}</div>}
+        {params.error && <div className="auth-alert error" role="alert">{params.error}</div>}
+        {params.message && <div className="auth-alert success" role="status" aria-live="polite">{params.message}</div>}
 
         <form action={signingUp ? signUp : signIn} className="auth-form">
           <input type="hidden" name="next" value={next} />
@@ -80,7 +80,14 @@ export default async function LoginPage({
                 <strong>Forgot password</strong>
                 <span>We&apos;ll request a secure password reset link.</span>
               </div>
-              <input name="email" type="email" autoComplete="email" placeholder="Work email" required />
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="Work email"
+                aria-label="Email address for password reset"
+                required
+              />
               <button className="btn secondary" type="submit">Send reset link</button>
             </form>
 
@@ -90,7 +97,14 @@ export default async function LoginPage({
                 <strong>Confirmation email missing</strong>
                 <span>Use this only if your account still requires email confirmation.</span>
               </div>
-              <input name="email" type="email" autoComplete="email" placeholder="Work email" required />
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="Work email"
+                aria-label="Email address for confirmation resend"
+                required
+              />
               <button className="btn secondary" type="submit">Resend confirmation</button>
             </form>
           </div>
