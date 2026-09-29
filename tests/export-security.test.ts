@@ -10,6 +10,7 @@ test("CSV export neutralises spreadsheet formula injection", () => {
   assert.equal(safeCsvCell("-1+2"), "'-1+2");
   assert.equal(safeCsvCell("@SUM(A1:A2)"), "'@SUM(A1:A2)");
   assert.equal(safeCsvCell(" Normal employee"), " Normal employee");
+  assert.equal(safeCsvCell(-12.5), "-12.5");
 });
 
 test("CSV escaping still protects commas, quotes and line breaks", () => {
