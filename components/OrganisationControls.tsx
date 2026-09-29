@@ -223,9 +223,11 @@ export function OrganisationControls({
                       onChange={(event) =>
                         assign(person.id, "schedule", event.target.value)
                       }
-                      disabled={saving === `schedule:${person.id}`}
+                      disabled={saving === `schedule:${person.id}` || !schedules.length}
                     >
-                      <option value="" disabled>Select schedule</option>
+                      <option value="" disabled>
+                        {schedules.length ? "Select schedule" : "Create a schedule above first"}
+                      </option>
                       {schedules.map((schedule) => (
                         <option key={schedule.id} value={schedule.id}>
                           {schedule.name}
@@ -235,6 +237,9 @@ export function OrganisationControls({
                   </td>
                 </tr>
               ))}
+              {!people.length ? (
+                <tr><td colSpan={3} className="empty-table-cell">No active employees are available for assignment.</td></tr>
+              ) : null}
             </tbody>
           </table>
         </div>
