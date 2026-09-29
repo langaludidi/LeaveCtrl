@@ -100,3 +100,18 @@ test("privileged RPC exposure is governed by an explicit allowlist", async () =>
     "The SQL allowlist and the release-test allowlist must remain identical"
   );
 });
+
+
+test("leave preflight extends the privileged RPC contract explicitly", async () => {
+  const sql = await readFile(
+    "supabase/migrations/20260929212555_leave_request_preflight_v1.sql",
+    "utf8"
+  );
+
+  assert.match(sql, /create\s+or\s+replace\s+function\s+public\.preview_leave_request_v1/i);
+  assert.match(sql, /security\s+definer/i);
+  assert.match(sql, /set\s+search_path\s+to\s+'public'\s*,\s*'private'/i);
+  assert.match(sql, /auth\.uid\(\)/i);
+  assert.match(sql, /revoke\s+all\s+on\s+function[\s\S]*from\s+public\s*,\s*anon/i);
+  assert.match(sql, /grant\s+execute\s+on\s+function[\s\S]*to\s+authenticated/i);
+});

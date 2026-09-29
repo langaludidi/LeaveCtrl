@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Info } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, Info, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type LeaveTypeOption = {
@@ -11,6 +11,35 @@ type LeaveTypeOption = {
   code: string;
   entitlementMethod: string;
 };
+
+type EvaluationOutcome = "ok" | "warning" | "blocked" | "not_applicable" | "not_evaluated";
+
+type LeaveEvaluation = {
+  ok: boolean;
+  blocker_code?: string | null;
+  message: string;
+  request?: { leave_type?: string; unit?: string; quantity?: number; start_date?: string; end_date?: string; day_fraction?: number; };
+  entitlement?: { outcome: EvaluationOutcome; available_before?: number | null; balance_after?: number | null; message: string; };
+  policy?: { outcome: EvaluationOutcome; message: string; };
+  coverage?: { outcome: EvaluationOutcome; warning_count?: number; warning_dates?: string[]; message: string; };
+};
+
+function EvaluationIcon({ outcome }: { outcome: EvaluationOutcome }) {
+  if (outcome === "ok") return <CheckCircle2 size={18} aria-hidden="true" />;
+  if (outcome === "warning") return <AlertTriangle size={18} aria-hidden="true" />;
+  if (outcome === "blocked") return <XCircle size={18} aria-hidden="true" />;
+  return <Info size={18} aria-hidden="true" />;
+}
+
+function EvaluationRow({ label, outcome, message, value }: { label: string; outcome: EvaluationOutcome; message: string; value?: string; }) {
+  return (
+    <div className={`evaluation-row ${outcome}`}>
+      <span className="evaluation-icon"><EvaluationIcon outcome={outcome} /></span>
+      <div><strong>{label}</strong><span>{message}</span></div>
+      {value ? <strong className="evaluation-value">{value}</strong> : null}
+    </div>
+  );
+}
 
 function estimateWeekdays(start: string, end: string) {
   if (!start || !end || end < start) return 0;
@@ -42,6 +71,8 @@ export function BookLeaveForm({
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
+  const [evaluation, setEvaluation] = useState<LeaveEvaluation | null>(null);
 
   const singleDay = Boolean(startDate && endDate && startDate === endDate);
 
@@ -57,6 +88,11 @@ export function BookLeaveForm({
   const balanceRequired = !eventBased && !noBalance;
   const manualAllocation = selectedType?.entitlementMethod === "manual_allocation";
   const projected = balanceRequired ? Math.max(currentBalance - estimate, 0) : currentBalance;
+
+  function clearEvaluation() {
+    setEvaluation(null);
+    setError("");
+  }
 
   const leaveGuidance = (() => {
     switch (selectedType?.code) {
@@ -80,9 +116,41 @@ export function BookLeaveForm({
     }
   })();
 
+  async function evaluateRequest() {
+    if (!leaveTypeId || !startDate || !endDate || eventBased) return;
+
+    setEvaluating(true);
+    setError("");
+
+    const supabase = createClient();
+    const { data, error: previewError } = await supabase.rpc("preview_leave_request_v1", {
+      p_leave_type_id: leaveTypeId,
+      p_start_date: startDate,
+      p_end_date: endDate,
+      p_day_fraction: dayFraction,
+    });
+
+    if (previewError) {
+      setError("We could not evaluate this request. Please try again.");
+      setEvaluation(null);
+      setEvaluating(false);
+      return;
+    }
+
+    setEvaluation(data as LeaveEvaluation);
+    setEvaluating(false);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!leaveTypeId || !startDate || !endDate) return;
+    if (!leaveTypeId || !startDate || !endDate || eventBased) return;
+
+    if (!evaluation) {
+      await evaluateRequest();
+      return;
+    }
+
+    if (!evaluation.ok) return;
 
     setSubmitting(true);
     setError("");
@@ -140,7 +208,10 @@ export function BookLeaveForm({
           <select
             className="native-field"
             value={leaveTypeId}
-            onChange={(event) => setLeaveTypeId(event.target.value)}
+            onChange={(event) => {
+              setLeaveTypeId(event.target.value);
+              clearEvaluation();
+            }}
             required
             disabled={!leaveTypes.length}
           >
@@ -170,6 +241,7 @@ export function BookLeaveForm({
               onChange={(event) => {
                 const value = event.target.value;
                 setStartDate(value);
+                clearEvaluation();
                 if (!endDate || endDate < value) {
                   setEndDate(value);
                   setDayFraction(1);
@@ -190,6 +262,7 @@ export function BookLeaveForm({
               onChange={(event) => {
                 const value = event.target.value;
                 setEndDate(value);
+                clearEvaluation();
                 if (value !== startDate) setDayFraction(1);
               }}
               required
@@ -203,7 +276,10 @@ export function BookLeaveForm({
             <button
               className={dayFraction === 1 ? "active" : ""}
               type="button"
-              onClick={() => setDayFraction(1)}
+              onClick={() => {
+                setDayFraction(1);
+                clearEvaluation();
+              }}
             >
               Full day
             </button>
@@ -211,7 +287,10 @@ export function BookLeaveForm({
               className={dayFraction === 0.5 ? "active" : ""}
               type="button"
               disabled={!singleDay}
-              onClick={() => setDayFraction(0.5)}
+              onClick={() => {
+                setDayFraction(0.5);
+                clearEvaluation();
+              }}
             >
               Half day
             </button>
@@ -227,10 +306,46 @@ export function BookLeaveForm({
             <span className="summary-icon"><CalendarDays size={20}/></span>
             <div>
               <strong>{estimate} {estimate === 1 ? "day" : "days"}</strong>
-              <span>Weekday estimate; public holidays and your work schedule are checked on submission.</span>
+              <span>Preview only. Your work schedule and public holidays are checked by the LeaveCtrl engine.</span>
             </div>
           </div>
         </label>
+
+        <section className="request-evaluation" aria-labelledby="request-evaluation-heading">
+          <div className="request-evaluation-head">
+            <div><span>STEP 3</span><h3 id="request-evaluation-heading">System evaluation</h3></div>
+            {evaluation?.ok ? <span className="evaluation-ready">Ready to submit</span> : null}
+          </div>
+
+          {eventBased ? (
+            <div className="evaluation-empty event-based">
+              <Info size={18} aria-hidden="true" />
+              <div><strong>Eligibility check required</strong><span>This entitlement is event-based and should not be submitted as an ordinary running-balance request.</span></div>
+            </div>
+          ) : evaluation ? (
+            <div className="evaluation-list" aria-live="polite">
+              <EvaluationRow
+                label="Entitlement"
+                outcome={evaluation.entitlement?.outcome ?? "not_evaluated"}
+                message={evaluation.entitlement?.message ?? "Not evaluated."}
+                value={evaluation.entitlement?.balance_after != null ? `${evaluation.entitlement.balance_after} days after approval` : undefined}
+              />
+              <EvaluationRow label="Policy" outcome={evaluation.policy?.outcome ?? "not_evaluated"} message={evaluation.policy?.message ?? "Not evaluated."} />
+              <EvaluationRow label="Coverage" outcome={evaluation.coverage?.outcome ?? "not_evaluated"} message={evaluation.coverage?.message ?? "Not evaluated."} />
+              {evaluation.coverage?.outcome === "warning" ? (
+                <div className="coverage-warning-note"><AlertTriangle size={17} aria-hidden="true" /><div><strong>Coverage warning</strong><span>{evaluation.coverage.message}</span></div></div>
+              ) : null}
+              {evaluation.ok && evaluation.request?.quantity != null ? (
+                <div className="evaluation-summary"><span>Authoritative request quantity</span><strong>{evaluation.request.quantity} {evaluation.request.quantity === 1 ? "working day" : "working days"}</strong></div>
+              ) : null}
+              {!evaluation.ok ? (
+                <div className="evaluation-blocker" role="alert"><XCircle size={17} aria-hidden="true" /><div><strong>Request needs attention</strong><span>{evaluation.message}</span></div></div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="evaluation-empty"><Info size={18} aria-hidden="true" /><div><strong>Check before submitting</strong><span>LeaveCtrl will evaluate entitlement, policy and team coverage without creating a request.</span></div></div>
+          )}
+        </section>
 
         <label>
           Note <span className="muted">(optional)</span>
@@ -250,9 +365,17 @@ export function BookLeaveForm({
           <button
             className="btn primary"
             type="submit"
-            disabled={submitting || !leaveTypes.length || eventBased}
+            disabled={submitting || evaluating || !leaveTypes.length || eventBased || Boolean(evaluation && !evaluation.ok)}
           >
-            {submitting ? "Submitting…" : eventBased ? "Eligibility check required" : "Submit request"}
+            {submitting
+              ? "Submitting…"
+              : evaluating
+                ? "Checking…"
+                : eventBased
+                  ? "Eligibility check required"
+                  : evaluation?.ok
+                    ? "Submit request"
+                    : "Check request"}
           </button>
         </div>
       </form>
@@ -298,27 +421,13 @@ export function BookLeaveForm({
           </div>
         </section>
 
-        <section className="card coverage-card">
-          <h2>Team coverage</h2>
-          <div className="coverage-alert">
-            <Info size={21}/>
-            <div>
-              <strong>Operational coverage is checked on submission</strong>
-              <p>
-                Configured minimum-staffing rules evaluate both ordinary leave and TOIL.
-                A hard rule blocks the request; a warning is shown to the approver.
-              </p>
-            </div>
-          </div>
-        </section>
-
         <section className="card calc-card">
-          <h2><Info size={19}/> How the calculation works</h2>
-          <div className="calc-row"><span>Selected calendar period</span><strong>Checked</strong></div>
-          <div className="calc-row"><span>Non-working schedule days</span><strong>Excluded</strong></div>
+          <h2><Info size={19}/> Governed underneath</h2>
+          <div className="calc-row"><span>Work schedule</span><strong>Evaluated</strong></div>
           <div className="calc-row"><span>Configured public holidays</span><strong>Excluded</strong></div>
-          <div className="calc-row"><span>Partial-day quantity</span><strong>{dayFraction === 0.5 ? "0.5 day" : "Full day"}</strong></div>
-          <div className="calc-row total"><span>Authoritative quantity</span><strong>Calculated on submit</strong></div>
+          <div className="calc-row"><span>Policy rules</span><strong>Evaluated</strong></div>
+          <div className="calc-row"><span>Team coverage</span><strong>Evaluated</strong></div>
+          <div className="calc-row total"><span>Final quantity</span><strong>Confirmed before submission</strong></div>
         </section>
       </div>
     </section>
