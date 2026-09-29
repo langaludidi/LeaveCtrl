@@ -88,7 +88,7 @@ export function AppShell({
   const canAudit = ["Organisation Admin", "HR Admin", "Auditor"].includes(role);
 
   const nav = [
-    { href: "/", label: "Home", icon: Home, visible: true },
+    { href: "/", label: "Home", icon: Home, visible: role !== "Employee" },
     { href: "/my-leave", label: "My Leave", icon: CalendarDays, visible: true },
     { href: "/book-leave", label: "Book Leave", icon: CalendarPlus, visible: true },
     { href: "/calendar", label: "Calendar", icon: CalendarDays, visible: true },
@@ -109,9 +109,28 @@ export function AppShell({
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
-        <Link href="/" className="brand" aria-label="LeaveCtrl home">
+        <Link href={role === "Employee" ? "/my-leave" : "/"} className="brand" aria-label="LeaveCtrl home">
           <BrandLogo className="shell-brand-logo" />
         </Link>
+
+        <div className="mobile-header-actions">
+          <Link
+            href="/notifications"
+            className="notification-button mobile-header-notifications"
+            aria-label={unreadNotifications
+              ? `${unreadNotifications} unread notifications`
+              : "Notifications"}
+            title="Notifications"
+          >
+            <Bell size={18} />
+            {unreadNotifications ? (
+              <span>{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
+            ) : null}
+          </Link>
+          <div className="avatar mobile-header-avatar" aria-label={displayName} title={displayName}>
+            {initials(displayName)}
+          </div>
+        </div>
 
         <button
           type="button"
@@ -146,6 +165,20 @@ export function AppShell({
               </Link>
             );
           })}
+
+          <div className="mobile-account-menu">
+            <div>
+              <div className="avatar">{initials(displayName)}</div>
+              <div>
+                <strong>{displayName}</strong>
+                <span>{role}</span>
+              </div>
+            </div>
+            <button type="button" onClick={signOut}>
+              <LogOut size={17} aria-hidden="true" />
+              Sign out
+            </button>
+          </div>
         </nav>
 
         <div className="sidebar-foot">
