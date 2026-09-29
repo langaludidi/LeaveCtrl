@@ -23,3 +23,14 @@ test("server auth verification prefers getClaims over a per-request Auth user lo
   assert.match(context, /auth\.getClaims\(\)/);
   assert.doesNotMatch(context, /auth\.getUser\(\)/);
 });
+
+test("client shell avoids repeated Auth user lookups on navigation", async () => {
+  const shell = await readFile("components/AppShell.tsx", "utf8");
+
+  assert.match(shell, /auth\.getClaims\(\)/);
+  assert.doesNotMatch(shell, /auth\.getUser\(\)/);
+  assert.match(
+    shell,
+    /window\.addEventListener\("leavectrl-notifications-changed", loadUnread\)[\s\S]*?\}, \[\]\);/
+  );
+});

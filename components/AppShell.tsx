@@ -52,8 +52,9 @@ export function AppShell({
     const supabase = createClient();
 
     async function loadUnread() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: claimsData } = await supabase.auth.getClaims();
+      const userId = claimsData?.claims?.sub ?? null;
+      if (!userId) {
         if (active) setUnreadNotifications(0);
         return;
       }
@@ -61,7 +62,7 @@ export function AppShell({
       const { count } = await supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
-        .eq("recipient_user_id", user.id)
+        .eq("recipient_user_id", userId)
         .is("read_at", null);
 
       if (active) setUnreadNotifications(count ?? 0);
@@ -74,7 +75,7 @@ export function AppShell({
       active = false;
       window.removeEventListener("leavectrl-notifications-changed", loadUnread);
     };
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     setMobileNavOpen(false);
