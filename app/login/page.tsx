@@ -1,4 +1,9 @@
-import { signIn, signUp } from "@/app/auth/actions";
+import {
+  requestPasswordReset,
+  resendConfirmation,
+  signIn,
+  signUp,
+} from "@/app/auth/actions";
 
 export default async function LoginPage({
   searchParams,
@@ -64,6 +69,30 @@ export default async function LoginPage({
             {signingUp ? "Sign in" : "Create account"}
           </a>
         </p>
+
+        <details className="auth-recovery">
+          <summary>Can&apos;t access your account?</summary>
+          <div className="auth-recovery-options">
+            <form action={requestPasswordReset} className="auth-recovery-form">
+              <div>
+                <strong>Forgot password</strong>
+                <span>We&apos;ll request a secure password reset link.</span>
+              </div>
+              <input name="email" type="email" autoComplete="email" placeholder="Work email" required />
+              <button className="btn secondary" type="submit">Send reset link</button>
+            </form>
+
+            <form action={resendConfirmation} className="auth-recovery-form">
+              <input type="hidden" name="next" value={next} />
+              <div>
+                <strong>Confirmation email missing</strong>
+                <span>Use this only if your account still requires email confirmation.</span>
+              </div>
+              <input name="email" type="email" autoComplete="email" placeholder="Work email" required />
+              <button className="btn secondary" type="submit">Resend confirmation</button>
+            </form>
+          </div>
+        </details>
       </section>
 
       <aside className="auth-aside">
