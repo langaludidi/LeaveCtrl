@@ -28,3 +28,9 @@ test("social image endpoint supports explicit variants and deterministic rotatio
   assert.match(route, /X-LeaveCtrl-Social-Variant/);
   assert.match(route, /status: 307/);
 });
+
+test("social image endpoint remains public for social crawlers", async () => {
+  const middleware = await readFile("lib/supabase/middleware.ts", "utf8");
+
+  assert.match(middleware, /pathname === "\/api\/social-image"/);
+});
