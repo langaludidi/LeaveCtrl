@@ -5,6 +5,7 @@ import {
   signUp,
 } from "@/app/auth/actions";
 import { safeInternalPath } from "@/lib/safe-internal-path";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default async function LoginPage({
   searchParams,
@@ -21,7 +22,7 @@ export default async function LoginPage({
   return (
     <main className="auth-page">
       <section className="auth-panel">
-        <div className="auth-brand"><span>Leave</span>Ctrl</div>
+        <div className="auth-brand"><BrandLogo className="auth-brand-logo" /></div>
 
         <div className="auth-copy">
           <p className="eyebrow">LEAVE & WORKFORCE AVAILABILITY</p>
