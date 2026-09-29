@@ -4,6 +4,7 @@ import { CalendarDays, CheckCircle2, Circle, Download, Scale, ShieldCheck, Users
 import { AppShell } from "@/components/AppShell";
 import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { OrganisationControls } from "@/components/OrganisationControls";
+import { LeavePolicyControls } from "@/components/LeavePolicyControls";
 import { AvailabilityControls } from "@/components/AvailabilityControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
@@ -34,6 +35,7 @@ export default async function SetupPage() {
     { data: people },
     { data: assignments },
     { data: leaveTypes },
+    { data: policyVersions },
     { data: blockedPeriods },
     { data: coverageRules },
   ] = await Promise.all([
@@ -81,10 +83,18 @@ export default async function SetupPage() {
       .order("effective_from", { ascending: false }),
     supabase
       .from("leave_types")
-      .select("id, name")
+      .select("id, name, code, is_statutory")
       .eq("organisation_id", employee.organisation_id)
       .eq("active", true)
       .order("name"),
+    supabase
+      .from("leave_policy_versions")
+      .select("leave_type_id, entitlement_method, entitlement_amount, cycle_months, cycle_basis, effective_from, effective_to")
+      .eq("organisation_id", employee.organisation_id)
+      .lte("effective_from", businessDate)
+      .or(`effective_to.is.null,effective_to.gte.${businessDate}`)
+      .order("effective_from", { ascending: false })
+      .order("version", { ascending: false }),
     supabase
       .from("blocked_periods")
       .select("id, name, start_date, end_date, hard_block")
@@ -138,6 +148,37 @@ export default async function SetupPage() {
     departmentId: person.department_id,
     scheduleId: scheduleMap.get(person.id) ?? null,
   }));
+
+  const currentPolicyByType = new Map<string, {
+    entitlement_method: string;
+    entitlement_amount: number | null;
+    cycle_months: number | null;
+    cycle_basis: string;
+  }>();
+  for (const policy of policyVersions ?? []) {
+    if (!currentPolicyByType.has(policy.leave_type_id)) {
+      currentPolicyByType.set(policy.leave_type_id, {
+        entitlement_method: policy.entitlement_method,
+        entitlement_amount: policy.entitlement_amount === null ? null : Number(policy.entitlement_amount),
+        cycle_months: policy.cycle_months,
+        cycle_basis: policy.cycle_basis,
+      });
+    }
+  }
+
+  const policyLeaveTypes = (leaveTypes ?? []).map((type) => {
+    const policy = currentPolicyByType.get(type.id);
+    return {
+      id: type.id,
+      code: type.code,
+      name: type.name,
+      isStatutory: type.is_statutory,
+      entitlementMethod: policy?.entitlement_method ?? "not_configured",
+      entitlementAmount: policy?.entitlement_amount ?? null,
+      cycleMonths: policy?.cycle_months ?? null,
+      cycleBasis: policy?.cycle_basis ?? "employment_anniversary",
+    };
+  });
 
   const activePeopleCount = people?.length ?? 0;
   const assignedScheduleCount = assignmentPeople.filter((person) => person.scheduleId).length;
@@ -266,6 +307,12 @@ export default async function SetupPage() {
             people={assignmentPeople}
             departments={departments ?? []}
             schedules={schedules ?? []}
+            businessDate={businessDate}
+          />
+
+          <LeavePolicyControls
+            people={assignmentPeople.map(({ id, name }) => ({ id, name }))}
+            leaveTypes={policyLeaveTypes}
             businessDate={businessDate}
           />
 
