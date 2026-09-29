@@ -9,6 +9,7 @@ type LeaveTypeOption = {
   id: string;
   name: string;
   code: string;
+  entitlementMethod: string;
 };
 
 function estimateWeekdays(start: string, end: string) {
@@ -49,8 +50,28 @@ export function BookLeaveForm({
     return singleDay && dayFraction === 0.5 ? weekdays * 0.5 : weekdays;
   }, [startDate, endDate, singleDay, dayFraction]);
 
+  const selectedType = leaveTypes.find((type) => type.id === leaveTypeId) ?? leaveTypes[0];
   const currentBalance = balancesByType[leaveTypeId] ?? 0;
-  const projected = Math.max(currentBalance - estimate, 0);
+  const balanceRequired = selectedType?.entitlementMethod !== "no_balance";
+  const manualAllocation = selectedType?.entitlementMethod === "manual_allocation";
+  const projected = balanceRequired ? Math.max(currentBalance - estimate, 0) : currentBalance;
+
+  const leaveGuidance = (() => {
+    switch (selectedType?.code) {
+      case "SICK":
+        return "Your statutory sick balance is calculated from service length and your work schedule. A medical certificate may be required for longer or repeated absences.";
+      case "FAMILY_RESPONSIBILITY":
+        return "Eligibility is based on service length and working pattern. The employer may request reasonable proof of the qualifying event.";
+      case "PARENTAL_INTERIM":
+        return "HR must first record the parental allocation confirmed for the qualifying event under the current interim regime.";
+      case "UNPAID":
+        return "Unpaid leave does not consume an entitlement balance. Approval is still required and payroll may be affected.";
+      case "ANNUAL":
+        return "The statutory annual floor is schedule-aware. Public holidays and non-working days are excluded when the request is calculated.";
+      default:
+        return "This employer-defined leave follows the configured policy and approval workflow.";
+    }
+  })();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,6 +147,11 @@ export function BookLeaveForm({
             <span className="field-help">Ask HR to configure at least one active leave type before booking leave.</span>
           ) : null}
         </label>
+
+        <div className="setup-reassurance leave-guidance">
+          <Info size={18}/>
+          <div><strong>{selectedType?.name ?? "Leave"}</strong><p>{leaveGuidance}</p></div>
+        </div>
 
         <div className="field-row">
           <label>
@@ -226,9 +252,19 @@ export function BookLeaveForm({
           <div className="balance-highlight">
             <span className="summary-icon"><CalendarDays size={20}/></span>
             <div>
-              <span>Available balance</span>
-              <strong>{currentBalance} <small>days</small></strong>
-              <small>Current ledger balance, including pending reservations.</small>
+              <span>{balanceRequired ? "Available balance" : "Balance treatment"}</span>
+              {balanceRequired ? (
+                <strong>{currentBalance} <small>days</small></strong>
+              ) : (
+                <strong className="balance-text-value">No balance required</strong>
+              )}
+              <small>
+                {balanceRequired
+                  ? manualAllocation
+                    ? "HR-confirmed event allocation, less pending reservations."
+                    : "Current ledger balance, including pending reservations."
+                  : "This leave type is governed by approval and dates rather than an entitlement balance."}
+              </small>
             </div>
           </div>
 
@@ -239,7 +275,10 @@ export function BookLeaveForm({
             </div>
             <div>
               <span className="math-icon green">=</span>
-              <div><span>Estimated after request</span><strong>{projected} days</strong></div>
+              <div>
+                <span>{balanceRequired ? "Estimated after request" : "Balance after request"}</span>
+                <strong>{balanceRequired ? `${projected} days` : "Not applicable"}</strong>
+              </div>
             </div>
           </div>
         </section>
