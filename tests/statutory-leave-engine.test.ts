@@ -53,7 +53,11 @@ test("leave booking explains statutory, manual-allocation and no-balance modes",
 
   assert.match(form, /case "SICK"/);
   assert.match(form, /case "FAMILY_RESPONSIBILITY"/);
-  assert.match(form, /case "PARENTAL_INTERIM"/);
+  assert.match(form, /case "PARENTAL"/);
+  assert.match(form, /case "ADOPTION"/);
+  assert.match(form, /case "MATERNITY"/);
+  assert.match(form, /case "COMMISSIONING_PARENTAL"/);
+  assert.match(form, /entitlementMethod === "event_based"/);
   assert.match(form, /case "UNPAID"/);
   assert.match(form, /No balance required/);
 });
