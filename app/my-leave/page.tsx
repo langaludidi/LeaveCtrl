@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -86,6 +87,19 @@ export default async function MyLeavePage() {
   const { supabase, employee, displayName, roles, businessDate } =
     await getCurrentContext();
   if (!employee) return null;
+
+  const welcomeRequired = !roles.some((role) =>
+    ["org_admin", "hr_admin"].includes(role)
+  );
+  if (welcomeRequired) {
+    const { data: welcomeState } = await supabase
+      .from("employees")
+      .select("welcome_completed_at")
+      .eq("id", employee.id)
+      .maybeSingle();
+
+    if (!welcomeState?.welcome_completed_at) redirect("/welcome");
+  }
 
   const today = dateFromKey(businessDate);
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
