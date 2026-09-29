@@ -4,6 +4,7 @@ import {
   signIn,
   signUp,
 } from "@/app/auth/actions";
+import { safeInternalPath } from "@/lib/safe-internal-path";
 
 export default async function LoginPage({
   searchParams,
@@ -12,9 +13,10 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const signingUp = params.mode === "signup";
-  const next = params.next?.startsWith("/") && !params.next.startsWith("//")
-    ? params.next
-    : signingUp ? "/onboarding" : "/";
+  const next = safeInternalPath(
+    params.next,
+    signingUp ? "/onboarding" : "/"
+  );
 
   return (
     <main className="auth-page">

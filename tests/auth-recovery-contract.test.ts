@@ -21,3 +21,13 @@ test("password reset landing page updates the authenticated user's password", as
   assert.match(resetPage, /auth\.signOut\(\)/);
   assert.match(resetPage, /Password%20updated/);
 });
+
+test("login rendering uses the same hardened internal-path validator as auth actions", async () => {
+  const login = await readFile("app/login/page.tsx", "utf8");
+
+  assert.match(login, /safeInternalPath/);
+  assert.doesNotMatch(
+    login,
+    /params\.next\?\.startsWith\("\/"\)/
+  );
+});
