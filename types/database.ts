@@ -849,6 +849,7 @@ export type Database = {
           start_date: string
           updated_at: string
           user_id: string | null
+          welcome_completed_at: string | null
         }
         Insert: {
           created_at?: string
@@ -865,6 +866,7 @@ export type Database = {
           start_date: string
           updated_at?: string
           user_id?: string | null
+          welcome_completed_at?: string | null
         }
         Update: {
           created_at?: string
@@ -881,6 +883,7 @@ export type Database = {
           start_date?: string
           updated_at?: string
           user_id?: string | null
+          welcome_completed_at?: string | null
         }
         Relationships: [
           {
@@ -2526,6 +2529,10 @@ export type Database = {
         Returns: string
       }
       claim_employee_invitation: { Args: { p_token: string }; Returns: string }
+      complete_employee_welcome: {
+        Args: never
+        Returns: string
+      }
       configure_annual_leave_policy_v2: {
         Args: {
           p_annual_days: number

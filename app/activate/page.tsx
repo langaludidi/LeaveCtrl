@@ -23,11 +23,11 @@ export default async function ActivatePage({
 
   const { data: existingEmployee } = await supabase
     .from("employees")
-    .select("id")
+    .select("id, welcome_completed_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (existingEmployee) redirect("/my-leave");
+  if (existingEmployee) redirect(existingEmployee.welcome_completed_at ? "/my-leave" : "/welcome");
 
   return (
     <main className="join-page">

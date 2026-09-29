@@ -544,3 +544,37 @@ textarea:focus-visible{
 .evaluation-summary span{font-size:10px;color:#718096}
 .evaluation-summary strong{font-size:12px;color:var(--teal-900)}
 @media(max-width:560px){.evaluation-row{grid-template-columns:28px minmax(0,1fr)}.evaluation-value{grid-column:2;text-align:left;white-space:normal}.request-evaluation{padding:11px}.request-evaluation-head{align-items:center}}
+
+
+/* One-time invited employee welcome */
+.welcome-page{min-height:100vh;background:var(--canvas);padding:28px 16px;display:flex;justify-content:center}
+.welcome-shell{width:min(760px,100%);display:flex;flex-direction:column;gap:14px}
+.welcome-brand{display:flex;align-items:center;min-height:44px}
+.welcome-brand-logo{width:150px;height:auto}
+.welcome-hero{padding:8px 2px 2px}
+.welcome-hero h1{font-size:34px;line-height:1.1;letter-spacing:-1.2px;margin:3px 0 7px}
+.welcome-hero>p:last-child{margin:0;max-width:620px;color:#64748b;font-size:14px;line-height:1.55}
+.welcome-context-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.welcome-context-card{min-height:82px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;display:flex;align-items:flex-start;gap:10px}
+.welcome-context-icon{width:34px;height:34px;border-radius:8px;background:#edf5f4;color:var(--teal-800);display:grid;place-items:center;flex:none}
+.welcome-context-card>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.welcome-context-card>div>span{font-size:10px;color:#718096;text-transform:uppercase;font-weight:700;letter-spacing:.035em}
+.welcome-context-card strong{font-size:13px;color:#26323d;line-height:1.35}
+.welcome-context-card small{font-size:10px;color:#82909c;line-height:1.35}
+.welcome-leave-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px}
+.welcome-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:7px}
+.welcome-section-head>div{display:flex;flex-direction:column;gap:2px}
+.welcome-section-head>div>span{font-size:10px;color:#718096;font-weight:750;letter-spacing:.04em}
+.welcome-section-head h2{font-size:17px;margin:0;color:#26323d}
+.welcome-section-head small{font-size:10px;color:#82909c}
+.welcome-leave-list{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+.welcome-leave-list>div{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1f2;padding:8px 0}
+.welcome-leave-list strong{font-size:12px;color:#26323d}
+.welcome-leave-list span{font-size:11px;color:#52606d;text-align:right}
+.welcome-finish{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.welcome-finish>div:first-child{display:flex;flex-direction:column;gap:3px}
+.welcome-finish strong{font-size:13px;color:#26323d}
+.welcome-finish span{font-size:11px;color:#718096}
+.welcome-complete-action{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.welcome-continue{min-height:44px;white-space:nowrap}
+@media(max-width:600px){.welcome-page{padding:16px 12px}.welcome-shell{gap:10px}.welcome-hero h1{font-size:30px}.welcome-context-grid{grid-template-columns:1fr}.welcome-context-card{min-height:70px}.welcome-leave-list{grid-template-columns:1fr}.welcome-section-head{flex-direction:column;gap:4px}.welcome-finish{align-items:flex-start;flex-direction:column}.welcome-complete-action,.welcome-continue{width:100%}}

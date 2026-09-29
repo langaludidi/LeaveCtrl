@@ -115,3 +115,18 @@ test("leave preflight extends the privileged RPC contract explicitly", async () 
   assert.match(sql, /revoke\s+all\s+on\s+function[\s\S]*from\s+public\s*,\s*anon/i);
   assert.match(sql, /grant\s+execute\s+on\s+function[\s\S]*to\s+authenticated/i);
 });
+
+
+test("employee welcome completion extends the privileged RPC contract explicitly", async () => {
+  const sql = await readFile(
+    "supabase/migrations/20260929213417_employee_welcome_onboarding_v1.sql",
+    "utf8"
+  );
+
+  assert.match(sql, /complete_employee_welcome/);
+  assert.match(sql, /security\s+definer/i);
+  assert.match(sql, /auth\.uid\(\)/i);
+  assert.match(sql, /set\s+search_path\s+to\s+'public'\s*,\s*'private'/i);
+  assert.match(sql, /revoke\s+all\s+on\s+function[\s\S]*from\s+public\s*,\s*anon/i);
+  assert.match(sql, /grant\s+execute\s+on\s+function[\s\S]*to\s+authenticated/i);
+});
