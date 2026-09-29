@@ -5,7 +5,10 @@ import test from "node:test";
 import { safeCsvCell } from "../lib/csv-export.ts";
 
 test("CSV export neutralises spreadsheet formula injection", () => {
-  assert.equal(safeCsvCell("=HYPERLINK(\"https://evil.example\")"), "'=HYPERLINK(\"https://evil.example\")");
+  assert.equal(
+    safeCsvCell("=HYPERLINK(\"https://evil.example\")"),
+    "\"'=HYPERLINK(\"\"https://evil.example\"\")\""
+  );
   assert.equal(safeCsvCell("+1+1"), "'+1+1");
   assert.equal(safeCsvCell("-1+2"), "'-1+2");
   assert.equal(safeCsvCell("@SUM(A1:A2)"), "'@SUM(A1:A2)");
