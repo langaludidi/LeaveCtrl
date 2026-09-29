@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Building2, Clock3, Save } from "lucide-react";
+import { Building2, Clock3, MapPin, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,16 +12,19 @@ type Person = {
   scheduleId: string | null;
 };
 type Department = { id: string; name: string };
+type Location = { id: string; name: string };
 type Schedule = { id: string; name: string };
 
 export function OrganisationControls({
   people,
   departments,
+  locations,
   schedules,
   businessDate,
 }: {
   people: Person[];
   departments: Department[];
+  locations: Location[];
   schedules: Schedule[];
   businessDate: string;
 }) {
@@ -48,6 +51,27 @@ export function OrganisationControls({
     }
     event.currentTarget.reset();
     setNotice("Department created.");
+    router.refresh();
+  }
+
+  async function createLocation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    setSaving("location");
+    const form = new FormData(event.currentTarget);
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc("create_location", {
+      p_name: String(form.get("name") ?? "").trim(),
+      p_code: String(form.get("code") ?? "").trim() || undefined,
+    });
+    setSaving("");
+    if (rpcError) {
+      setError("Location could not be created.");
+      return;
+    }
+    event.currentTarget.reset();
+    setNotice("Location created.");
     router.refresh();
   }
 
@@ -114,7 +138,7 @@ export function OrganisationControls({
       {error ? <div className="auth-alert error">{error}</div> : null}
       {notice ? <div className="auth-alert success">{notice}</div> : null}
 
-      <div className="admin-two-col">
+      <div className="admin-three-col">
         <form className="card admin-mini-card" onSubmit={createDepartment}>
           <div className="card-title">
             <div>
@@ -175,6 +199,36 @@ export function OrganisationControls({
           <button className="btn primary" disabled={saving === "schedule"} type="submit">
             <Save size={16}/>
             {saving === "schedule" ? "Saving…" : "Add schedule"}
+          </button>
+        </form>
+
+        <form className="card admin-mini-card" onSubmit={createLocation}>
+          <div className="card-title">
+            <div>
+              <h2>Locations</h2>
+              <p className="card-subtitle">Create workplaces used for employee assignment and workforce context.</p>
+            </div>
+            <MapPin size={19}/>
+          </div>
+          <label>
+            Location name
+            <input name="name" placeholder="Head Office" required />
+          </label>
+          <label>
+            Code <span className="muted">(optional)</span>
+            <input name="code" placeholder="HQ" />
+          </label>
+          {locations.length ? (
+            <div className="configured-leave-list">
+              <strong>Configured locations</strong>
+              {locations.slice(0, 4).map((location) => (
+                <span key={location.id}>{location.name}</span>
+              ))}
+            </div>
+          ) : null}
+          <button className="btn primary" disabled={saving === "location"} type="submit">
+            <Save size={16}/>
+            {saving === "location" ? "Saving…" : "Add location"}
           </button>
         </form>
       </div>

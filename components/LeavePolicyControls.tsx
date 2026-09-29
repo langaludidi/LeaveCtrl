@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Baby, Plus, Scale } from "lucide-react";
+import { Baby, Plus, Scale, WalletCards } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -58,6 +58,16 @@ export function LeavePolicyControls({
     [leaveTypes]
   );
 
+  const openingBalanceTypes = useMemo(
+    () =>
+      leaveTypes.filter(
+        (type) =>
+          type.code === "ANNUAL" ||
+          (!type.isStatutory && type.entitlementMethod === "fixed_days")
+      ),
+    [leaveTypes]
+  );
+
   async function createEmployerLeave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving("employer-leave");
@@ -90,6 +100,43 @@ export function LeavePolicyControls({
 
     event.currentTarget.reset();
     setNotice("Employer leave type saved and provisioned for active employees.");
+    router.refresh();
+  }
+
+  async function setOpeningBalance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving("opening-balance");
+    setError("");
+    setNotice("");
+
+    const form = new FormData(event.currentTarget);
+    const employeeId = String(form.get("employee") ?? "");
+    const leaveTypeCode = String(form.get("leaveType") ?? "");
+    const balance = Number(form.get("balance") ?? 0);
+    const reason = String(form.get("reason") ?? "").trim();
+
+    if (!employeeId || !leaveTypeCode || !Number.isFinite(balance) || reason.length < 3) {
+      setSaving("");
+      setError("Select an employee and leave type, enter the opening position and record the reason.");
+      return;
+    }
+
+    const supabase = createClient();
+    const { data, error: rpcError } = await supabase.rpc("set_employee_opening_balance", {
+      p_employee_id: employeeId,
+      p_leave_type_code: leaveTypeCode,
+      p_balance: balance,
+      p_reason: reason,
+    });
+
+    setSaving("");
+    if (rpcError) {
+      setError("The opening leave position could not be saved.");
+      return;
+    }
+
+    event.currentTarget.reset();
+    setNotice(`Opening leave position saved. Current balance: ${Number(data ?? balance)} days.`);
     router.refresh();
   }
 
@@ -292,6 +339,58 @@ export function LeavePolicyControls({
 
           <button className="btn primary" type="submit" disabled={saving === "parental-allocation" || !people.length}>
             {saving === "parental-allocation" ? "Saving…" : "Update parental allocation"}
+          </button>
+        </form>
+      </div>
+
+      <div className="admin-two-col opening-balance-row">
+        <form className="card admin-mini-card" onSubmit={setOpeningBalance}>
+          <div className="card-title">
+            <div>
+              <h2>Opening leave position</h2>
+              <p className="card-subtitle">
+                Record the employee&apos;s verified opening or migration balance. LeaveCtrl posts an auditable ledger adjustment.
+              </p>
+            </div>
+            <WalletCards size={19}/>
+          </div>
+
+          <label>
+            Employee
+            <select className="native-field" name="employee" required disabled={!people.length}>
+              <option value="">Select employee</option>
+              {people.map((person) => (
+                <option key={person.id} value={person.id}>{person.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Leave type
+            <select className="native-field" name="leaveType" required disabled={!openingBalanceTypes.length}>
+              <option value="">Select leave type</option>
+              {openingBalanceTypes.map((type) => (
+                <option key={type.id} value={type.code}>{type.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Opening position in days
+            <input name="balance" type="number" min="-366" max="366" step="0.5" required />
+          </label>
+
+          <label>
+            Reason / migration reference
+            <input name="reason" placeholder="Opening balance confirmed by HR" required />
+          </label>
+
+          <button
+            className="btn primary"
+            type="submit"
+            disabled={saving === "opening-balance" || !people.length || !openingBalanceTypes.length}
+          >
+            {saving === "opening-balance" ? "Saving…" : "Save opening position"}
           </button>
         </form>
       </div>
