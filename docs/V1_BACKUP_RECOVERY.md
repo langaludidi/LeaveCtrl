@@ -17,19 +17,25 @@ The LeaveCtrl organisation JSON export is useful for customer data portability, 
 
 ## Supabase CLI workflow
 
-Run from a trusted workstation or CI environment that has the required database credentials:
+Run from a trusted workstation or CI environment that has the database connection string and current Supabase CLI.
+
+Supabase's documented backup procedure separates roles, schema and data:
 
 ```bash
-supabase db dump --project-ref nihvucwfzajudsejczzz -f leavectrl-schema-and-data.sql
+supabase db dump --db-url "[CONNECTION_STRING]" -f roles.sql --role-only
+supabase db dump --db-url "[CONNECTION_STRING]" -f schema.sql
+supabase db dump --db-url "[CONNECTION_STRING]" -f data.sql --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
 ```
 
-If the installed Supabase CLI version requires different flags, use:
+The connection string should come from the Supabase **Connect** panel. Use the Session pooler connection string by default unless the environment supports the direct database connection.
+
+Before execution, run:
 
 ```bash
 supabase db dump --help
 ```
 
-and follow the current command syntax rather than guessing.
+to verify the installed CLI syntax. Never place the database password or connection string in this repository.
 
 ## Storage requirements
 
@@ -54,7 +60,7 @@ A recovery test should verify that the backup can reconstruct:
 - reporting configuration;
 - audit events.
 
-Auth/session recovery must be evaluated separately because database restore behaviour and Auth operational state are not identical to a tenant JSON export.
+Auth/session recovery must be evaluated separately. Supabase's standard `db dump` excludes managed schemas such as Auth and Storage by default, so database logical backup is not a complete replacement for documenting/recreating platform Auth/SMTP configuration.
 
 ## Recommended post-launch direction
 
