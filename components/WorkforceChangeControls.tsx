@@ -94,7 +94,7 @@ export function WorkforceChangeControls({
         <Shuffle size={19}/>
       </div>
       <form className="workforce-change-form" onSubmit={recordChange}>
-        <label>Employee<select className="native-field" name="employee" required>{people.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+        <label>Employee<select className="native-field" name="employee" required disabled={!people.length}>{!people.length?<option value="">No active employees available</option>:people.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
         <label>Effective date<input className="native-field" name="effectiveFrom" type="date" required/></label>
         <label>Change type<select className="native-field" name="changeType" defaultValue="combined_change">
           <option value="transfer">Transfer</option><option value="schedule_change">Working schedule</option>
@@ -103,11 +103,11 @@ export function WorkforceChangeControls({
         </select></label>
         <label>Department<select className="native-field" name="department" defaultValue=""><option value="">No department</option>{departments.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
         <label>Manager<select className="native-field" name="manager" defaultValue=""><option value="">No manager</option>{people.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-        <label>Work schedule<select className="native-field" name="schedule" required>{schedules.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+        <label>Work schedule<select className="native-field" name="schedule" required disabled={!schedules.length}>{!schedules.length?<option value="">Create a work schedule first</option>:schedules.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
         <label>Location<select className="native-field" name="location" defaultValue=""><option value="">No fixed location</option>{locations.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
         <label>Work arrangement<select className="native-field" name="workMode" defaultValue="onsite"><option value="onsite">On-site</option><option value="hybrid">Hybrid</option><option value="remote">Remote / work from home</option><option value="field">Field based</option></select></label>
         <label className="wide-field">Reason / note <span className="muted">(optional)</span><input className="native-field" name="reason"/></label>
-        <button className="btn primary" disabled={saving==="change"} type="submit"><Save size={16}/>{saving==="change"?"Saving…":"Record change"}</button>
+        <button className="btn primary" disabled={saving==="change" || !people.length || !schedules.length} type="submit"><Save size={16}/>{saving==="change"?"Saving…":"Record change"}</button>
       </form>
     </div>
 
@@ -132,14 +132,14 @@ export function WorkforceChangeControls({
     <form className="card remuneration-card" onSubmit={saveRemuneration}>
       <div className="card-title"><div><h2>Confidential remuneration</h2><p className="card-subtitle">Used to calculate a traceable annual-leave liability. Employees and ordinary managers cannot access this data.</p></div><Coins size={19}/></div>
       <div className="remuneration-grid">
-        <label>Employee<select className="native-field" name="employee" required>{people.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+        <label>Employee<select className="native-field" name="employee" required disabled={!people.length}>{!people.length?<option value="">No active employees available</option>:people.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
         <label>Effective date<input className="native-field" name="effectiveFrom" type="date" required/></label>
         <label>Gross remuneration<input className="native-field" name="amount" type="number" min="0" step="0.01" required/></label>
         <label>Frequency<select className="native-field" name="frequency" defaultValue="monthly"><option value="monthly">Monthly</option><option value="annual">Annual</option><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="hourly">Hourly</option></select></label>
         <label>Daily liability rate override <span className="muted">(optional)</span><input className="native-field" name="dailyRate" type="number" min="0" step="0.01"/></label>
         <label>Reason <span className="muted">(optional)</span><input className="native-field" name="reason"/></label>
       </div>
-      <button className="btn primary" disabled={saving==="remuneration"} type="submit"><Coins size={16}/>{saving==="remuneration"?"Saving…":"Save remuneration"}</button>
+      <button className="btn primary" disabled={saving==="remuneration" || !people.length} type="submit"><Coins size={16}/>{saving==="remuneration"?"Saving…":"Save remuneration"}</button>
     </form>
   </section>;
 }
