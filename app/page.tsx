@@ -14,8 +14,14 @@ function compactNumber(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-function SummaryCard({ tone, icon, label, value, unit, sub }: { tone: string; icon: React.ReactNode; label: string; value: string; unit: string; sub: string; }) {
-  return <div className={`summary-card ${tone}`}><div className="summary-head"><span className="summary-icon">{icon}</span><span>{label}</span></div><div className="summary-value">{value} <small>{unit}</small></div><div className="summary-foot"><span>{sub}</span><ChevronRight size={17}/></div></div>;
+function SummaryCard({ tone, icon, label, value, unit, sub, href }: { tone: string; icon: React.ReactNode; label: string; value: string; unit: string; sub: string; href: string; }) {
+  return (
+    <Link href={href} className={`summary-card summary-card-link ${tone}`} aria-label={`${label}: ${value} ${unit}. Open details.`}>
+      <div className="summary-head"><span className="summary-icon">{icon}</span><span>{label}</span></div>
+      <div className="summary-value">{value} <small>{unit}</small></div>
+      <div className="summary-foot"><span>{sub}</span><ChevronRight size={17} aria-hidden="true"/></div>
+    </Link>
+  );
 }
 
 export default async function HomePage() {
@@ -82,10 +88,10 @@ export default async function HomePage() {
     <AppShell displayName={displayName} role={roleLabel(roles)} requestCount={approvalCount}>
       <section className="page-head split"><div><p className="eyebrow">WORKFORCE AVAILABILITY</p><h1>Welcome back, {employee.first_name}</h1><p>Your balances, requests, TOIL and approval work are reading from the governed LeaveCtrl ledgers.</p></div><Link href="/book-leave" className="btn primary"><CalendarDays size={18}/> Book Leave</Link></section>
       <section className="summary-grid">
-        <SummaryCard tone="teal" icon={<CalendarDays size={20}/>} label="Annual Leave Available" value={compactNumber(annualBalance)} unit="days" sub={availableToil > 0 ? `${compactNumber(availableToil)}h TOIL also available` : annual ? "current ledger balance" : "setup required"}/>
-        <SummaryCard tone="amber" icon={<Clock3 size={20}/>} label="My Pending Requests" value={String(pendingMine)} unit={pendingMine === 1 ? "request" : "requests"} sub={canApprove && approvalCount ? `${approvalCount} approval item${approvalCount === 1 ? "" : "s"} for you` : "no approval work"}/>
-        <SummaryCard tone="blue" icon={<Users size={20}/>} label="Away Today" value={String(awayCount)} unit={awayCount === 1 ? "person" : "people"} sub="approved leave and TOIL"/>
-        <SummaryCard tone="red" icon={<AlertTriangle size={20}/>} label="Coverage Alerts" value={String(coverageAlerts)} unit={coverageAlerts === 1 ? "alert" : "alerts"} sub={coverageAlerts ? "minimum-staffing warnings awaiting approval" : "no active staffing warnings"}/>
+        <SummaryCard href="/my-leave" tone="teal" icon={<CalendarDays size={20}/>} label="Annual Leave Available" value={compactNumber(annualBalance)} unit="days" sub={availableToil > 0 ? `${compactNumber(availableToil)}h TOIL also available` : annual ? "current ledger balance" : "setup required"}/>
+        <SummaryCard href="/requests" tone="amber" icon={<Clock3 size={20}/>} label="My Pending Requests" value={String(pendingMine)} unit={pendingMine === 1 ? "request" : "requests"} sub={canApprove && approvalCount ? `${approvalCount} approval item${approvalCount === 1 ? "" : "s"} for you` : "no approval work"}/>
+        <SummaryCard href="/calendar" tone="blue" icon={<Users size={20}/>} label="Away Today" value={String(awayCount)} unit={awayCount === 1 ? "person" : "people"} sub="approved leave and TOIL"/>
+        <SummaryCard href="/requests" tone="red" icon={<AlertTriangle size={20}/>} label="Coverage Alerts" value={String(coverageAlerts)} unit={coverageAlerts === 1 ? "alert" : "alerts"} sub={coverageAlerts ? "minimum-staffing warnings awaiting approval" : "no active staffing warnings"}/>
       </section>
       <section className="two-col">
         <div className="card data-card"><div className="card-title"><h2>My Leave & TOIL</h2><Link href="/requests">View all</Link></div><div className="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Status</th></tr></thead><tbody>
