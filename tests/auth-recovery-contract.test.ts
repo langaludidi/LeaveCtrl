@@ -18,7 +18,7 @@ test("password reset landing page updates the authenticated user's password", as
   const resetPage = await readFile("app/reset-password/page.tsx", "utf8");
 
   assert.match(resetPage, /auth\.updateUser\(\{ password \}\)/);
-  assert.match(resetPage, /auth\.signOut\(\)/);
+  assert.match(resetPage, /auth\.signOut\(\{ scope: "global" \}\)/);
   assert.match(resetPage, /Password%20updated/);
 });
 

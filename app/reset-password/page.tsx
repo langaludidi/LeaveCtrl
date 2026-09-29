@@ -39,7 +39,8 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    await supabase.auth.signOut();
+    // Revoke refresh sessions across devices after a recovery password change.
+    await supabase.auth.signOut({ scope: "global" });
     router.push("/login?message=Password%20updated.%20Sign%20in%20with%20your%20new%20password.");
     router.refresh();
   }
