@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
+import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 import {
   CANONICAL_PRODUCTION_APP_URL,
@@ -22,6 +23,13 @@ function read(formData: FormData, key: string) {
 
 function readSecret(formData: FormData, key: string) {
   return String(formData.get(key) ?? "");
+}
+
+function confirmationPath(next: string, message?: string, error?: string) {
+  const params = new URLSearchParams({ next });
+  if (message) params.set("message", message);
+  if (error) params.set("error", error);
+  return `/confirm-email?${params.toString()}`;
 }
 
 async function emailRedirect(next: string) {
@@ -67,16 +75,56 @@ async function emailRedirect(next: string) {
     : undefined;
 }
 
+async function clearExistingBrowserSession() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    await supabase.auth.signOut({ scope: "local" });
+  }
+
+  return supabase;
+}
+
 export async function signIn(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
   const password = readSecret(formData, "password");
   const next = safeInternalPath(read(formData, "next"), "/");
-  const supabase = await createClient();
+  const supabase = await clearExistingBrowserSession();
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
   if (error) {
+    if (
+      error.message.toLowerCase().includes("email") &&
+      error.message.toLowerCase().includes("confirm")
+    ) {
+      redirect(
+        confirmationPath(
+          next,
+          "Check your email to verify your address before signing in."
+        )
+      );
+    }
+
     redirect(
       `/login?error=${encodeURIComponent(signInErrorMessage(error.message))}&next=${encodeURIComponent(next)}`
+    );
+  }
+
+  if (!hasVerifiedEmailOwnership(data.user)) {
+    await supabase.auth.signOut({ scope: "local" });
+    redirect(
+      confirmationPath(
+        next,
+        undefined,
+        "Email verification is required before LeaveCtrl access. Send the confirmation email again below."
+      )
     );
   }
 
@@ -101,7 +149,10 @@ export async function signUp(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  // A stale or pre-existing browser session must never be allowed to make a
+  // failed/new registration appear authenticated as that prior account.
+  const supabase = await clearExistingBrowserSession();
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -117,14 +168,28 @@ export async function signUp(formData: FormData) {
     );
   }
 
-  if (data.session) redirect(next);
+  // With production email confirmation enabled, Supabase returns a user but no
+  // session. If configuration ever returns a session here, fail closed and
+  // revoke it rather than admitting the registration to the application.
+  if (data.session || hasVerifiedEmailOwnership(data.user)) {
+    if (data.session) {
+      await supabase.auth.signOut({ scope: "local" });
+    }
 
-  // Keep the response account-enumeration-safe. Supabase deliberately obscures
-  // whether a submitted email already belongs to an account.
+    redirect(
+      confirmationPath(
+        next,
+        undefined,
+        "LeaveCtrl requires email ownership verification before application access. Check your email or send the confirmation email again."
+      )
+    );
+  }
+
   redirect(
-    `/login?message=${encodeURIComponent(
-      "If this email needs confirmation, check your inbox. If you already have a LeaveCtrl account, sign in or use password recovery. You can also send the confirmation email again below."
-    )}&next=${encodeURIComponent(next)}`
+    confirmationPath(
+      next,
+      "Check your email. Open the confirmation link to verify your address and activate your LeaveCtrl account."
+    )
   );
 }
 
@@ -165,9 +230,11 @@ export async function resendConfirmation(formData: FormData) {
 
   if (!email) {
     redirect(
-      `/login?error=${encodeURIComponent(
+      confirmationPath(
+        next,
+        undefined,
         "Enter your email address to send the confirmation email again."
-      )}&next=${encodeURIComponent(next)}`
+      )
     );
   }
 
@@ -181,17 +248,21 @@ export async function resendConfirmation(formData: FormData) {
   });
 
   if (error) {
+    // Keep the response neutral: do not reveal whether the address is already
+    // confirmed, absent or temporarily rate-limited.
     redirect(
-      `/login?error=${encodeURIComponent(
-        "We could not send a confirmation email. If this account is already confirmed, sign in or use password recovery."
-      )}&next=${encodeURIComponent(next)}`
+      confirmationPath(
+        next,
+        "If an account requiring confirmation exists for that address, confirmation instructions have been requested."
+      )
     );
   }
 
   redirect(
-    `/login?message=${encodeURIComponent(
-      "If confirmation is still required, a new confirmation email has been requested."
-    )}&next=${encodeURIComponent(next)}`
+    confirmationPath(
+      next,
+      "If an account requiring confirmation exists for that address, confirmation instructions have been requested."
+    )
   );
 }
 
