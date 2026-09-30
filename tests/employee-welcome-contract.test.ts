@@ -5,15 +5,12 @@ import test from "node:test";
 test("new invited employees receive one-time contextual welcome", async () => {
   const activation = await readFile("components/ActivateAccountForm.tsx", "utf8");
   const activatePage = await readFile("app/activate/page.tsx", "utf8");
-  const home = await readFile("app/page.tsx", "utf8");
-  const myLeave = await readFile("app/my-leave/page.tsx", "utf8");
+  const gate = await readFile("lib/access-gate.ts", "utf8");
 
-  assert.match(activation, /router\.push\("\/welcome"\)/);
-  assert.match(activatePage, /welcome_completed_at/);
-  assert.match(home, /welcome_completed_at/);
-  assert.match(home, /redirect\("\/welcome"\)/);
-  assert.match(myLeave, /welcome_completed_at/);
-  assert.match(myLeave, /redirect\("\/welcome"\)/);
+  assert.match(activation, /router\.replace\("\/welcome"\)/);
+  assert.match(activatePage, /loadAccessStates/);
+  assert.match(gate, /employee_welcome_completed_at/);
+  assert.match(gate, /return isPath\(pathname, "\/welcome"\) \? null : "\/welcome"/);
 });
 
 test("welcome presents useful context rather than a recurring splash", async () => {
