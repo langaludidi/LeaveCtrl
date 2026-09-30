@@ -21,14 +21,14 @@ test("mobile account recovery is compact and intentionally styled", async () => 
   );
 });
 
-test("server auth verification prefers getClaims over a per-request Auth user lookup", async () => {
+test("server authorization uses the authoritative Auth user for email verification", async () => {
   const middleware = await readFile("lib/supabase/middleware.ts", "utf8");
   const context = await readFile("lib/current-context.ts", "utf8");
 
-  assert.match(middleware, /auth\.getClaims\(\)/);
-  assert.doesNotMatch(middleware, /auth\.getUser\(\)/);
-  assert.match(context, /auth\.getClaims\(\)/);
-  assert.doesNotMatch(context, /auth\.getUser\(\)/);
+  assert.match(middleware, /auth\.getUser\(\)/);
+  assert.match(middleware, /hasVerifiedEmailOwnership/);
+  assert.match(context, /auth\.getUser\(\)/);
+  assert.match(context, /hasVerifiedEmailOwnership/);
 });
 
 test("client shell avoids repeated Auth user lookups on navigation", async () => {

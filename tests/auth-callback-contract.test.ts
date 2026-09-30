@@ -11,6 +11,7 @@ test("auth callback exchanges the existing PKCE code and never trusts arbitrary 
   assert.match(source, /error_code/);
   assert.match(source, /error_description/);
   assert.match(source, /confirmationLinkErrorMessage/);
+  assert.match(source, /hasVerifiedEmailOwnership/);
   assert.match(source, /Cache-Control", "private, no-store"/);
   assert.doesNotMatch(source, /new URL\(next, url\.origin\)/);
 });

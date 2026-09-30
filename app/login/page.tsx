@@ -36,7 +36,7 @@ export default async function LoginPage({
           <h1>{signingUp ? "Create your workspace" : "Welcome back"}</h1>
           <p>
             {signingUp
-              ? "Create your secure account, then continue directly to your organisation or invitation."
+              ? "Create your secure account, verify your email address, then continue to your organisation or invitation."
               : "Sign in to manage your leave, your team and the work that needs your attention."}
           </p>
         </div>

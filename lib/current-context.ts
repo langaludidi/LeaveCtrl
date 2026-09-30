@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 
 export function dateInTimeZone(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-ZA", {
@@ -18,15 +19,16 @@ export function dateInTimeZone(date: Date, timeZone: string) {
 
 export async function getCurrentContext(options?: { requireEmployee?: boolean }) {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const claims = claimsData?.claims;
-  const userId = claims?.sub ?? null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!userId) redirect("/login");
+  if (!user) redirect("/login");
+  if (!hasVerifiedEmailOwnership(user)) redirect("/confirm-email");
 
-  const user = {
-    id: userId,
-    email: typeof claims?.email === "string" ? claims.email : null,
+  const safeUser = {
+    id: user.id,
+    email: user.email ?? null,
   };
 
   const { data: contextRow } = await supabase
@@ -66,7 +68,7 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
 
   return {
     supabase,
-    user,
+    user: safeUser,
     employee,
     organisation,
     timezone,
@@ -74,7 +76,7 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
     roles,
     displayName: employee
       ? `${employee.first_name} ${employee.last_name}`
-      : user.email ?? "User",
+      : safeUser.email ?? "User",
   };
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 import {
   authCallbackOriginAllowed,
@@ -18,9 +19,12 @@ function redirectNoStore(target: URL) {
   return response;
 }
 
-function loginErrorUrl(baseUrl: string, message: string, next: string) {
-  const target = new URL("/login", baseUrl);
-  target.searchParams.set("mode", "signup");
+function confirmationRecoveryUrl(
+  baseUrl: string,
+  message: string,
+  next: string
+) {
+  const target = new URL("/confirm-email", baseUrl);
   target.searchParams.set("error", message);
   target.searchParams.set("next", next);
   return target;
@@ -45,7 +49,7 @@ export async function GET(request: Request) {
     })
   ) {
     return redirectNoStore(
-      loginErrorUrl(
+      confirmationRecoveryUrl(
         CANONICAL_PRODUCTION_APP_URL,
         "This confirmation link opened on a non-production LeaveCtrl address. Start again at www.leavectrl.co.za and send the confirmation email again.",
         next
@@ -72,26 +76,40 @@ export async function GET(request: Request) {
 
   if (providerError) {
     return redirectNoStore(
-      loginErrorUrl(baseUrl, confirmationLinkErrorMessage(providerError), next)
+      confirmationRecoveryUrl(
+        baseUrl,
+        confirmationLinkErrorMessage(providerError),
+        next
+      )
     );
   }
 
   const code = url.searchParams.get("code");
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
+    if (!error && hasVerifiedEmailOwnership(data.user)) {
       return redirectNoStore(new URL(next, baseUrl));
     }
 
+    if (!error) {
+      await supabase.auth.signOut({ scope: "local" });
+    }
+
     return redirectNoStore(
-      loginErrorUrl(baseUrl, confirmationLinkErrorMessage(error.message), next)
+      confirmationRecoveryUrl(
+        baseUrl,
+        confirmationLinkErrorMessage(
+          error?.message ?? "email verification evidence missing"
+        ),
+        next
+      )
     );
   }
 
   return redirectNoStore(
-    loginErrorUrl(
+    confirmationRecoveryUrl(
       baseUrl,
       confirmationLinkErrorMessage("confirmation code missing"),
       next
