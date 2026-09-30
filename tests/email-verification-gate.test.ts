@@ -45,7 +45,7 @@ test("callback admits only a user carrying confirmation evidence", async () => {
 
 test("database membership and employee activation require verified email evidence", async () => {
   const sql = await readFile(
-    "supabase/migrations/20260930051500_email_verification_authorization_gate_v1.sql",
+    "supabase/migrations/20260930051932_email_verification_authorization_gate_v1.sql",
     "utf8"
   );
 
