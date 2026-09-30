@@ -9,7 +9,8 @@ import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 export default async function TeamPage() {
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
+  const { supabase, employee, displayName, roles } =
+    await getCurrentContext({ allowOrganisationOnboardingIncomplete: true });
   if (!employee) return null;
 
   const canAdminPeople = roles.includes("org_admin") || roles.includes("hr_admin");
