@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
+import { loadAccessStates } from "@/lib/access-state";
 import { claimInvitation } from "./actions";
 
 export default async function JoinPage({
@@ -9,6 +11,7 @@ export default async function JoinPage({
 }) {
   const params = await searchParams;
   const token = params.token ?? "";
+
   if (!token) {
     return (
       <main className="join-page">
@@ -22,19 +25,24 @@ export default async function JoinPage({
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const next = "/join?token=" + encodeURIComponent(token);
 
   if (!user) {
-    redirect(`/login?mode=signup&next=${encodeURIComponent(`/join?token=${token}`)}`);
+    redirect("/login?mode=signup&next=" + encodeURIComponent(next));
   }
 
-  const { data: existingEmployee } = await supabase
-    .from("employees")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  if (!hasVerifiedEmailOwnership(user)) {
+    redirect("/confirm-email?next=" + encodeURIComponent(next));
+  }
 
-  if (existingEmployee) redirect("/");
+  const states = await loadAccessStates(supabase);
+  if (states.length > 0) {
+    redirect("/");
+  }
 
   return (
     <main className="join-page">
@@ -43,15 +51,18 @@ export default async function JoinPage({
         <p className="eyebrow">ORGANISATION INVITATION</p>
         <h1>Join your organisation</h1>
         <p>
-          Your account is authenticated. Accepting this invitation will connect your employee profile,
-          work schedule and approval role to the organisation that invited you.
+          Your verified LeaveCtrl identity is ready. Accepting this invitation
+          will connect you only to the organisation, employee profile and
+          capabilities assigned by the invitation.
         </p>
 
-        {params.error ? <div className="auth-alert error">{params.error}</div> : null}
+        {params.error ? <div className="auth-alert error" role="alert">{params.error}</div> : null}
 
         <form action={claimInvitation}>
           <input type="hidden" name="token" value={token} />
-          <button className="btn primary join-submit" type="submit">Accept invitation</button>
+          <button className="btn primary join-submit" type="submit">
+            Accept invitation
+          </button>
         </form>
       </section>
     </main>
