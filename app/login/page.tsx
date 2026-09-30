@@ -23,6 +23,9 @@ export default async function LoginPage({
     params.next,
     signingUp ? "/onboarding" : "/"
   );
+  const invitationSignup =
+    signingUp &&
+    (next.startsWith("/join?") || next.startsWith("/activate?"));
 
   return (
     <main className="auth-page">
@@ -33,10 +36,18 @@ export default async function LoginPage({
 
         <div className="auth-copy">
           <p className="eyebrow">LEAVE & WORKFORCE AVAILABILITY</p>
-          <h1>{signingUp ? "Create your workspace" : "Welcome back"}</h1>
+          <h1>
+            {signingUp
+              ? invitationSignup
+                ? "Join your organisation"
+                : "Create your LeaveCtrl organisation"
+              : "Welcome back"}
+          </h1>
           <p>
             {signingUp
-              ? "Create your secure account, verify your email address, then continue to your organisation or invitation."
+              ? invitationSignup
+                ? "Create one secure LeaveCtrl identity, verify your email, then continue with the organisation that invited you."
+                : "Set up leave and workforce availability for your organisation. You will verify your email before organisation setup begins."
               : "Sign in to manage your leave, your team and the work that needs your attention."}
           </p>
         </div>
