@@ -137,6 +137,8 @@ export async function signUp(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
   const password = readSecret(formData, "password");
   const next = safeInternalPath(read(formData, "next"), "/onboarding");
+  const invitationIntent =
+    next.startsWith("/join?") || next.startsWith("/activate?");
 
   const passwordPolicy = validatePassword(password);
   if (!firstName || !lastName || !email || !passwordPolicy.valid) {
@@ -157,7 +159,13 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      data: { first_name: firstName, last_name: lastName },
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        registration_intent: invitationIntent
+          ? "invitation"
+          : "create_organisation",
+      },
       emailRedirectTo: await emailRedirect(next),
     },
   });
