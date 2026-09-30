@@ -2,16 +2,30 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("login exposes password recovery and confirmation resend", async () => {
+test("login exposes password recovery and unambiguous confirmation email action", async () => {
   const actions = await readFile("app/auth/actions.ts", "utf8");
   const login = await readFile("app/login/page.tsx", "utf8");
 
   assert.match(actions, /resetPasswordForEmail/);
-  assert.match(actions, /auth\.resend\(\{[\s\S]*type:\s*"signup"/);
+  assert.match(
+    actions,
+    /auth\.resend\(\{[\s\S]*type:\s*"signup"/
+  );
   assert.match(login, /requestPasswordReset/);
   assert.match(login, /resendConfirmation/);
   assert.match(login, /Send reset link/);
-  assert.match(login, /Resend confirmation/);
+  assert.match(login, /Send confirmation email again/);
+  assert.doesNotMatch(login, />Resend confirmation</);
+});
+
+test("production email redirects use the single server-side LeaveCtrl URL source", async () => {
+  const actions = await readFile("app/auth/actions.ts", "utf8");
+
+  assert.match(actions, /process\.env\.LEAVECTRL_APP_URL/);
+  assert.doesNotMatch(actions, /NEXT_PUBLIC_APP_URL/);
+  assert.doesNotMatch(actions, /VERCEL_PROJECT_PRODUCTION_URL/);
+  assert.match(actions, /LEAVECTRL_ENABLE_PREVIEW_AUTH_EMAIL/);
+  assert.match(actions, /canInitiateEmailAuth/);
 });
 
 test("password reset landing page updates the authenticated user's password", async () => {
@@ -26,10 +40,7 @@ test("login rendering uses the same hardened internal-path validator as auth act
   const login = await readFile("app/login/page.tsx", "utf8");
 
   assert.match(login, /safeInternalPath/);
-  assert.doesNotMatch(
-    login,
-    /params\.next\?\.startsWith\("\/"\)/
-  );
+  assert.doesNotMatch(login, /params\.next\?\.startsWith\("\/"\)/);
 });
 
 test("signup and reset flows share the strong password policy", async () => {
@@ -50,16 +61,34 @@ test("strong password minimum applies to account creation but does not block leg
 test("account recovery fields and messages are accessible", async () => {
   const login = await readFile("app/login/page.tsx", "utf8");
 
-  assert.match(login, /aria-label="Email address for password reset"/);
-  assert.match(login, /aria-label="Email address for confirmation resend"/);
+  assert.match(
+    login,
+    /aria-label="Email address for password reset"/
+  );
+  assert.match(
+    login,
+    /aria-label="Email address for confirmation email"/
+  );
   assert.match(login, /className="auth-alert error" role="alert"/);
-  assert.match(login, /className="auth-alert success" role="status" aria-live="polite"/);
+  assert.match(
+    login,
+    /className="auth-alert success" role="status" aria-live="polite"/
+  );
 });
 
 test("passwords are treated as opaque secrets rather than trimmed text", async () => {
   const actions = await readFile("app/auth/actions.ts", "utf8");
 
-  assert.match(actions, /function readSecret\(formData: FormData, key: string\)/);
-  assert.match(actions, /return String\(formData\.get\(key\) \?\? ""\);/);
-  assert.equal((actions.match(/readSecret\(formData, "password"\)/g) ?? []).length, 2);
+  assert.match(
+    actions,
+    /function readSecret\(formData: FormData, key: string\)/
+  );
+  assert.match(
+    actions,
+    /return String\(formData\.get\(key\) \?\? ""\);/
+  );
+  assert.equal(
+    (actions.match(/readSecret\(formData, "password"\)/g) ?? []).length,
+    2
+  );
 });
