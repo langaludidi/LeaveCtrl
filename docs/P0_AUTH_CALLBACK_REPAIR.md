@@ -17,6 +17,7 @@ Supabase Auth logs also prove signup requests originated from a duplicate-projec
 - Production callback base is pinned to `https://www.leavectrl.co.za`.
 - Authentication URL construction no longer consumes `NEXT_PUBLIC_APP_URL` or `VERCEL_PROJECT_PRODUCTION_URL`.
 - `LEAVECTRL_APP_URL` is the only named application URL variable used by auth code, and a bad production value cannot override the canonical domain.
+- Production authentication email actions may start only on `https://www.leavectrl.co.za`; production Vercel aliases are rejected before Supabase receives the request so PKCE state cannot be split across origins.
 - Preview authentication email actions are blocked by default.
 - Deliberate preview auth requires `LEAVECTRL_ENABLE_PREVIEW_AUTH_EMAIL=true` and remains on the exact preview origin.
 - Existing `/auth/callback` remains authoritative and now validates callback origin, maps provider/link errors to recovery copy and uses no-store responses.

@@ -9,7 +9,9 @@ type AppBaseUrlInput = {
 };
 
 type EmailAuthAvailabilityInput = {
+  requestOrigin?: string | null;
   vercelEnv?: string | null;
+  production?: boolean;
   previewAuthEnabled?: boolean;
 };
 
@@ -45,10 +47,30 @@ export function isPreviewEmailAuthEnabled(value: string | null | undefined) {
 }
 
 export function canInitiateEmailAuth({
+  requestOrigin,
   vercelEnv,
+  production = false,
   previewAuthEnabled = false,
 }: EmailAuthAvailabilityInput) {
-  return vercelEnv !== "preview" || previewAuthEnabled;
+  const origin = normaliseHttpUrl(requestOrigin);
+
+  // A production PKCE flow must start on the same canonical origin that will
+  // receive and exchange the one-time code. Vercel aliases are not accepted.
+  if (vercelEnv === "production" || (production && vercelEnv !== "preview")) {
+    return origin === CANONICAL_PRODUCTION_APP_URL;
+  }
+
+  // Preview auth email flows are opt-in and stay on the exact preview origin.
+  if (vercelEnv === "preview") {
+    return (
+      previewAuthEnabled &&
+      !!origin &&
+      isVercelPreviewOrigin(origin)
+    );
+  }
+
+  // Development email auth is local-only.
+  return !!origin && isLocalDevelopmentOrigin(origin);
 }
 
 export function resolveAppBaseUrl({
@@ -61,15 +83,10 @@ export function resolveAppBaseUrl({
   const configured = normaliseHttpUrl(configuredUrl);
   const origin = normaliseHttpUrl(requestOrigin);
 
-  // Production authentication is deterministic. Neither a stale environment
-  // variable nor a Vercel alias may move a customer away from the canonical app.
   if (vercelEnv === "production") {
     return CANONICAL_PRODUCTION_APP_URL;
   }
 
-  // Preview auth email flows are disabled by default. If they are deliberately
-  // enabled, the flow must stay on the exact Vercel preview origin where PKCE
-  // started so its verifier cookie remains available for the callback exchange.
   if (vercelEnv === "preview") {
     if (previewAuthEnabled && origin && isVercelPreviewOrigin(origin)) {
       return origin;
@@ -77,13 +94,10 @@ export function resolveAppBaseUrl({
     return CANONICAL_PRODUCTION_APP_URL;
   }
 
-  // Non-Vercel production is still pinned to the canonical customer domain.
   if (production) {
     return CANONICAL_PRODUCTION_APP_URL;
   }
 
-  // Local development should remain local even when a canonical production URL
-  // is present in the environment.
   if (origin && isLocalDevelopmentOrigin(origin)) return origin;
   if (configured && isLocalDevelopmentOrigin(configured)) return configured;
 
