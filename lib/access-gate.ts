@@ -1,5 +1,8 @@
-import type { LeaveCtrlAccessState } from "@/lib/access-state";
-import { isOrganisationSetupOperator } from "@/lib/access-state";
+import type { LeaveCtrlAccessState } from "./access-state";
+
+function isOrganisationSetupOperator(state: LeaveCtrlAccessState) {
+  return state.roles.includes("org_admin");
+}
 
 function isPath(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`);
