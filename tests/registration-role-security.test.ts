@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const migrationPath =
-  "supabase/migrations/20260930075500_registration_membership_state_v1.sql";
+  "supabase/migrations/20260930060958_registration_membership_state_v1.sql";
 
 test("public organisation creation has no caller-controlled privileged role parameter", async () => {
   const sql = await readFile(migrationPath, "utf8");
