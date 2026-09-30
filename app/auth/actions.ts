@@ -6,14 +6,15 @@ import { createClient } from "@/lib/supabase/server";
 import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 import {
+  CANONICAL_PRODUCTION_APP_URL,
   canInitiateEmailAuth,
   isPreviewEmailAuthEnabled,
   resolveAppBaseUrl,
 } from "@/lib/app-base-url";
 import { validatePassword } from "@/lib/password-policy";
 
-const PREVIEW_EMAIL_AUTH_BLOCKED =
-  "Authentication email actions are disabled on preview deployments. Continue at www.leavectrl.co.za.";
+const EMAIL_AUTH_ORIGIN_BLOCKED =
+  "Continue this authentication request at www.leavectrl.co.za.";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -26,21 +27,38 @@ function readSecret(formData: FormData, key: string) {
 async function emailRedirect(next: string) {
   const headerStore = await headers();
   const vercelEnv = process.env.VERCEL_ENV;
+  const production = process.env.NODE_ENV === "production";
   const previewAuthEnabled = isPreviewEmailAuthEnabled(
     process.env.LEAVECTRL_ENABLE_PREVIEW_AUTH_EMAIL
   );
+  const forwardedHost =
+    headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const forwardedProto =
+    headerStore.get("x-forwarded-proto") ??
+    (forwardedHost?.startsWith("localhost") ? "http" : "https");
+  const requestOrigin =
+    headerStore.get("origin") ??
+    (forwardedHost ? `${forwardedProto}://${forwardedHost}` : null);
 
-  if (!canInitiateEmailAuth({ vercelEnv, previewAuthEnabled })) {
-    redirect(
-      `/login?error=${encodeURIComponent(PREVIEW_EMAIL_AUTH_BLOCKED)}&next=${encodeURIComponent(next)}`
-    );
+  if (
+    !canInitiateEmailAuth({
+      requestOrigin,
+      vercelEnv,
+      production,
+      previewAuthEnabled,
+    })
+  ) {
+    const target = new URL("/login", CANONICAL_PRODUCTION_APP_URL);
+    target.searchParams.set("error", EMAIL_AUTH_ORIGIN_BLOCKED);
+    target.searchParams.set("next", next);
+    redirect(target.toString());
   }
 
   const baseUrl = resolveAppBaseUrl({
     configuredUrl: process.env.LEAVECTRL_APP_URL,
-    requestOrigin: headerStore.get("origin"),
+    requestOrigin,
     vercelEnv,
-    production: process.env.NODE_ENV === "production",
+    production,
     previewAuthEnabled,
   });
 

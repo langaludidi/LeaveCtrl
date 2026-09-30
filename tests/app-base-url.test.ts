@@ -11,10 +11,8 @@ import {
 test("Vercel production always uses the canonical customer domain", () => {
   assert.equal(
     resolveAppBaseUrl({
-      configuredUrl:
-        "https://leave-ctrl-2eqn-example.vercel.app",
-      requestOrigin:
-        "https://leave-ctrl-2eqn-example.vercel.app",
+      configuredUrl: "https://leave-ctrl-2eqn-example.vercel.app",
+      requestOrigin: "https://leave-ctrl-2eqn-example.vercel.app",
       vercelEnv: "production",
       production: true,
     }),
@@ -22,7 +20,52 @@ test("Vercel production always uses the canonical customer domain", () => {
   );
 });
 
-test("non-Vercel production also ignores stale configured or request origins", () => {
+test("production email auth can start only on the canonical origin", () => {
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: CANONICAL_PRODUCTION_APP_URL,
+      vercelEnv: "production",
+      production: true,
+    }),
+    true
+  );
+
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: "https://leave-ctrl.vercel.app",
+      vercelEnv: "production",
+      production: true,
+    }),
+    false
+  );
+
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: "https://leave-ctrl-2eqn-example.vercel.app",
+      vercelEnv: "production",
+      production: true,
+    }),
+    false
+  );
+});
+
+test("non-Vercel production also requires the canonical origin", () => {
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: CANONICAL_PRODUCTION_APP_URL,
+      production: true,
+    }),
+    true
+  );
+
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: "https://other.example",
+      production: true,
+    }),
+    false
+  );
+
   assert.equal(
     resolveAppBaseUrl({
       configuredUrl: "https://other.example",
@@ -36,7 +79,9 @@ test("non-Vercel production also ignores stale configured or request origins", (
 test("preview auth email initiation is disabled by default", () => {
   assert.equal(
     canInitiateEmailAuth({
+      requestOrigin: "https://leave-ctrl-git-test-example.vercel.app",
       vercelEnv: "preview",
+      production: true,
       previewAuthEnabled: false,
     }),
     false
@@ -46,6 +91,16 @@ test("preview auth email initiation is disabled by default", () => {
 test("deliberate preview auth stays on the exact preview origin", () => {
   const preview =
     "https://leave-ctrl-git-auth-test-example.vercel.app";
+
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: preview,
+      vercelEnv: "preview",
+      production: true,
+      previewAuthEnabled: true,
+    }),
+    true
+  );
 
   assert.equal(
     resolveAppBaseUrl({
@@ -101,7 +156,23 @@ test("production callback exchanges only on the canonical origin", () => {
   );
 });
 
-test("development can use localhost without inheriting production URL", () => {
+test("development email auth is local-only", () => {
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: "http://localhost:3000",
+      production: false,
+    }),
+    true
+  );
+
+  assert.equal(
+    canInitiateEmailAuth({
+      requestOrigin: "https://unexpected.example",
+      production: false,
+    }),
+    false
+  );
+
   assert.equal(
     resolveAppBaseUrl({
       configuredUrl: CANONICAL_PRODUCTION_APP_URL,
@@ -109,14 +180,5 @@ test("development can use localhost without inheriting production URL", () => {
       production: false,
     }),
     "http://localhost:3000"
-  );
-
-  assert.equal(
-    authCallbackOriginAllowed({
-      configuredUrl: CANONICAL_PRODUCTION_APP_URL,
-      requestOrigin: "http://localhost:3000",
-      production: false,
-    }),
-    true
   );
 });

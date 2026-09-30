@@ -26,6 +26,8 @@ test("production email redirects use the single server-side LeaveCtrl URL source
   assert.doesNotMatch(actions, /VERCEL_PROJECT_PRODUCTION_URL/);
   assert.match(actions, /LEAVECTRL_ENABLE_PREVIEW_AUTH_EMAIL/);
   assert.match(actions, /canInitiateEmailAuth/);
+  assert.match(actions, /x-forwarded-host/);
+  assert.match(actions, /CANONICAL_PRODUCTION_APP_URL/);
 });
 
 test("password reset landing page updates the authenticated user's password", async () => {
