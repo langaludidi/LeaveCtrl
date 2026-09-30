@@ -1,14 +1,37 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const appUrl = Deno.env.get("LEAVECTRL_APP_URL") ?? "https://leave-ctrl.vercel.app";
+const CANONICAL_APP_URL = "https://www.leavectrl.co.za";
+const configuredAppUrl = Deno.env.get("LEAVECTRL_APP_URL");
+
+function productionAppUrl() {
+  if (!configuredAppUrl) return CANONICAL_APP_URL;
+
+  try {
+    const configuredOrigin = new URL(configuredAppUrl).origin;
+    if (configuredOrigin === CANONICAL_APP_URL) {
+      return configuredOrigin;
+    }
+
+    console.warn(
+      "send-employee-invite: ignored non-canonical LEAVECTRL_APP_URL"
+    );
+  } catch {
+    console.warn("send-employee-invite: ignored invalid LEAVECTRL_APP_URL");
+  }
+
+  return CANONICAL_APP_URL;
+}
+
+const appUrl = productionAppUrl();
 const allowedOrigin = new URL(appUrl).origin;
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("Origin");
   return {
     ...(origin === allowedOrigin ? { "Access-Control-Allow-Origin": origin } : {}),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
@@ -52,7 +75,9 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-      console.error("send-employee-invite: required Supabase configuration is missing");
+      console.error(
+        "send-employee-invite: required Supabase configuration is missing"
+      );
       return json(req, { error: "service_unavailable" }, 503);
     }
 
@@ -123,9 +148,6 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Invitation-token validation is deliberately service-role only. The caller's
-    // authenticated user ID is passed explicitly and re-authorised by the RPC so
-    // the browser cannot invoke this privileged validation helper directly.
     const { data: tokenValid, error: tokenError } = await supabaseAdmin.rpc(
       "validate_employee_invitation_for_delivery",
       {
@@ -136,19 +158,24 @@ Deno.serve(async (req: Request) => {
     );
 
     if (tokenError || tokenValid !== true) {
-      return json(req, { error: "invitation_token_invalid_or_expired" }, 400);
+      return json(
+        req,
+        { error: "invitation_token_invalid_or_expired" },
+        400
+      );
     }
 
     const next = `/activate?token=${encodeURIComponent(token)}`;
     const redirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`;
 
-    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo,
-      data: {
-        employee_id: employeeId,
-        organisation_id: employee.organisation_id,
-      },
-    });
+    const { error: inviteError } =
+      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo,
+        data: {
+          employee_id: employeeId,
+          organisation_id: employee.organisation_id,
+        },
+      });
 
     if (inviteError) {
       console.error("send-employee-invite: Supabase Auth invite failed", {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  confirmationLinkErrorMessage,
   signInErrorMessage,
   signUpErrorMessage,
 } from "../lib/auth-messages.ts";
@@ -29,5 +30,17 @@ test("sign-up errors keep password guidance useful without leaking provider deta
   assert.equal(
     signUpErrorMessage("database error saving new user: secret detail"),
     "We could not create the account. Please check the details and try again."
+  );
+});
+
+test("expired and reused confirmation credentials receive a recovery path", () => {
+  assert.equal(
+    confirmationLinkErrorMessage("One-time token not found"),
+    "Your confirmation link is invalid or has expired. Send yourself a new confirmation email to continue."
+  );
+
+  assert.equal(
+    confirmationLinkErrorMessage("confirmation already used"),
+    "This confirmation link can no longer be used. Sign in if your account is already confirmed, or send yourself a new confirmation email."
   );
 });

@@ -5,8 +5,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signInErrorMessage, signUpErrorMessage } from "@/lib/auth-messages";
 import { safeInternalPath } from "@/lib/safe-internal-path";
-import { resolveAppBaseUrl } from "@/lib/app-base-url";
+import {
+  canInitiateEmailAuth,
+  isPreviewEmailAuthEnabled,
+  resolveAppBaseUrl,
+} from "@/lib/app-base-url";
 import { validatePassword } from "@/lib/password-policy";
+
+const PREVIEW_EMAIL_AUTH_BLOCKED =
+  "Authentication email actions are disabled on preview deployments. Continue at www.leavectrl.co.za.";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -18,13 +25,23 @@ function readSecret(formData: FormData, key: string) {
 
 async function emailRedirect(next: string) {
   const headerStore = await headers();
+  const vercelEnv = process.env.VERCEL_ENV;
+  const previewAuthEnabled = isPreviewEmailAuthEnabled(
+    process.env.LEAVECTRL_ENABLE_PREVIEW_AUTH_EMAIL
+  );
+
+  if (!canInitiateEmailAuth({ vercelEnv, previewAuthEnabled })) {
+    redirect(
+      `/login?error=${encodeURIComponent(PREVIEW_EMAIL_AUTH_BLOCKED)}&next=${encodeURIComponent(next)}`
+    );
+  }
+
   const baseUrl = resolveAppBaseUrl({
-    configuredUrl:
-      process.env.NEXT_PUBLIC_APP_URL ??
-      process.env.LEAVECTRL_APP_URL,
-    vercelProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    configuredUrl: process.env.LEAVECTRL_APP_URL,
     requestOrigin: headerStore.get("origin"),
+    vercelEnv,
     production: process.env.NODE_ENV === "production",
+    previewAuthEnabled,
   });
 
   return baseUrl
@@ -40,7 +57,9 @@ export async function signIn(formData: FormData) {
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(signInErrorMessage(error.message))}&next=${encodeURIComponent(next)}`);
+    redirect(
+      `/login?error=${encodeURIComponent(signInErrorMessage(error.message))}&next=${encodeURIComponent(next)}`
+    );
   }
 
   redirect(next);
@@ -55,9 +74,10 @@ export async function signUp(formData: FormData) {
 
   const passwordPolicy = validatePassword(password);
   if (!firstName || !lastName || !email || !passwordPolicy.valid) {
-    const message = !firstName || !lastName || !email
-      ? "Please complete all fields."
-      : passwordPolicy.message;
+    const message =
+      !firstName || !lastName || !email
+        ? "Please complete all fields."
+        : passwordPolicy.message;
     redirect(
       `/login?mode=signup&error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`
     );
@@ -81,8 +101,12 @@ export async function signUp(formData: FormData) {
 
   if (data.session) redirect(next);
 
+  // Keep the response account-enumeration-safe. Supabase deliberately obscures
+  // whether a submitted email already belongs to an account.
   redirect(
-    `/login?message=${encodeURIComponent("Check your email to confirm your account. If it does not arrive, use Resend confirmation below.")}&next=${encodeURIComponent(next)}`
+    `/login?message=${encodeURIComponent(
+      "If this email needs confirmation, check your inbox. If you already have a LeaveCtrl account, sign in or use password recovery. You can also send the confirmation email again below."
+    )}&next=${encodeURIComponent(next)}`
   );
 }
 
@@ -90,7 +114,11 @@ export async function requestPasswordReset(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
 
   if (!email) {
-    redirect(`/login?error=${encodeURIComponent("Enter your email address to request a password reset.")}`);
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "Enter your email address to request a password reset."
+      )}`
+    );
   }
 
   const supabase = await createClient();
@@ -100,12 +128,16 @@ export async function requestPasswordReset(formData: FormData) {
 
   if (error) {
     redirect(
-      `/login?error=${encodeURIComponent("We could not send a password reset email. Please try again shortly.")}`
+      `/login?error=${encodeURIComponent(
+        "We could not send a password reset email. Please try again shortly."
+      )}`
     );
   }
 
   redirect(
-    `/login?message=${encodeURIComponent("If an account exists for that email, password reset instructions have been requested.")}`
+    `/login?message=${encodeURIComponent(
+      "If an account exists for that email, password reset instructions have been requested."
+    )}`
   );
 }
 
@@ -114,7 +146,11 @@ export async function resendConfirmation(formData: FormData) {
   const next = safeInternalPath(read(formData, "next"), "/onboarding");
 
   if (!email) {
-    redirect(`/login?error=${encodeURIComponent("Enter your email address to resend confirmation.")}&next=${encodeURIComponent(next)}`);
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "Enter your email address to send the confirmation email again."
+      )}&next=${encodeURIComponent(next)}`
+    );
   }
 
   const supabase = await createClient();
@@ -128,12 +164,16 @@ export async function resendConfirmation(formData: FormData) {
 
   if (error) {
     redirect(
-      `/login?error=${encodeURIComponent("We could not send a confirmation email. If this account is already confirmed, sign in or use password recovery.")}&next=${encodeURIComponent(next)}`
+      `/login?error=${encodeURIComponent(
+        "We could not send a confirmation email. If this account is already confirmed, sign in or use password recovery."
+      )}&next=${encodeURIComponent(next)}`
     );
   }
 
   redirect(
-    `/login?message=${encodeURIComponent("If confirmation is still required, a new confirmation email has been requested.")}&next=${encodeURIComponent(next)}`
+    `/login?message=${encodeURIComponent(
+      "If confirmation is still required, a new confirmation email has been requested."
+    )}&next=${encodeURIComponent(next)}`
   );
 }
 

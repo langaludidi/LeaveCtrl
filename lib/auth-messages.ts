@@ -32,14 +32,36 @@ export function signUpErrorMessage(message: string) {
     normalised.includes("smtp") ||
     normalised.includes("mailer") ||
     normalised.includes("confirmation") ||
-    normalised.includes("email") && (
-      normalised.includes("send") ||
-      normalised.includes("dial tcp") ||
-      normalised.includes("no such host")
-    )
+    (normalised.includes("email") &&
+      (normalised.includes("send") ||
+        normalised.includes("dial tcp") ||
+        normalised.includes("no such host")))
   ) {
     return "We could not send the confirmation email, so the account was not created. Please try again shortly or contact your LeaveCtrl administrator.";
   }
 
   return "We could not create the account. Please check the details and try again.";
+}
+
+export function confirmationLinkErrorMessage(message: string) {
+  const normalised = message.toLowerCase();
+
+  if (
+    normalised.includes("expired") ||
+    normalised.includes("otp_expired") ||
+    normalised.includes("one-time token not found") ||
+    normalised.includes("token not found") ||
+    normalised.includes("invalid")
+  ) {
+    return "Your confirmation link is invalid or has expired. Send yourself a new confirmation email to continue.";
+  }
+
+  if (
+    normalised.includes("already") &&
+    (normalised.includes("used") || normalised.includes("confirmed"))
+  ) {
+    return "This confirmation link can no longer be used. Sign in if your account is already confirmed, or send yourself a new confirmation email.";
+  }
+
+  return "We could not confirm this email link. Sign in if you already confirmed your account, or send yourself a new confirmation email.";
 }
