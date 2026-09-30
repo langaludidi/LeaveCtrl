@@ -1788,6 +1788,8 @@ export type Database = {
           id: string
           leave_year_start_month: number
           name: string
+          onboarding_completed_at: string | null
+          onboarding_started_at: string | null
           status: string
           timezone: string
           updated_at: string
@@ -1799,6 +1801,8 @@ export type Database = {
           id?: string
           leave_year_start_month?: number
           name: string
+          onboarding_completed_at?: string | null
+          onboarding_started_at?: string | null
           status?: string
           timezone?: string
           updated_at?: string
@@ -1810,6 +1814,8 @@ export type Database = {
           id?: string
           leave_year_start_month?: number
           name?: string
+          onboarding_completed_at?: string | null
+          onboarding_started_at?: string | null
           status?: string
           timezone?: string
           updated_at?: string
@@ -2533,6 +2539,10 @@ export type Database = {
         Args: never
         Returns: string
       }
+      complete_organisation_onboarding: {
+        Args: never
+        Returns: string
+      }
       configure_annual_leave_policy_v2: {
         Args: {
           p_annual_days: number
@@ -2641,6 +2651,17 @@ export type Database = {
       exit_employee: {
         Args: { p_employee_id: string; p_end_date: string; p_reason: string }
         Returns: Json
+      }
+      get_access_state_v1: {
+        Args: never
+        Returns: {
+          employee_id: string | null
+          employee_welcome_completed_at: string | null
+          organisation_id: string
+          organisation_name: string
+          organisation_onboarding_completed_at: string | null
+          roles: Database["public"]["Enums"]["member_role"][]
+        }[]
       }
       get_current_context_v1: {
         Args: never
