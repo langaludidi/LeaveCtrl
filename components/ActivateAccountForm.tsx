@@ -19,8 +19,8 @@ export function ActivateAccountForm({ token }: { token: string }) {
     const password = String(form.get("password") ?? "");
     const confirmPassword = String(form.get("confirmPassword") ?? "");
 
-    if (password.length < 8) {
-      setError("Use at least 8 characters.");
+    if (password.length < 12) {
+      setError("Use at least 12 characters.");
       setSaving(false);
       return;
     }
@@ -47,31 +47,33 @@ export function ActivateAccountForm({ token }: { token: string }) {
     if (claimError) {
       setError(
         claimError.message === "invitation_email_mismatch"
-          ? "This invitation belongs to a different email address."
+          ? "This invitation belongs to a different verified email address."
           : claimError.message === "invitation_invalid_or_expired"
             ? "This invitation is invalid or has expired."
-            : claimError.message === "account_already_linked_to_organisation"
-              ? "This login is already linked to another active LeaveCtrl organisation."
-              : "We could not activate this LeaveCtrl profile."
+            : claimError.message === "email_verification_required"
+              ? "Verify your email before activating LeaveCtrl."
+              : claimError.message === "account_already_linked_to_organisation"
+                ? "This LeaveCtrl identity already has an active organisation context."
+                : "We could not activate this LeaveCtrl profile."
       );
       setSaving(false);
       return;
     }
 
-    router.push("/welcome");
+    router.replace("/welcome");
     router.refresh();
   }
 
   return (
     <form className="activation-form" onSubmit={submit}>
-      {error ? <div className="auth-alert error">{error}</div> : null}
+      {error ? <div className="auth-alert error" role="alert">{error}</div> : null}
 
       <label>
         Create password
         <input
           name="password"
           type="password"
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
           required
         />
@@ -82,7 +84,7 @@ export function ActivateAccountForm({ token }: { token: string }) {
         <input
           name="confirmPassword"
           type="password"
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
           required
         />

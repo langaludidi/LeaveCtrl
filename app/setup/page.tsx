@@ -6,6 +6,7 @@ import { InitialPolicyForm } from "@/components/InitialPolicyForm";
 import { OrganisationControls } from "@/components/OrganisationControls";
 import { LeavePolicyControls } from "@/components/LeavePolicyControls";
 import { AvailabilityControls } from "@/components/AvailabilityControls";
+import { OrganisationOnboardingCompleteButton } from "@/components/OrganisationOnboardingCompleteButton";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 function formatHolidayDate(value: string) {
@@ -17,7 +18,8 @@ function formatHolidayDate(value: string) {
 }
 
 export default async function SetupPage() {
-  const { supabase, employee, displayName, roles, businessDate } = await getCurrentContext();
+  const { supabase, employee, displayName, roles, businessDate, accessState } =
+    await getCurrentContext({ allowOrganisationOnboardingIncomplete: true });
   if (!employee) return null;
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
@@ -273,6 +275,22 @@ export default async function SetupPage() {
                 </div>
               ))}
             </div>
+            {!accessState.organisation_onboarding_completed_at ? (
+              <div className="readiness-overview">
+                <div>
+                  <span className="liability-kicker">INITIAL ORGANISATION ONBOARDING</span>
+                  <h3>Review the core controls, then open the workspace</h3>
+                  <p>
+                    Advanced configuration can continue later. LeaveCtrl will not
+                    route a new organisation creator into normal operations until
+                    these core controls have been confirmed.
+                  </p>
+                </div>
+                <OrganisationOnboardingCompleteButton
+                  ready={readinessComplete === readinessChecks.length}
+                />
+              </div>
+            ) : null}
           </section>
 
           <section className="setup-grid">

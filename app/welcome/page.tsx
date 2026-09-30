@@ -19,7 +19,8 @@ function compact(value: number) {
 }
 
 export default async function WelcomePage() {
-  const { supabase, employee, organisation, businessDate } = await getCurrentContext();
+  const { supabase, employee, organisation, businessDate } =
+    await getCurrentContext({ allowEmployeeWelcomeIncomplete: true });
   if (!employee || !organisation) return null;
 
   const [

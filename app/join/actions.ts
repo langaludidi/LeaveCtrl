@@ -8,19 +8,34 @@ export async function claimInvitation(formData: FormData) {
   if (!token) redirect("/join?error=Invitation%20token%20missing.");
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("claim_employee_invitation", { p_token: token });
+  const { error } = await supabase.rpc("claim_employee_invitation", {
+    p_token: token,
+  });
 
   if (error) {
+    if (error.message === "email_verification_required") {
+      redirect(
+        "/confirm-email?next=" +
+          encodeURIComponent("/join?token=" + token)
+      );
+    }
+
     const message =
       error.message === "invitation_email_mismatch"
-        ? "This invitation belongs to a different email address."
+        ? "This invitation belongs to a different verified email address."
         : error.message === "invitation_invalid_or_expired"
           ? "This invitation is invalid or has expired."
           : error.message === "account_already_linked_to_organisation"
-            ? "This login is already linked to another active LeaveCtrl organisation."
+            ? "This LeaveCtrl identity already has an active organisation context."
             : "We could not accept this invitation.";
-    redirect(`/join?token=${encodeURIComponent(token)}&error=${encodeURIComponent(message)}`);
+
+    redirect(
+      "/join?token=" +
+        encodeURIComponent(token) +
+        "&error=" +
+        encodeURIComponent(message)
+    );
   }
 
-  redirect("/");
+  redirect("/welcome");
 }

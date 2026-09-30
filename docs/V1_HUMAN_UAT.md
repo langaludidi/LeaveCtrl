@@ -129,7 +129,7 @@ Any P0/P1 issue blocks release.
 8. Confirm the recovery session signs out after update.
 9. Sign in with the new password.
 10. Confirm prior refresh sessions are no longer usable.
-11. Test **Resend confirmation** for an unconfirmed UAT account.
+11. Test **Send confirmation email again** for an unconfirmed UAT account.
 
 **Pass:** Recovery is non-enumerating, strong-password enforced, and closes prior refresh sessions.
 

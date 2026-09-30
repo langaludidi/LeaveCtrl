@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
+import { loadAccessStates, isOrganisationSetupOperator } from "@/lib/access-state";
 
 export function dateInTimeZone(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-ZA", {
@@ -14,10 +15,16 @@ export function dateInTimeZone(date: Date, timeZone: string) {
   const month = parts.find((part) => part.type === "month")?.value ?? "01";
   const day = parts.find((part) => part.type === "day")?.value ?? "01";
 
-  return `${year}-${month}-${day}`;
+  return year + "-" + month + "-" + day;
 }
 
-export async function getCurrentContext(options?: { requireEmployee?: boolean }) {
+type CurrentContextOptions = {
+  requireEmployee?: boolean;
+  allowOrganisationOnboardingIncomplete?: boolean;
+  allowEmployeeWelcomeIncomplete?: boolean;
+};
+
+export async function getCurrentContext(options?: CurrentContextOptions) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,6 +32,41 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
 
   if (!user) redirect("/login");
   if (!hasVerifiedEmailOwnership(user)) redirect("/confirm-email");
+
+  const states = await loadAccessStates(supabase);
+
+  if (states.length === 0) {
+    redirect("/access/no-membership");
+  }
+
+  if (states.length > 1) {
+    redirect("/access/organisation-context");
+  }
+
+  const accessState = states[0];
+
+  if (!accessState.employee_id && options?.requireEmployee !== false) {
+    redirect("/access/membership-incomplete");
+  }
+
+  if (
+    !accessState.organisation_onboarding_completed_at &&
+    !options?.allowOrganisationOnboardingIncomplete
+  ) {
+    redirect(
+      isOrganisationSetupOperator(accessState)
+        ? "/setup"
+        : "/access/organisation-setup-pending"
+    );
+  }
+
+  if (
+    !accessState.employee_welcome_completed_at &&
+    !isOrganisationSetupOperator(accessState) &&
+    !options?.allowEmployeeWelcomeIncomplete
+  ) {
+    redirect("/welcome");
+  }
 
   const safeUser = {
     id: user.id,
@@ -34,6 +76,13 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
   const { data: contextRow } = await supabase
     .rpc("get_current_context_v1")
     .maybeSingle();
+
+  if (
+    contextRow &&
+    contextRow.organisation_id !== accessState.organisation_id
+  ) {
+    redirect("/access/organisation-context");
+  }
 
   const employee = contextRow
     ? {
@@ -49,7 +98,7 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
     : null;
 
   if (!employee && options?.requireEmployee !== false) {
-    redirect("/onboarding");
+    redirect("/access/membership-incomplete");
   }
 
   const organisation = contextRow
@@ -62,7 +111,7 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
       }
     : null;
 
-  const roles = contextRow?.roles ?? [];
+  const roles = contextRow?.roles ?? accessState.roles;
   const timezone = organisation?.timezone ?? "UTC";
   const businessDate = dateInTimeZone(new Date(), timezone);
 
@@ -71,11 +120,12 @@ export async function getCurrentContext(options?: { requireEmployee?: boolean })
     user: safeUser,
     employee,
     organisation,
+    accessState,
     timezone,
     businessDate,
     roles,
     displayName: employee
-      ? `${employee.first_name} ${employee.last_name}`
+      ? employee.first_name + " " + employee.last_name
       : safeUser.email ?? "User",
   };
 }

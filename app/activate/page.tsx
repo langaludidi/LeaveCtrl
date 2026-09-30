@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { ActivateAccountForm } from "@/components/ActivateAccountForm";
 import { createClient } from "@/lib/supabase/server";
+import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
+import { loadAccessStates } from "@/lib/access-state";
 
 export default async function ActivatePage({
   searchParams,
@@ -17,17 +19,20 @@ export default async function ActivatePage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const next = "/activate?token=" + encodeURIComponent(token);
+
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(`/activate?token=${token}`)}`);
+    redirect("/login?mode=signup&next=" + encodeURIComponent(next));
   }
 
-  const { data: existingEmployee } = await supabase
-    .from("employees")
-    .select("id, welcome_completed_at")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  if (!hasVerifiedEmailOwnership(user)) {
+    redirect("/confirm-email?next=" + encodeURIComponent(next));
+  }
 
-  if (existingEmployee) redirect(existingEmployee.welcome_completed_at ? "/my-leave" : "/welcome");
+  const states = await loadAccessStates(supabase);
+  if (states.length > 0) {
+    redirect("/");
+  }
 
   return (
     <main className="join-page">
@@ -36,8 +41,9 @@ export default async function ActivatePage({
         <p className="eyebrow">EMPLOYEE ACCESS</p>
         <h1>Activate your account</h1>
         <p>
-          Your organisation has already created your employee profile and leave position.
-          Create a password to activate access.
+          Your organisation controls the employee profile and permissions
+          attached to this invitation. Create your password to activate access;
+          you cannot choose or elevate your role here.
         </p>
         <ActivateAccountForm token={token}/>
       </section>

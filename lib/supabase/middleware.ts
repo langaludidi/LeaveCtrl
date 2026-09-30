@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
+import { loadAccessStates } from "@/lib/access-state";
+import { accessGateRedirect } from "@/lib/access-gate";
 
 export async function updateSession(request: NextRequest) {
   const { url, key } = getSupabasePublicConfig();
@@ -26,49 +28,87 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // Protected-route authorization uses the Auth server's user record rather
-  // than user-editable metadata or an unverified local claim.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
   const userId = user?.id ?? null;
   const emailVerified = hasVerifiedEmailOwnership(user);
 
-  const pathname = request.nextUrl.pathname;
-  const isConfirmationPage = pathname === "/confirm-email";
-  const isPublic =
+  const isAuthCallback = pathname.startsWith("/auth/");
+  const isAnonymousUtility =
+    pathname === "/api/health" || pathname === "/api/social-image";
+  const isAuthSurface =
     pathname === "/login" ||
-    isConfirmationPage ||
-    pathname.startsWith("/auth/") ||
-    pathname === "/join" ||
-    pathname === "/api/health" ||
-    pathname === "/api/social-image";
+    pathname === "/confirm-email" ||
+    pathname === "/reset-password" ||
+    isAuthCallback;
+  const isInvitationEntry = pathname === "/join";
 
-  if (!userId && !isPublic) {
+  if (!userId) {
+    if (isAuthSurface || isInvitationEntry || isAnonymousUtility) {
+      return response;
+    }
+
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("next", pathname);
+    redirectUrl.searchParams.set(
+      "next",
+      pathname + request.nextUrl.search
+    );
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (userId && !emailVerified && !isPublic) {
+  if (!emailVerified) {
+    if (
+      pathname === "/confirm-email" ||
+      isAuthCallback ||
+      isAnonymousUtility
+    ) {
+      return response;
+    }
+
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/confirm-email";
     redirectUrl.search = "";
-    redirectUrl.searchParams.set("next", pathname);
+    redirectUrl.searchParams.set(
+      "next",
+      pathname + request.nextUrl.search
+    );
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (userId && !emailVerified && pathname === "/login") {
+  if (
+    isAuthCallback ||
+    isAnonymousUtility ||
+    pathname === "/reset-password" ||
+    pathname === "/access/unavailable"
+  ) {
+    return response;
+  }
+
+  let states;
+  try {
+    states = await loadAccessStates(supabase);
+  } catch {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/confirm-email";
+    redirectUrl.pathname = "/access/unavailable";
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (userId && emailVerified && (pathname === "/login" || isConfirmationPage)) {
+  if (pathname === "/login" || pathname === "/confirm-email") {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/";
+    redirectUrl.pathname = accessGateRedirect("/", states) ?? "/";
+    redirectUrl.search = "";
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  const gatedPath = accessGateRedirect(pathname, states);
+  if (gatedPath && gatedPath !== pathname) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = gatedPath;
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }
