@@ -79,7 +79,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isAuthCallback || isAnonymousUtility || pathname === "/reset-password") {
+  if (
+    isAuthCallback ||
+    isAnonymousUtility ||
+    pathname === "/reset-password" ||
+    pathname === "/access/unavailable"
+  ) {
     return response;
   }
 
