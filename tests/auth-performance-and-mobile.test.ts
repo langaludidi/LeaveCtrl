@@ -8,10 +8,17 @@ test("mobile account recovery is compact and intentionally styled", async () => 
 
   assert.match(login, /Need help signing in\?/);
   assert.match(login, /Reset password/);
-  assert.match(login, /Resend confirmation/);
+  assert.match(login, /Send confirmation email again/);
+  assert.doesNotMatch(login, />Resend confirmation</);
   assert.match(css, /\.auth-recovery\{/);
-  assert.match(css, /\.auth-recovery-form\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/i);
-  assert.match(css, /@media\(max-width:520px\)[\s\S]*?\.auth-recovery-form\{grid-template-columns:1fr/i);
+  assert.match(
+    css,
+    /\.auth-recovery-form\{[^}]*grid-template-columns:minmax\(0,1fr\) auto/i
+  );
+  assert.match(
+    css,
+    /@media\(max-width:520px\)[\s\S]*?\.auth-recovery-form\{grid-template-columns:1fr/i
+  );
 });
 
 test("server auth verification prefers getClaims over a per-request Auth user lookup", async () => {
