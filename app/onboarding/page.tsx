@@ -28,14 +28,18 @@ export default function OnboardingPage() {
     if (rpcError) {
       setError(
         rpcError.message === "account_already_linked_to_organisation"
-          ? "This login is already linked to an active LeaveCtrl organisation."
-          : "We could not create the organisation. Please check the details and try again."
+          ? "This LeaveCtrl identity already has an active organisation."
+          : rpcError.message === "registration_email_mismatch"
+            ? "Use the same verified email address you registered with."
+            : rpcError.message === "email_verification_required"
+              ? "Verify your email before creating an organisation."
+              : "We could not create the organisation. Please check the details and try again."
       );
       setSaving(false);
       return;
     }
 
-    router.push("/setup");
+    router.replace("/setup");
     router.refresh();
   }
 
@@ -43,20 +47,21 @@ export default function OnboardingPage() {
     <main className="onboarding-page">
       <section className="onboarding-shell">
         <div className="auth-brand"><span>Leave</span>Ctrl</div>
-        <div className="onboarding-progress">
+        <div className="onboarding-progress" aria-label="Organisation onboarding">
           <span className="active">1</span><i /><span>2</span><i /><span>3</span>
         </div>
 
         <div className="onboarding-copy">
-          <p className="eyebrow">ORGANISATION SETUP</p>
-          <h1>Start with the basics</h1>
+          <p className="eyebrow">CREATE YOUR LEAVECTRL ORGANISATION</p>
+          <h1>Start with your organisation</h1>
           <p>
-            We only need enough information to establish your organisation and administrator profile.
-            The rest can be configured progressively.
+            This creates a new LeaveCtrl workspace. The verified creator becomes
+            its initial organisation administrator through the controlled setup
+            transaction; no privileged role is selected in this form.
           </p>
         </div>
 
-        {error && <div className="auth-alert error">{error}</div>}
+        {error && <div className="auth-alert error" role="alert">{error}</div>}
 
         <form onSubmit={submit} className="onboarding-form">
           <label>
@@ -69,11 +74,11 @@ export default function OnboardingPage() {
             <label>Last name<input name="lastName" required /></label>
           </div>
 
-          <label>Work email<input name="email" type="email" required /></label>
+          <label>Verified work email<input name="email" type="email" required /></label>
           <label>Your employment start date<input name="startDate" type="date" required /></label>
 
           <div className="onboarding-defaults">
-            <strong>South Africa defaults will be prepared for review</strong>
+            <strong>South Africa-first defaults will be prepared for review</strong>
             <span>Country: South Africa · Time zone: Africa/Johannesburg · Currency: ZAR</span>
           </div>
 
