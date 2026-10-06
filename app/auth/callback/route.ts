@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     return redirectNoStore(
       confirmationRecoveryUrl(
         CANONICAL_PRODUCTION_APP_URL,
-        "This confirmation link opened on a non-production LeaveCtrl address. Start again at www.leavectrl.co.za and send the confirmation email again.",
+        "This confirmation link opened on a non-production LeaveCtrl address. Start again at app.leavectrl.co.za and send the confirmation email again.",
         next
       )
     );
