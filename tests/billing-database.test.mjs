@@ -61,7 +61,7 @@ async function fixture(db) {
   await db.exec(
     await readFile(
       new URL(
-        "../supabase/migrations/20261006153721_verified_billing_and_subscription_access.sql",
+        "../supabase/migrations/20261006162023_verified_billing_and_subscription_access.sql",
         import.meta.url,
       ),
       "utf8",
