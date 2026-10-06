@@ -8,7 +8,7 @@ test("employee invitation callback is pinned to the canonical production app", a
     "utf8"
   );
 
-  assert.match(source, /https:\/\/www\.leavectrl\.co\.za/);
+  assert.match(source, /https:\/\/app\.leavectrl\.co\.za/);
   assert.match(source, /ignored non-canonical LEAVECTRL_APP_URL/);
   assert.doesNotMatch(source, /https:\/\/leave-ctrl\.vercel\.app/);
   assert.doesNotMatch(source, /leave-ctrl-2eqn/);
