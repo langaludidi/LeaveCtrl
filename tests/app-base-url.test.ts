@@ -182,3 +182,11 @@ test("development email auth is local-only", () => {
     "http://localhost:3000"
   );
 });
+
+test("marketing origins cannot initiate or exchange production email auth", () => {
+  assert.equal(CANONICAL_PRODUCTION_APP_URL, "https://app.leavectrl.co.za");
+  for (const requestOrigin of ["https://leavectrl.co.za", "https://www.leavectrl.co.za"]) {
+    assert.equal(canInitiateEmailAuth({ requestOrigin, vercelEnv: "production", production: true }), false);
+    assert.equal(authCallbackOriginAllowed({ requestOrigin, vercelEnv: "production", production: true }), false);
+  }
+});
