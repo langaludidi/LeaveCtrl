@@ -5,8 +5,12 @@ import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 import { loadAccessStates } from "@/lib/access-state";
 import { accessGateRedirect } from "@/lib/access-gate";
+import { safeInternalPath } from "@/lib/safe-internal-path";
 
 export async function updateSession(request: NextRequest) {
+  // Only this exact machine endpoint is anonymous; its route verifies the raw
+  // Paystack signature. Other billing APIs still require a verified user.
+  if(request.nextUrl.pathname==="/api/billing/webhook" || request.nextUrl.pathname==="/subscribe") return NextResponse.next({request});
   const { url, key } = getSupabasePublicConfig();
 
   let response = NextResponse.next({ request });
@@ -88,6 +92,10 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
+  // Billing is also the recovery surface for incomplete or expired workspaces.
+  // Its server handlers independently enforce membership and billing authority.
+  if(pathname==="/billing" || pathname.startsWith("/billing/") || pathname.startsWith("/api/billing/")) return response;
+
   let states;
   try {
     states = await loadAccessStates(supabase);
@@ -100,6 +108,8 @@ export async function updateSession(request: NextRequest) {
 
   if (pathname === "/login" || pathname === "/confirm-email") {
     const redirectUrl = request.nextUrl.clone();
+    const next=safeInternalPath(request.nextUrl.searchParams.get("next"),"/");
+    if(next==="/billing" || next.startsWith("/billing?") || next.startsWith("/billing/")) return NextResponse.redirect(new URL(next,request.nextUrl.origin));
     redirectUrl.pathname = accessGateRedirect("/", states) ?? "/";
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);

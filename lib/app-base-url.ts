@@ -1,4 +1,4 @@
-export const CANONICAL_PRODUCTION_APP_URL = "https://www.leavectrl.co.za";
+export const CANONICAL_PRODUCTION_APP_URL = "https://app.leavectrl.co.za";
 
 type AppBaseUrlInput = {
   configuredUrl?: string | null;

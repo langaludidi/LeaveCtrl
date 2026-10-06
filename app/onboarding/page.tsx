@@ -39,7 +39,8 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.replace("/setup");
+    const next=new URLSearchParams(window.location.search).get("next");
+    router.replace(next==="/billing"?"/billing":"/setup");
     router.refresh();
   }
 

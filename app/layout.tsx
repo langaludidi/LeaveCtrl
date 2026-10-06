@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const siteUrl = "https://www.leavectrl.co.za";
+const siteUrl = "https://app.leavectrl.co.za";
 const title = "LeaveCtrl | Leave & Workforce Availability";
 const description =
   "Simple, governed leave management, workforce availability, approvals and TOIL in one calm operational workspace.";
