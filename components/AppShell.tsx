@@ -15,11 +15,13 @@ import {
   LogOut,
   Menu,
   Settings,
+  CreditCard,
   Users,
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
+import { BillingBanner } from "@/components/BillingBanner";
 
 function initials(name: string) {
   return (
@@ -97,6 +99,7 @@ export function AppShell({
     { href: "/reports", label: "Reports", icon: BarChart3, visible: canReport },
     { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: canAudit },
     { href: "/setup", label: "Administration", icon: Settings, visible: canAdmin },
+    { href: "/billing", label: "Billing & subscription", icon: CreditCard, visible: role === "Organisation Admin" },
   ].filter((item) => item.visible);
 
   async function signOut() {
@@ -245,7 +248,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="page-wrap">{children}</main>
+        <main className="page-wrap"><BillingBanner />{children}</main>
       </div>
     </div>
   );
