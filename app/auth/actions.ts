@@ -15,7 +15,7 @@ import {
 import { validatePassword } from "@/lib/password-policy";
 
 const EMAIL_AUTH_ORIGIN_BLOCKED =
-  "Continue this authentication request at www.leavectrl.co.za.";
+  "Continue this authentication request at app.leavectrl.co.za.";
 
 function read(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
