@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const CANONICAL_APP_URL = "https://www.leavectrl.co.za";
+const CANONICAL_APP_URL = "https://app.leavectrl.co.za";
 const configuredAppUrl = Deno.env.get("LEAVECTRL_APP_URL");
 
 function productionAppUrl() {
