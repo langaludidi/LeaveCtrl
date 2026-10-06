@@ -177,6 +177,8 @@ export async function providerPlan(price: {
 }
 
 export async function initialiseCheckout(priceId: string) {
+  if (process.env.LEAVECTRL_BILLING_ENABLED !== "true")
+    throw new BillingError("billing_not_enabled", 503);
   if (billingConfiguration().mode !== "live")
     throw new BillingError("preview_billing_disabled", 503);
   // Check database credentials before taking any payment.

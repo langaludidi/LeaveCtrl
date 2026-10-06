@@ -9,6 +9,8 @@ import {
 } from "@/lib/billing/catalog";
 
 const messages: Record<string, string> = {
+  billing_not_enabled:
+    "Online payments are being configured. No payment has been taken. Contact director@leavectrl.co.za for help.",
   billing_configuration_required:
     "Online payments are being configured. No payment has been taken. Contact director@leavectrl.co.za for help.",
   billing_record_rejected:

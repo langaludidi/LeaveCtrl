@@ -85,7 +85,9 @@ export default async function BillingPage({
   }
   let configured = true;
   try {
-    configured = billingConfiguration().mode === "live";
+    configured =
+      billingConfiguration().mode === "live" &&
+      process.env.LEAVECTRL_BILLING_ENABLED === "true";
   } catch {
     configured = false;
   }
