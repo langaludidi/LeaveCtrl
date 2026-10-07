@@ -76,23 +76,58 @@ jobs:
       - name: Install browser engines
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Wait for exact production release
+      - name: Resolve and verify production release
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
           EXPECTED_COMMIT: ${{ github.sha }}
+          BEFORE_COMMIT: ${{ github.event.before }}
         run: |
           set -euo pipefail
+
+          current_release() {
+            curl -fsS --max-time 10 https://app.leavectrl.co.za/api/health 2>/dev/null \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).release_commit||"")}catch{}})'
+          }
+
+          target="$EXPECTED_COMMIT"
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            workflow_only="$(node - <<'NODE'
+          const fs = require("fs");
+          const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+          const paths = [...new Set((event.commits || []).flatMap((commit) => [
+            ...(commit.added || []),
+            ...(commit.modified || []),
+            ...(commit.removed || []),
+          ]))];
+          process.stdout.write(paths.length > 0 && paths.every((path) => path.startsWith(".github/workflows/")) ? "true" : "false");
+          NODE
+            )"
+            if [ "$workflow_only" = "true" ] && [ -n "${BEFORE_COMMIT:-}" ] && [ "$BEFORE_COMMIT" != "0000000000000000000000000000000000000000" ]; then
+              target="$BEFORE_COMMIT"
+              echo "Workflow-only push; validating already-live parent release $target"
+            fi
+          else
+            target="$(current_release)"
+            if [ -z "$target" ]; then
+              echo "::error::Could not resolve current production release."
+              exit 1
+            fi
+            echo "Scheduled/manual run; validating current production release $target"
+          fi
+
           for attempt in $(seq 1 30); do
-            body="$(curl -fsS --max-time 10 https://app.leavectrl.co.za/api/health || true)"
-            deployed="$(printf '%s' "$body" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).release_commit||"")}catch{}})')"
-            if [ "$deployed" = "$EXPECTED_COMMIT" ]; then
-              echo "Production is serving $EXPECTED_COMMIT"
+            deployed="$(current_release || true)"
+            if [ "$deployed" = "$target" ]; then
+              echo "Production release verified: $target"
               exit 0
             fi
-            echo "Waiting for production commit (attempt $attempt/30): currently ${deployed:-unknown}"
+            echo "Waiting for production commit (attempt $attempt/30): target=$target current=${deployed:-unknown}"
             sleep 10
           done
-          echo "::error::Production did not converge to $EXPECTED_COMMIT within five minutes."
+
+          echo "::error::Production did not converge to $target within five minutes."
           exit 1
 
       - name: Run production browser and WCAG regression
