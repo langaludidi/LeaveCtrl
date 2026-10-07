@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const publicPages = [
@@ -6,7 +6,7 @@ const publicPages = [
   { path: "/reset-password", name: "reset password" },
 ];
 
-async function expectNoHorizontalOverflow(page: Parameters<typeof test>[0] extends never ? never : any) {
+async function expectNoHorizontalOverflow(page: Page) {
   const fits = await page.evaluate(() => {
     const root = document.documentElement;
     return root.scrollWidth <= window.innerWidth + 1;
@@ -14,7 +14,7 @@ async function expectNoHorizontalOverflow(page: Parameters<typeof test>[0] exten
   expect(fits).toBe(true);
 }
 
-async function expectWcagAA(page: any) {
+async function expectWcagAA(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
