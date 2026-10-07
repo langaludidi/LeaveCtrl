@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - ".github/workflows/browser-regression.yml"
-      - "tests/browser-production.spec.ts"
+      - "release-tests/browser-production.spec.mjs"
   schedule:
     - cron: "20 3 * * *"
 
@@ -73,7 +73,7 @@ jobs:
           E2E_BROWSER: ${{ matrix.browser }}
           E2E_WIDTH: ${{ matrix.width }}
           E2E_HEIGHT: ${{ matrix.height }}
-        run: npx playwright test tests/browser-production.spec.ts --reporter=line --workers=1
+        run: npx playwright test release-tests/browser-production.spec.mjs --reporter=line --workers=1
 
       - name: Regression summary
         if: success()
