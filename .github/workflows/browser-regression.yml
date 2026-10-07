@@ -8,8 +8,11 @@ on:
     paths:
       - ".github/workflows/browser-regression.yml"
       - ".github/workflows/production-monitor.yml"
-      - "release-tests/browser-production.spec.mjs"
-      - "app/api/health/route.ts"
+      - "release-tests/**"
+      - "app/**"
+      - "components/**"
+      - "middleware.ts"
+      - "next.config.*"
   schedule:
     - cron: "20 3 * * *"
 
