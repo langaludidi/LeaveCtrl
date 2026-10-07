@@ -1,0 +1,117 @@
+name: Production monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/production-monitor.yml"
+      - "app/api/health/route.ts"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-monitor
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INCIDENT_TITLE: "[monitor] LeaveCtrl production health failure"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check production health and login surface
+        id: probe
+        shell: bash
+        run: |
+          set +e
+          health_body="$(mktemp)"
+          health_status="$(curl -sS --retry 2 --retry-delay 2 --max-time 12 -o "$health_body" -w '%{http_code}' https://app.leavectrl.co.za/api/health)"
+          login_headers="$(mktemp)"
+          login_body="$(mktemp)"
+          login_status="$(curl -sS --retry 2 --retry-delay 2 --max-time 12 -D "$login_headers" -o "$login_body" -w '%{http_code}' https://app.leavectrl.co.za/login)"
+
+          health_ok=false
+          login_ok=false
+          headers_ok=false
+
+          if [ "$health_status" = "200" ] && grep -q '"status":"ok"' "$health_body"; then
+            health_ok=true
+          fi
+
+          if [ "$login_status" = "200" ] && grep -qi 'LeaveCtrl' "$login_body"; then
+            login_ok=true
+          fi
+
+          if grep -qi '^strict-transport-security:' "$login_headers"             && grep -qi '^x-content-type-options: *nosniff' "$login_headers"; then
+            headers_ok=true
+          fi
+
+          echo "health_status=$health_status" >> "$GITHUB_OUTPUT"
+          echo "login_status=$login_status" >> "$GITHUB_OUTPUT"
+          echo "health_ok=$health_ok" >> "$GITHUB_OUTPUT"
+          echo "login_ok=$login_ok" >> "$GITHUB_OUTPUT"
+          echo "headers_ok=$headers_ok" >> "$GITHUB_OUTPUT"
+
+          if [ "$health_ok" = true ] && [ "$login_ok" = true ] && [ "$headers_ok" = true ]; then
+            exit 0
+          fi
+          exit 1
+
+      - name: Open or update incident
+        if: failure() && steps.probe.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
+          body="Automated production monitoring detected a failure.
+
+          - Health endpoint HTTP: ${{ steps.probe.outputs.health_status }}
+          - Login HTTP: ${{ steps.probe.outputs.login_status }}
+          - Health contract passed: ${{ steps.probe.outputs.health_ok }}
+          - Login surface passed: ${{ steps.probe.outputs.login_ok }}
+          - Required security headers passed: ${{ steps.probe.outputs.headers_ok }}
+          - Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Detected at: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          Treat as a production incident until a later monitor run confirms recovery."
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$INCIDENT_TITLE" --body "$body"
+          fi
+
+      - name: Close recovered incident
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          open_issues="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[].number')"
+          for issue in $open_issues; do
+            gh issue comment "$issue" --body "Automated production monitoring has recovered. Health, login and required security-header probes are passing again."
+            gh issue close "$issue" --reason completed
+          done
+
+      - name: Monitoring summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### LeaveCtrl production monitor"
+            echo "- Health HTTP: ${{ steps.probe.outputs.health_status }}"
+            echo "- Login HTTP: ${{ steps.probe.outputs.login_status }}"
+            echo "- Health contract: ${{ steps.probe.outputs.health_ok }}"
+            echo "- Login surface: ${{ steps.probe.outputs.login_ok }}"
+            echo "- Security headers: ${{ steps.probe.outputs.headers_ok }}"
+          } >> "$GITHUB_STEP_SUMMARY"
