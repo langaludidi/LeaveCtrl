@@ -21,7 +21,6 @@ export async function GET() {
           supabase_auth: "ok",
         },
         release_commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
-        release_commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
       },
       {
         status: 200,
