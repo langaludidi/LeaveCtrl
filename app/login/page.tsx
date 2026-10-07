@@ -6,6 +6,7 @@ import {
 } from "@/app/auth/actions";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 import { BrandLogo } from "@/components/BrandLogo";
+import { AuthCaptcha } from "@/components/AuthCaptcha";
 
 export default async function LoginPage({
   searchParams,
@@ -26,6 +27,7 @@ export default async function LoginPage({
   const invitationSignup =
     signingUp &&
     (next.startsWith("/join?") || next.startsWith("/activate?"));
+  const captchaSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 
   return (
     <main className="auth-page">
@@ -94,6 +96,8 @@ export default async function LoginPage({
             />
           </label>
 
+          <AuthCaptcha siteKey={captchaSiteKey} label="Sign-in security check" />
+
           <button className="btn primary auth-submit" type="submit">
             {signingUp ? "Create account" : "Sign in"}
           </button>
@@ -128,6 +132,7 @@ export default async function LoginPage({
                 aria-label="Email address for password reset"
                 required
               />
+              <AuthCaptcha siteKey={captchaSiteKey} label="Password reset security check" />
               <button className="btn secondary" type="submit">
                 Send reset link
               </button>
