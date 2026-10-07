@@ -1,0 +1,99 @@
+name: Production database backup
+
+on:
+  schedule:
+    # 00:35 UTC = 02:35 South Africa Standard Time (UTC+2).
+    - cron: "35 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require backup connection secret
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL is not configured. Add the Supabase Session Pooler connection string as a GitHub Actions secret."
+            exit 1
+          fi
+
+      - name: Install PostgreSQL 17 client
+        shell: bash
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Create encrypted-compatible logical backup
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p backup
+
+          pg_dump --version
+          pg_dump "$SUPABASE_DB_URL" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --no-subscriptions \
+            --file=backup/leavectrl.dump
+
+          pg_dump "$SUPABASE_DB_URL" \
+            --schema-only \
+            --no-owner \
+            --no-privileges \
+            --no-subscriptions \
+            --file=backup/schema.sql
+
+          pg_restore --list backup/leavectrl.dump > backup/restore-list.txt
+
+          test -s backup/leavectrl.dump
+          test -s backup/schema.sql
+          test -s backup/restore-list.txt
+
+          sha256sum backup/leavectrl.dump backup/schema.sql > backup/SHA256SUMS
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > backup/created-at-utc.txt
+          printf '%s\n' "LeaveCtrl production logical database backup" > backup/README.txt
+          printf '%s\n' "Restore only to an isolated recovery database first. Never restore directly over production." >> backup/README.txt
+
+      - name: Upload protected backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: leavectrl-db-backup-${{ github.run_id }}
+          path: backup/
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Backup summary
+        shell: bash
+        run: |
+          {
+            echo "### LeaveCtrl database backup"
+            echo "- Logical dump created successfully"
+            echo "- Schema dump created successfully"
+            echo "- Archive inventory validated with pg_restore"
+            echo "- SHA-256 checksums generated"
+            echo "- Artifact retention: 7 days"
+            echo "- Recovery rule: restore to an isolated database before any production recovery"
+          } >> "$GITHUB_STEP_SUMMARY"
