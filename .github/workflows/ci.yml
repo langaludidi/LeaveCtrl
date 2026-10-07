@@ -37,6 +37,8 @@ jobs:
           done
       - name: Unit tests
         run: npm test
+      - name: Critical business logic coverage
+        run: npm run test:critical-coverage
       - name: Dependency audit
         shell: bash
         run: |
