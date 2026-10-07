@@ -1,6 +1,7 @@
 import { createCipheriv, randomBytes, randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { put, type PutBlobResult } from "@vercel/blob";
 import backupTables from "@/config/backup-tables.json";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
@@ -12,13 +13,6 @@ const MAGIC = Buffer.from("LCTRL-BACKUP-V1\n");
 const PAGE_SIZE = 1000;
 
 type TableSpec = { name: string; pk: string };
-
-type BlobPutResult = {
-  url: string;
-  pathname: string;
-  contentType?: string;
-  etag?: string;
-};
 
 function serviceClient() {
   const key =
@@ -111,51 +105,21 @@ function encryptBackup(payload: unknown) {
   return Buffer.concat([MAGIC, iv, tag, ciphertext]);
 }
 
-function blobCredentials() {
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (!token) throw new Error("backup_blob_token_missing");
-
-  const envStoreId = process.env.BLOB_STORE_ID?.trim();
-  const parsedStoreId = token.split("_")[3];
-  const storeId = (envStoreId || parsedStoreId || "").replace(/^store_/, "");
-  if (!storeId) throw new Error("backup_blob_store_id_missing");
-
-  return { token, storeId };
-}
-
-async function putPrivateBlob(pathname: string, body: Buffer): Promise<BlobPutResult> {
-  const { token, storeId } = blobCredentials();
-  const requestId = `${storeId}:${Date.now()}:${randomUUID()}`;
-  const target = `https://vercel.com/api/blob/?pathname=${encodeURIComponent(pathname)}`;
-
-  const response = await fetch(target, {
-    method: "PUT",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "x-vercel-blob-store-id": storeId,
-      "x-api-blob-request-id": requestId,
-      "x-api-blob-request-attempt": "0",
-      "x-api-version": "12",
-      "x-vercel-blob-access": "private",
-      "x-content-type": "application/octet-stream",
-      "x-add-random-suffix": "0",
-      "x-allow-overwrite": "1",
-    },
-    body: body.buffer.slice(
-      body.byteOffset,
-      body.byteOffset + body.byteLength,
-    ) as ArrayBuffer,
-    signal: AbortSignal.timeout(30_000),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `backup_blob_write_failed:${response.status}:${detail.slice(0, 200)}`,
-    );
+async function putPrivateBlob(
+  pathname: string,
+  body: Buffer,
+): Promise<PutBlobResult> {
+  try {
+    return await put(pathname, body, {
+      access: "private",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: "application/octet-stream",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown";
+    throw new Error(`backup_blob_write_failed:${message}`);
   }
-
-  return (await response.json()) as BlobPutResult;
 }
 
 function backupSlots(now: Date) {
@@ -227,7 +191,7 @@ export async function GET(request: Request) {
     const encrypted = encryptBackup(payload);
     const now = new Date();
     const slots = backupSlots(now);
-    const uploaded: BlobPutResult[] = [];
+    const uploaded: PutBlobResult[] = [];
 
     for (const pathname of slots) {
       uploaded.push(await putPrivateBlob(pathname, encrypted));
