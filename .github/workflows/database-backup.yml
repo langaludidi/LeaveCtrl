@@ -1,0 +1,88 @@
+name: Production database backup
+
+on:
+  schedule:
+    # 00:35 UTC = 02:35 South Africa Standard Time (UTC+2).
+    - cron: "35 0 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/database-backup.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require backup connection secret
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL is not configured. Add the Supabase Session Pooler connection string as a GitHub Actions repository secret."
+            exit 1
+          fi
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Create Supabase logical backup
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p backup
+
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --data-only --use-copy \
+            -x "storage.buckets_vectors" \
+            -x "storage.vector_indexes"
+
+          test -s backup/roles.sql
+          test -s backup/schema.sql
+          test -s backup/data.sql
+
+          sha256sum backup/roles.sql backup/schema.sql backup/data.sql > backup/SHA256SUMS
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > backup/created-at-utc.txt
+          printf '%s\n' "LeaveCtrl production logical database backup" > backup/README.txt
+          printf '%s\n' "Created with Supabase CLI filtering for managed platform objects." >> backup/README.txt
+          printf '%s\n' "Restore only to an isolated recovery database first. Never restore directly over production." >> backup/README.txt
+
+      - name: Upload protected backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: leavectrl-db-backup-${{ github.run_id }}
+          path: backup/
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Backup summary
+        shell: bash
+        run: |
+          {
+            echo "### LeaveCtrl database backup"
+            echo "- Supabase roles dump created successfully"
+            echo "- Schema dump created successfully"
+            echo "- Data dump created successfully"
+            echo "- SHA-256 checksums generated"
+            echo "- Artifact retention: 7 days"
+            echo "- Recovery rule: restore to an isolated database before any production recovery"
+          } >> "$GITHUB_STEP_SUMMARY"
