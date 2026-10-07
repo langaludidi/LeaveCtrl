@@ -76,11 +76,7 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 30); do
             body="$(curl -fsS --max-time 10 https://app.leavectrl.co.za/api/health || true)"
-            deployed="$(printf '%s' "$body" | python3 -c 'import json,sys
-try:
-    print(json.load(sys.stdin).get("release_commit") or "")
-except Exception:
-    print("")')"
+            deployed="$(printf '%s' "$body" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).release_commit||"")}catch{}})')"
             if [ "$deployed" = "$EXPECTED_COMMIT" ]; then
               echo "Production is serving $EXPECTED_COMMIT"
               exit 0
