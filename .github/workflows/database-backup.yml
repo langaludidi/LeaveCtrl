@@ -19,7 +19,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SUPABASE_DB_URL_BASE: postgresql://postgres.nihvucwfzajudsejczzz@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+  SUPABASE_DB_HOST: aws-1-eu-west-1.pooler.supabase.com
+  SUPABASE_DB_PORT: "5432"
+  SUPABASE_DB_USER: postgres.nihvucwfzajudsejczzz
+  SUPABASE_DB_NAME: postgres
 
 jobs:
   backup:
@@ -52,9 +55,13 @@ jobs:
           umask 077
           mkdir -p backup
 
-          supabase db dump --db-url "$SUPABASE_DB_URL_BASE" --password "$SUPABASE_DB_PASSWORD" -f backup/roles.sql --role-only
-          supabase db dump --db-url "$SUPABASE_DB_URL_BASE" --password "$SUPABASE_DB_PASSWORD" -f backup/schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL_BASE" --password "$SUPABASE_DB_PASSWORD" -f backup/data.sql --data-only --use-copy \
+          ENCODED_PASSWORD="$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"], safe=""))')"
+          SUPABASE_DB_URL="postgresql://${SUPABASE_DB_USER}:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}/${SUPABASE_DB_NAME}"
+          echo "::add-mask::$SUPABASE_DB_URL"
+
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --data-only --use-copy \
             -x "storage.buckets_vectors" \
             -x "storage.vector_indexes"
 
