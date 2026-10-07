@@ -3,8 +3,10 @@ import test from "node:test";
 import { retrySubscriptionLinkAfterPaymentRace } from "../lib/billing/retry.ts";
 
 class FixtureBillingError extends Error {
-  constructor(public code: string) {
+  code: string;
+  constructor(code: string) {
     super(code);
+    this.code = code;
   }
 }
 
