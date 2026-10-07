@@ -15,7 +15,7 @@ export function BrandLogo({
   const accent = reverse ? "#ffffff" : black ? "#111111" : "#008080";
 
   return (
-    <span className={`brand-logo brand-logo-${variant} ${className}`.trim()} aria-label="LeaveCtrl">
+    <span className={`brand-logo brand-logo-${variant} ${className}`.trim()} role="img" aria-label="LeaveCtrl">
       <svg className="brand-mark" viewBox="0 0 42 42" aria-hidden="true" focusable="false">
         {[2, 15, 28].flatMap((x) =>
           [2, 15, 28].map((y) => {
