@@ -12,6 +12,11 @@ on:
       - "app/api/health/route.ts"
       - "app/**"
       - "components/**"
+      - "lib/**"
+      - "middleware.ts"
+      - "next.config.ts"
+      - "package.json"
+      - "package-lock.json"
   schedule:
     - cron: "20 3 * * *"
 
