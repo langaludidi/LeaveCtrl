@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/browser-regression.yml"
       - "release-tests/browser-production.spec.mjs"
+      - "app/api/health/route.ts"
   schedule:
     - cron: "20 3 * * *"
 
@@ -66,6 +67,25 @@ jobs:
 
       - name: Install browser engines
         run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Wait for exact production release
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            body="$(curl -fsS --max-time 10 https://app.leavectrl.co.za/api/health || true)"
+            deployed="$(printf '%s' "$body" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).release_commit||"")}catch{}})')"
+            if [ "$deployed" = "$EXPECTED_COMMIT" ]; then
+              echo "Production is serving $EXPECTED_COMMIT"
+              exit 0
+            fi
+            echo "Waiting for production commit (attempt $attempt/30): currently ${deployed:-unknown}"
+            sleep 10
+          done
+          echo "::error::Production did not converge to $EXPECTED_COMMIT within five minutes."
+          exit 1
 
       - name: Run production browser and WCAG regression
         env:

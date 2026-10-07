@@ -48,7 +48,8 @@ test("login and recovery surfaces fit the viewport without document overflow", a
   const { context, page } = await pageForTest();
 
   for (const path of ["/login", "/reset-password"]) {
-    await page.goto(path, { waitUntil: "networkidle" });
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await page.locator("body").waitFor({ state: "visible" });
     const overflow = await page.evaluate(() => ({
       width: document.documentElement.scrollWidth,
       viewport: window.innerWidth,
@@ -61,7 +62,8 @@ test("login and recovery surfaces fit the viewport without document overflow", a
 
 test("keyboard focus becomes visibly apparent on the login surface", async () => {
   const { context, page } = await pageForTest();
-  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.locator("body").waitFor({ state: "visible" });
 
   for (let i = 0; i < 8; i++) {
     await page.keyboard.press("Tab");
@@ -94,7 +96,8 @@ test("login and recovery surfaces have no serious or critical axe violations", a
   const { context, page } = await pageForTest();
 
   for (const path of ["/login", "/reset-password"]) {
-    await page.goto(path, { waitUntil: "networkidle" });
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await page.locator("body").waitFor({ state: "visible" });
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
