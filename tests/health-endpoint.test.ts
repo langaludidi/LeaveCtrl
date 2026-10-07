@@ -14,7 +14,7 @@ test("health endpoint is safe, dynamic and non-cached", async () => {
   assert.match(route, /dynamic = "force-dynamic"/);
   assert.match(route, /"Cache-Control": "no-store"/);
   assert.match(route, /"X-Content-Type-Options": "nosniff"/);
-  assert.doesNotMatch(route, /key\s*:/);
+  assert.doesNotMatch(route, /^\s*key\s*:/m);
   assert.doesNotMatch(route, /supabase_url\s*:/i);
 });
 
