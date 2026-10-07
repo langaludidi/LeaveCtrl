@@ -145,7 +145,8 @@ jobs:
           echo "Restored fingerprint:   $actual"
           test "$actual" = "$expected"
 
-          test "$(docker exec "$db_container" psql -U postgres -d postgres -Atc "select count(*) from supabase_migrations.schema_migrations")" = "0"
+          migration_history_present="$(docker exec "$db_container" psql -U postgres -d postgres -Atc "select to_regclass('supabase_migrations.schema_migrations') is not null")"
+          test "$migration_history_present" = "f"
 
       - name: Recovery rehearsal summary
         if: success()
