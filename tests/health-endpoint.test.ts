@@ -9,6 +9,7 @@ test("health endpoint is safe, dynamic and non-cached", async () => {
   assert.match(route, /status: "unavailable"/);
   assert.match(route, /\/auth\/v1\/health/);
   assert.match(route, /AbortSignal\.timeout\(5000\)/);
+  assert.match(route, /release_commit: process\.env\.VERCEL_GIT_COMMIT_SHA/);
   assert.match(route, /dynamic = "force-dynamic"/);
   assert.match(route, /"Cache-Control": "no-store"/);
   assert.match(route, /"X-Content-Type-Options": "nosniff"/);
