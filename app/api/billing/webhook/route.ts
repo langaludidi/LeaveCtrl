@@ -13,6 +13,7 @@ import {
   billingFailure,
 } from "@/lib/billing/http";
 import { signatureMatches, providerId } from "@/lib/billing/verification";
+import { retrySubscriptionLinkAfterPaymentRace } from "@/lib/billing/retry";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -82,7 +83,9 @@ async function processEvent(event: string, data: Record<string, any>) {
     const code = String(
       data.subscription_code ?? data.subscription?.subscription_code ?? "",
     );
-    await refreshSubscription(code);
+    await retrySubscriptionLinkAfterPaymentRace(() =>
+      refreshSubscription(code),
+    );
     return true;
   }
   if (event === "invoice.update") {
