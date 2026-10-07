@@ -5,9 +5,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { url: supabaseUrl } = getSupabasePublicConfig();
-    const response = await fetch(`${supabaseUrl}/auth/v1/health`, {
+    const config = getSupabasePublicConfig();
+    const response = await fetch(`${config.url}/auth/v1/health`, {
       cache: "no-store",
+      headers: {
+        apikey: config.key,
+      },
       signal: AbortSignal.timeout(5000),
     });
 
