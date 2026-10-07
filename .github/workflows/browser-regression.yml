@@ -77,12 +77,34 @@ jobs:
         if: github.event_name == 'push'
         shell: bash
         env:
-          BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=2 origin "$BEFORE_SHA" || true
-          changed="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" || true)"
+
+          health="$(curl -fsS --max-time 10 https://app.leavectrl.co.za/api/health || true)"
+          deployed="$(printf '%s' "$health" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).release_commit||"")}catch{}})')"
+
+          if [ -z "$deployed" ]; then
+            echo "::warning::Could not determine the production release commit; require exact convergence."
+            echo "requires_deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$deployed" = "$CURRENT_SHA" ]; then
+            echo "Production already serves $CURRENT_SHA"
+            echo "requires_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --no-tags origin "$deployed" "$CURRENT_SHA" || true
+          if ! git cat-file -e "$deployed^{commit}" 2>/dev/null; then
+            echo "::warning::Production commit $deployed is unavailable locally; require exact convergence."
+            echo "requires_deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "$deployed" "$CURRENT_SHA" || true)"
+          echo "Changes since production $deployed:"
           echo "$changed"
 
           requires_deploy=false
