@@ -25,6 +25,14 @@ function readSecret(formData: FormData, key: string) {
   return String(formData.get(key) ?? "");
 }
 
+function captchaToken(formData: FormData) {
+  return readSecret(formData, "captchaToken").trim();
+}
+
+function captchaConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+}
+
 function confirmationPath(next: string, message?: string, error?: string) {
   const params = new URLSearchParams({ next });
   if (message) params.set("message", message);
@@ -92,11 +100,19 @@ export async function signIn(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
   const password = readSecret(formData, "password");
   const next = safeInternalPath(read(formData, "next"), "/");
+  const token = captchaToken(formData);
+  if (captchaConfigured() && !token) {
+    redirect(
+      `/login?error=${encodeURIComponent("Complete the security check and try again.")}&next=${encodeURIComponent(next)}`
+    );
+  }
+
   const supabase = await clearExistingBrowserSession();
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
+    options: token ? { captchaToken: token } : undefined,
   });
 
   if (error) {
@@ -139,6 +155,7 @@ export async function signUp(formData: FormData) {
   const next = safeInternalPath(read(formData, "next"), "/onboarding");
   const invitationIntent =
     next.startsWith("/join?") || next.startsWith("/activate?");
+  const token = captchaToken(formData);
 
   const passwordPolicy = validatePassword(password);
   if (!firstName || !lastName || !email || !passwordPolicy.valid) {
@@ -148,6 +165,12 @@ export async function signUp(formData: FormData) {
         : passwordPolicy.message;
     redirect(
       `/login?mode=signup&error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`
+    );
+  }
+
+  if (captchaConfigured() && !token) {
+    redirect(
+      `/login?mode=signup&error=${encodeURIComponent("Complete the security check and try again.")}&next=${encodeURIComponent(next)}`
     );
   }
 
@@ -167,6 +190,7 @@ export async function signUp(formData: FormData) {
           : "create_organisation",
       },
       emailRedirectTo: await emailRedirect(next),
+      ...(token ? { captchaToken: token } : {}),
     },
   });
 
@@ -203,6 +227,7 @@ export async function signUp(formData: FormData) {
 
 export async function requestPasswordReset(formData: FormData) {
   const email = read(formData, "email").toLowerCase();
+  const token = captchaToken(formData);
 
   if (!email) {
     redirect(
@@ -212,9 +237,16 @@ export async function requestPasswordReset(formData: FormData) {
     );
   }
 
+  if (captchaConfigured() && !token) {
+    redirect(
+      `/login?error=${encodeURIComponent("Complete the security check before requesting a password reset.")}`
+    );
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: await emailRedirect("/reset-password"),
+    ...(token ? { captchaToken: token } : {}),
   });
 
   if (error) {
