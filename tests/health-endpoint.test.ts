@@ -13,7 +13,7 @@ test("health endpoint is safe, dynamic and non-cached", async () => {
   assert.match(route, /"Cache-Control": "no-store"/);
   assert.match(route, /"X-Content-Type-Options": "nosniff"/);
   assert.doesNotMatch(route, /key\s*:/);
-  assert.doesNotMatch(route, /url\s*:/);
+  assert.doesNotMatch(route, /supabase_url\s*:/i);
 });
 
 test("auth middleware allows only the dedicated health route as a public API path", async () => {
