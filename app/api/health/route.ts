@@ -5,12 +5,21 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    getSupabasePublicConfig();
+    const { url: supabaseUrl } = getSupabasePublicConfig();
+    const response = await fetch(`${supabaseUrl}/auth/v1/health`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) throw new Error("supabase_auth_unavailable");
 
     return NextResponse.json(
       {
         status: "ok",
         service: "LeaveCtrl",
+        dependencies: {
+          supabase_auth: "ok",
+        },
       },
       {
         status: 200,
