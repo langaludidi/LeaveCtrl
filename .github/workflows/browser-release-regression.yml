@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - "e2e/**"
-      - "playwright.release.config.ts"
+      - "playwright.release.config.mjs"
       - ".github/workflows/browser-release-regression.yml"
       - "app/**"
       - "components/**"
@@ -15,7 +15,7 @@ on:
   pull_request:
     paths:
       - "e2e/**"
-      - "playwright.release.config.ts"
+      - "playwright.release.config.mjs"
       - ".github/workflows/browser-release-regression.yml"
       - "app/**"
       - "components/**"
@@ -50,7 +50,7 @@ jobs:
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run production cross-browser responsive and WCAG regression
-        run: npx playwright test --config=playwright.release.config.ts
+        run: npx playwright test --config=playwright.release.config.mjs
 
       - name: Upload browser failure evidence
         if: failure()
