@@ -22,7 +22,7 @@ concurrency:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
       INCIDENT_TITLE: "[monitor] LeaveCtrl production health failure"
@@ -30,31 +30,69 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Wait for exact production release after push
+        id: convergence
+        if: github.event_name == 'push'
+        continue-on-error: true
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            body="$(curl -fsS --max-time 10 https://app.leavectrl.co.za/api/health || true)"
+            deployed="$(printf '%s' "$body" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).release_commit||"")}catch{}})')"
+            if [ "$deployed" = "$EXPECTED_COMMIT" ]; then
+              echo "Production is serving $EXPECTED_COMMIT"
+              exit 0
+            fi
+            echo "Waiting for production commit (attempt $attempt/36): currently ${deployed:-unknown}"
+            sleep 10
+          done
+          echo "::error::Production did not converge to $EXPECTED_COMMIT within six minutes."
+          exit 1
+
       - name: Check production health and login surface
         id: probe
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CONVERGENCE_OUTCOME: ${{ steps.convergence.outcome }}
         run: |
           set +e
-          health_body="$(mktemp)"
-          health_status="$(curl -sS --retry 2 --retry-delay 2 --max-time 12 -o "$health_body" -w '%{http_code}' https://app.leavectrl.co.za/api/health)"
+          health_ok=false
+          health_status="000"
+
+          for attempt in 1 2 3; do
+            health_body="$(mktemp)"
+            health_status="$(curl -sS --max-time 12 -o "$health_body" -w '%{http_code}' https://app.leavectrl.co.za/api/health)"
+            if [ "$health_status" = "200" ] && grep -q '"status":"ok"' "$health_body"; then
+              health_ok=true
+              break
+            fi
+            echo "Health probe $attempt/3 failed with HTTP $health_status"
+            sleep 10
+          done
+
           login_headers="$(mktemp)"
           login_body="$(mktemp)"
           login_status="$(curl -sS --retry 2 --retry-delay 2 --max-time 12 -D "$login_headers" -o "$login_body" -w '%{http_code}' https://app.leavectrl.co.za/login)"
 
-          health_ok=false
           login_ok=false
           headers_ok=false
-
-          if [ "$health_status" = "200" ] && grep -q '"status":"ok"' "$health_body"; then
-            health_ok=true
-          fi
+          release_ok=true
 
           if [ "$login_status" = "200" ] && grep -qi 'LeaveCtrl' "$login_body"; then
             login_ok=true
           fi
 
-          if grep -qi '^strict-transport-security:' "$login_headers"             && grep -qi '^x-content-type-options: *nosniff' "$login_headers"; then
+          if grep -qi '^strict-transport-security:' "$login_headers" \
+            && grep -qi '^x-content-type-options: *nosniff' "$login_headers"; then
             headers_ok=true
+          fi
+
+          if [ "$EVENT_NAME" = "push" ] && [ "$CONVERGENCE_OUTCOME" != "success" ]; then
+            release_ok=false
           fi
 
           echo "health_status=$health_status" >> "$GITHUB_OUTPUT"
@@ -62,8 +100,9 @@ jobs:
           echo "health_ok=$health_ok" >> "$GITHUB_OUTPUT"
           echo "login_ok=$login_ok" >> "$GITHUB_OUTPUT"
           echo "headers_ok=$headers_ok" >> "$GITHUB_OUTPUT"
+          echo "release_ok=$release_ok" >> "$GITHUB_OUTPUT"
 
-          if [ "$health_ok" = true ] && [ "$login_ok" = true ] && [ "$headers_ok" = true ]; then
+          if [ "$health_ok" = true ] && [ "$login_ok" = true ] && [ "$headers_ok" = true ] && [ "$release_ok" = true ]; then
             exit 0
           fi
           exit 1
@@ -74,8 +113,9 @@ jobs:
         run: |
           set -euo pipefail
           existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
-          body="Automated production monitoring detected a failure.
+          body="Automated production monitoring detected a sustained failure.
 
+          - Exact release converged: ${{ steps.probe.outputs.release_ok }}
           - Health endpoint HTTP: ${{ steps.probe.outputs.health_status }}
           - Login HTTP: ${{ steps.probe.outputs.login_status }}
           - Health contract passed: ${{ steps.probe.outputs.health_ok }}
@@ -99,7 +139,7 @@ jobs:
           set -euo pipefail
           open_issues="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[].number')"
           for issue in $open_issues; do
-            gh issue comment "$issue" --body "Automated production monitoring has recovered. Health, login and required security-header probes are passing again."
+            gh issue comment "$issue" --body "Automated production monitoring has recovered. Exact-release convergence (when applicable), health, login and required security-header probes are passing."
             gh issue close "$issue" --reason completed
           done
 
@@ -109,6 +149,7 @@ jobs:
         run: |
           {
             echo "### LeaveCtrl production monitor"
+            echo "- Exact release converged: ${{ steps.probe.outputs.release_ok }}"
             echo "- Health HTTP: ${{ steps.probe.outputs.health_status }}"
             echo "- Login HTTP: ${{ steps.probe.outputs.login_status }}"
             echo "- Health contract: ${{ steps.probe.outputs.health_ok }}"
