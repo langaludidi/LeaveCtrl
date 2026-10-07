@@ -4,5 +4,11 @@
   "fluid": true,
   "regions": [
     "dub1"
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/database-backup",
+      "schedule": "0 2 * * *"
+    }
   ]
 }

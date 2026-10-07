@@ -1,0 +1,174 @@
+[
+  {
+    "name": "organisations",
+    "pk": "id"
+  },
+  {
+    "name": "work_schedules",
+    "pk": "id"
+  },
+  {
+    "name": "locations",
+    "pk": "id"
+  },
+  {
+    "name": "leave_types",
+    "pk": "id"
+  },
+  {
+    "name": "leave_policy_versions",
+    "pk": "id"
+  },
+  {
+    "name": "statutory_leave_rules",
+    "pk": "id"
+  },
+  {
+    "name": "public_holidays",
+    "pk": "id"
+  },
+  {
+    "name": "departments",
+    "pk": "id"
+  },
+  {
+    "name": "employees",
+    "pk": "id"
+  },
+  {
+    "name": "organisation_memberships",
+    "pk": "id"
+  },
+  {
+    "name": "employee_employment_conditions",
+    "pk": "id"
+  },
+  {
+    "name": "employee_schedule_assignments",
+    "pk": "id"
+  },
+  {
+    "name": "employee_invitations",
+    "pk": "id"
+  },
+  {
+    "name": "employee_remuneration_history",
+    "pk": "id"
+  },
+  {
+    "name": "employee_variable_earnings",
+    "pk": "id"
+  },
+  {
+    "name": "leave_entitlements",
+    "pk": "id"
+  },
+  {
+    "name": "leave_requests",
+    "pk": "id"
+  },
+  {
+    "name": "leave_request_days",
+    "pk": "id"
+  },
+  {
+    "name": "leave_ledger_entries",
+    "pk": "id"
+  },
+  {
+    "name": "leave_request_coverage_checks",
+    "pk": "id"
+  },
+  {
+    "name": "approval_actions",
+    "pk": "id"
+  },
+  {
+    "name": "leave_events",
+    "pk": "id"
+  },
+  {
+    "name": "leave_evidence",
+    "pk": "id"
+  },
+  {
+    "name": "absence_types",
+    "pk": "id"
+  },
+  {
+    "name": "absence_events",
+    "pk": "id"
+  },
+  {
+    "name": "absence_request_warnings",
+    "pk": "id"
+  },
+  {
+    "name": "blocked_periods",
+    "pk": "id"
+  },
+  {
+    "name": "coverage_rules",
+    "pk": "id"
+  },
+  {
+    "name": "overtime_settings",
+    "pk": "organisation_id"
+  },
+  {
+    "name": "overtime_events",
+    "pk": "id"
+  },
+  {
+    "name": "overtime_event_payments",
+    "pk": "overtime_event_id"
+  },
+  {
+    "name": "toil_ledger_entries",
+    "pk": "id"
+  },
+  {
+    "name": "toil_requests",
+    "pk": "id"
+  },
+  {
+    "name": "toil_request_coverage_checks",
+    "pk": "id"
+  },
+  {
+    "name": "notifications",
+    "pk": "id"
+  },
+  {
+    "name": "audit_events",
+    "pk": "id"
+  },
+  {
+    "name": "billing_prices",
+    "pk": "id"
+  },
+  {
+    "name": "billing_accounts",
+    "pk": "organisation_id"
+  },
+  {
+    "name": "billing_checkouts",
+    "pk": "id"
+  },
+  {
+    "name": "billing_payments",
+    "pk": "reference"
+  },
+  {
+    "name": "billing_subscriptions",
+    "pk": "subscription_code"
+  },
+  {
+    "name": "billing_events",
+    "pk": "event_key"
+  },
+  {
+    "name": "billing_adjustments",
+    "pk": "adjustment_key"
+  }
+]

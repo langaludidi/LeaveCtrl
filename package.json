@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test"
+    "test": "node --test",
+    "backup:verify": "node scripts/verify-backup.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.0",
+    "@vercel/blob": "^2.8.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.468.0",
     "next": "^15.5.3",
