@@ -72,7 +72,35 @@ jobs:
       - name: Install browser engines
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
+      - name: Classify production deployment requirement
+        id: deploy_scope
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=2 origin "$BEFORE_SHA" || true
+          changed="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" || true)"
+          echo "$changed"
+
+          requires_deploy=false
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            case "$path" in
+              .github/workflows/browser-regression.yml|.github/workflows/production-monitor.yml|release-tests/*)
+                ;;
+              *)
+                requires_deploy=true
+                ;;
+            esac
+          done <<< "$changed"
+
+          echo "requires_deploy=$requires_deploy" >> "$GITHUB_OUTPUT"
+
       - name: Wait for exact production release
+        if: github.event_name != 'push' || steps.deploy_scope.outputs.requires_deploy == 'true'
         shell: bash
         env:
           EXPECTED_COMMIT: ${{ github.sha }}
