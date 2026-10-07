@@ -1,0 +1,171 @@
+name: Backup restore rehearsal
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/backup-restore-rehearsal.yml"
+  schedule:
+    # Monthly recovery rehearsal: 01:35 UTC = 03:35 SAST.
+    - cron: "35 1 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-restore-rehearsal
+  cancel-in-progress: false
+
+env:
+  SUPABASE_DB_HOST: aws-1-eu-west-1.pooler.supabase.com
+  SUPABASE_DB_PORT: "5432"
+  SUPABASE_DB_USER: postgres.nihvucwfzajudsejczzz
+  SUPABASE_DB_NAME: postgres
+
+jobs:
+  restore-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require production backup password
+        shell: bash
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::SUPABASE_DB_PASSWORD is not configured."
+            exit 1
+          fi
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Create fresh logical recovery set
+        shell: bash
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p recovery-dump
+
+          ENCODED_PASSWORD="$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"], safe=""))')"
+          SUPABASE_DB_URL="postgresql://${SUPABASE_DB_USER}:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}/${SUPABASE_DB_NAME}"
+          echo "::add-mask::$SUPABASE_DB_URL"
+          printf '%s' "$SUPABASE_DB_URL" > "$RUNNER_TEMP/production-db-url"
+
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f recovery-dump/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f recovery-dump/data.sql --data-only --use-copy \
+            -x "storage.buckets_vectors" \
+            -x "storage.vector_indexes"
+
+          test -s recovery-dump/schema.sql
+          test -s recovery-dump/data.sql
+          (cd recovery-dump && sha256sum schema.sql data.sql > SHA256SUMS)
+          (cd recovery-dump && sha256sum -c SHA256SUMS)
+
+      - name: Capture production row-count fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUPABASE_DB_URL="$(cat "$RUNNER_TEMP/production-db-url")"
+          docker run --rm postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc "
+              select concat_ws('|',
+                (select count(*) from public.organisations),
+                (select count(*) from public.organisation_memberships),
+                (select count(*) from public.employees),
+                (select count(*) from public.leave_requests),
+                (select count(*) from public.leave_ledger_entries),
+                (select count(*) from public.audit_events),
+                (select count(*) from public.billing_accounts),
+                (select count(*) from public.billing_payments),
+                (select count(*) from public.billing_subscriptions)
+              );
+            " > "$RUNNER_TEMP/production-counts"
+          test -s "$RUNNER_TEMP/production-counts"
+
+      - name: Start disposable Supabase recovery target
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/leavectrl-recovery"
+          cd "$RUNNER_TEMP/leavectrl-recovery"
+          supabase init --force
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,postgres-meta,supavisor
+
+      - name: Restore schema and data into disposable target
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)"
+          test -n "$db_container"
+
+          docker cp recovery-dump/schema.sql "$db_container:/tmp/leavectrl-schema.sql"
+          {
+            echo "set session_replication_role = replica;"
+            cat recovery-dump/data.sql
+            echo
+            echo "set session_replication_role = origin;"
+          } > "$RUNNER_TEMP/leavectrl-data-restore.sql"
+          docker cp "$RUNNER_TEMP/leavectrl-data-restore.sql" "$db_container:/tmp/leavectrl-data.sql"
+
+          docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -f /tmp/leavectrl-schema.sql
+          docker exec "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -f /tmp/leavectrl-data.sql
+
+      - name: Verify restored data fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)"
+          actual="$(docker exec "$db_container" psql -U postgres -d postgres -Atc "
+            select concat_ws('|',
+              (select count(*) from public.organisations),
+              (select count(*) from public.organisation_memberships),
+              (select count(*) from public.employees),
+              (select count(*) from public.leave_requests),
+              (select count(*) from public.leave_ledger_entries),
+              (select count(*) from public.audit_events),
+              (select count(*) from public.billing_accounts),
+              (select count(*) from public.billing_payments),
+              (select count(*) from public.billing_subscriptions)
+            );
+          ")"
+          expected="$(cat "$RUNNER_TEMP/production-counts")"
+
+          echo "Production fingerprint: $expected"
+          echo "Restored fingerprint:   $actual"
+          test "$actual" = "$expected"
+
+          test "$(docker exec "$db_container" psql -U postgres -d postgres -Atc "select count(*) from supabase_migrations.schema_migrations")" = "0"
+
+      - name: Recovery rehearsal summary
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "### LeaveCtrl backup restore rehearsal"
+            echo "- Fresh production logical dump: PASS"
+            echo "- SHA-256 dump integrity: PASS"
+            echo "- Disposable Supabase target: PASS"
+            echo "- Schema restore: PASS"
+            echo "- Data restore: PASS"
+            echo "- Key row-count reconciliation: PASS"
+            echo "- Production writes performed: NONE"
+            echo "- Auth password hashes remain outside this logical-backup scope by design."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop disposable recovery target
+        if: always()
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/leavectrl-recovery" 2>/dev/null || exit 0
+          supabase stop --no-backup || true
