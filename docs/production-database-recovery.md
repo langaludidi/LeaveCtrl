@@ -8,7 +8,13 @@ LeaveCtrl deliberately remains on the Supabase Free plan until recurring revenue
 
 GitHub Actions runs `.github/workflows/database-backup.yml` every day at 00:35 UTC (02:35 SAST), can be started manually, and also runs when the backup workflow itself is changed on `main`.
 
-The workflow requires one GitHub Actions repository secret named `SUPABASE_DB_URL`. Use the **Supabase Session Pooler** connection string on port 5432. The password must exist only in GitHub Secrets; never commit it to the repository, place it in a public variable, or paste it into documentation.
+The workflow requires one GitHub Actions repository secret named `SUPABASE_DB_PASSWORD`. Store the **raw Supabase database password only** in this secret. Do not URL-encode it, do not include the connection string, and never commit it to the repository.
+
+The non-sensitive LeaveCtrl Session Pooler endpoint and username are fixed in the workflow:
+- project ref: `nihvucwfzajudsejczzz`
+- username: `postgres.nihvucwfzajudsejczzz`
+- host: `aws-1-eu-west-1.pooler.supabase.com`
+- port: `5432`
 
 The workflow uses the official Supabase CLI backup method and creates:
 - `roles.sql` for database roles required by the logical export;
@@ -20,14 +26,15 @@ GitHub retains each artifact for seven days. This gives seven rolling daily rest
 
 ## First activation
 
-1. In Supabase, open **Connect** and select **Session pooler**.
-2. Copy the connection string and substitute the database password.
-3. In the LeaveCtrl GitHub repository, create an Actions repository secret named `SUPABASE_DB_URL`.
-4. Merge or manually run **Production database backup**.
-5. Confirm the workflow succeeds and that a non-empty backup artifact exists.
-6. Download the first artifact and keep one additional offline copy in a secure location.
+1. In GitHub, open the LeaveCtrl repository.
+2. Go to **Settings → Secrets and variables → Actions**.
+3. Create a repository secret named `SUPABASE_DB_PASSWORD`.
+4. Paste only the current Supabase database password as the secret value.
+5. Run or trigger **Production database backup**.
+6. Confirm the workflow succeeds and that a non-empty backup artifact exists.
+7. Download the first artifact and keep one additional offline copy in a secure location.
 
-Do not treat the backup control as operational until steps 3-5 have succeeded.
+Do not treat the backup control as operational until steps 3-6 have succeeded.
 
 ## Recovery test
 
