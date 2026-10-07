@@ -429,7 +429,12 @@ do $$
 declare t text;
 begin
   foreach t in array array['employees','departments','work_schedules','employee_schedule_assignments','leave_types','leave_policy_versions','leave_entitlements','leave_requests','leave_request_days','leave_ledger_entries','approval_actions','blocked_periods','coverage_rules','locations','employee_employment_conditions','employee_remuneration_history','overtime_settings','overtime_events','employee_variable_earnings','toil_ledger_entries','overtime_event_payments','toil_requests','leave_evidence','absence_types','absence_events'] loop
-    execute format('create trigger billing_write_access before insert or update or delete on public.%I for each row execute function private.enforce_billing_write_access()',t);
+    -- Three absence/evidence tables existed in the original production database
+    -- outside the committed migration chain. Future clean replays must not fail
+    -- before the reconstruction migration can recreate them.
+    if to_regclass(format('public.%I', t)) is not null then
+      execute format('create trigger billing_write_access before insert or update or delete on public.%I for each row execute function private.enforce_billing_write_access()',t);
+    end if;
   end loop;
 end $$;
 create trigger billing_write_access before update on public.organisations for each row execute function private.enforce_billing_write_access();
