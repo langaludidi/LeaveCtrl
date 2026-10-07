@@ -433,7 +433,7 @@ textarea:focus-visible{
 /* Authentication CAPTCHA */
 .auth-captcha{display:grid;gap:6px;max-width:100%;overflow:hidden}
 .auth-captcha>div{min-height:65px}
-.auth-captcha-note{margin:0;color:#718096;font-size:9px;line-height:1.4}
+.auth-captcha-note{margin:0;color:#64748b;font-size:9px;line-height:1.4}
 .auth-recovery-form>.auth-captcha{grid-column:1/-1}
 
 /* Authentication recovery */
