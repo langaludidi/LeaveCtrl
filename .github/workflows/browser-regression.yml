@@ -10,6 +10,8 @@ on:
       - ".github/workflows/production-monitor.yml"
       - "release-tests/browser-production.spec.mjs"
       - "app/api/health/route.ts"
+      - "app/**"
+      - "components/**"
   schedule:
     - cron: "20 3 * * *"
 
