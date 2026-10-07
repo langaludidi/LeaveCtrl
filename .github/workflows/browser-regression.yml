@@ -1,0 +1,88 @@
+name: Production browser regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/browser-regression.yml"
+      - "release-tests/browser-production.spec.mjs"
+  schedule:
+    - cron: "20 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-browser-regression
+  cancel-in-progress: true
+
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            width: 1440
+            height: 1000
+            label: chromium-desktop
+          - browser: chromium
+            width: 768
+            height: 1024
+            label: chromium-tablet
+          - browser: chromium
+            width: 390
+            height: 844
+            label: chromium-phone
+          - browser: webkit
+            width: 1440
+            height: 1000
+            label: webkit-desktop
+          - browser: webkit
+            width: 768
+            height: 1024
+            label: webkit-tablet
+          - browser: webkit
+            width: 390
+            height: 844
+            label: webkit-phone
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install pinned browser-regression tooling
+        run: npm install --no-save --no-package-lock @playwright/test@1.56.1 @axe-core/playwright@4.10.2
+
+      - name: Install browser engines
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run production browser and WCAG regression
+        env:
+          LEAVECTRL_BASE_URL: https://app.leavectrl.co.za
+          E2E_BROWSER: ${{ matrix.browser }}
+          E2E_WIDTH: ${{ matrix.width }}
+          E2E_HEIGHT: ${{ matrix.height }}
+        run: npx playwright test release-tests/browser-production.spec.mjs --reporter=line --workers=1
+
+      - name: Regression summary
+        if: success()
+        run: |
+          {
+            echo "### LeaveCtrl production browser regression"
+            echo "- Matrix: ${{ matrix.label }}"
+            echo "- Protected-route redirect: PASS"
+            echo "- Responsive viewport overflow: PASS"
+            echo "- Keyboard focus visibility: PASS"
+            echo "- WCAG serious/critical scan: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
