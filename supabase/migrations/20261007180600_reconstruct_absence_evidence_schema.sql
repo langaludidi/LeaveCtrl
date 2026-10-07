@@ -6,6 +6,40 @@
 -- comply with the V1 RPC-only mutation boundary established by
 -- 20260928151747_enforce_rpc_only_public_table_mutations.sql.
 
+create table if not exists public.leave_events (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  employee_id uuid not null references public.employees(id) on delete cascade,
+  event_type text not null
+    check (event_type in ('birth','adoption','surrogacy','pregnancy_loss','stillbirth','other_parental')),
+  expected_date date,
+  event_date date,
+  birth_parent boolean not null default false,
+  other_parent_employed boolean,
+  partner_shared_declaration jsonb not null default '{}'::jsonb,
+  requested_allocation numeric,
+  agreed_allocation numeric,
+  allocation_unit text not null default 'calendar_days'
+    check (allocation_unit in ('days','calendar_days','weeks')),
+  protected_recovery_start date,
+  protected_recovery_end date,
+  employer_paid_portion numeric,
+  unpaid_uif_portion numeric,
+  status text not null default 'draft'
+    check (status in ('draft','submitted','confirmed','closed','cancelled')),
+  confidentiality_level text not null default 'restricted'
+    check (confidentiality_level in ('restricted','highly_restricted')),
+  created_by uuid,
+  updated_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists leave_events_employee_event_date_idx
+  on public.leave_events(employee_id,event_date desc);
+create index if not exists leave_events_org_status_idx
+  on public.leave_events(organisation_id,status);
+
 create table if not exists public.leave_evidence (
   id uuid primary key default gen_random_uuid(),
   organisation_id uuid not null references public.organisations(id) on delete cascade,
@@ -87,9 +121,68 @@ create index if not exists absence_events_employee_dates_idx
 create index if not exists absence_events_org_dates_idx
   on public.absence_events(organisation_id,start_date,end_date);
 
+alter table public.leave_events enable row level security;
 alter table public.leave_evidence enable row level security;
 alter table public.absence_types enable row level security;
 alter table public.absence_events enable row level security;
+
+drop policy if exists leave_events_read on public.leave_events;
+create policy leave_events_read
+on public.leave_events for select to authenticated
+using (
+  exists (
+    select 1 from public.employees e
+    where e.id=employee_id
+      and e.user_id=(select auth.uid())
+  )
+  or private.has_org_role(
+    organisation_id,
+    array['hr_admin'::public.member_role,'org_admin'::public.member_role]
+  )
+);
+
+drop policy if exists leave_events_insert on public.leave_events;
+create policy leave_events_insert
+on public.leave_events for insert to authenticated
+with check (
+  exists (
+    select 1 from public.employees e
+    where e.id=employee_id
+      and e.user_id=(select auth.uid())
+      and e.organisation_id=organisation_id
+      and e.employment_status='active'
+  )
+  or private.has_org_role(
+    organisation_id,
+    array['hr_admin'::public.member_role,'org_admin'::public.member_role]
+  )
+);
+
+drop policy if exists leave_events_update on public.leave_events;
+create policy leave_events_update
+on public.leave_events for update to authenticated
+using (
+  exists (
+    select 1 from public.employees e
+    where e.id=employee_id
+      and e.user_id=(select auth.uid())
+  )
+  or private.has_org_role(
+    organisation_id,
+    array['hr_admin'::public.member_role,'org_admin'::public.member_role]
+  )
+)
+with check (
+  exists (
+    select 1 from public.employees e
+    where e.id=employee_id
+      and e.user_id=(select auth.uid())
+  )
+  or private.has_org_role(
+    organisation_id,
+    array['hr_admin'::public.member_role,'org_admin'::public.member_role]
+  )
+);
 
 drop policy if exists leave_evidence_read on public.leave_evidence;
 create policy leave_evidence_read
@@ -225,22 +318,22 @@ using (
 
 -- New tables must inherit the same anonymous/read and authenticated/write
 -- boundary as the rest of the V1 public schema.
-revoke all on public.leave_evidence, public.absence_types, public.absence_events
+revoke all on public.leave_events, public.leave_evidence, public.absence_types, public.absence_events
 from anon;
 revoke insert,update,delete,truncate,references,trigger
-on public.leave_evidence, public.absence_types, public.absence_events
+on public.leave_events, public.leave_evidence, public.absence_types, public.absence_events
 from authenticated;
 grant select
-on public.leave_evidence, public.absence_types, public.absence_events
+on public.leave_events, public.leave_evidence, public.absence_types, public.absence_events
 to authenticated;
 grant all
-on public.leave_evidence, public.absence_types, public.absence_events
+on public.leave_events, public.leave_evidence, public.absence_types, public.absence_events
 to service_role;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['leave_evidence','absence_types','absence_events'] loop
+  foreach t in array array['leave_events','leave_evidence','absence_types','absence_events'] loop
     execute format('drop trigger if exists billing_write_access on public.%I',t);
     execute format(
       'create trigger billing_write_access before insert or update or delete on public.%I for each row execute function private.enforce_billing_write_access()',
