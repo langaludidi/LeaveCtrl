@@ -141,7 +141,10 @@ async function putPrivateBlob(pathname: string, body: Buffer): Promise<BlobPutRe
       "x-add-random-suffix": "0",
       "x-allow-overwrite": "1",
     },
-    body,
+    body: body.buffer.slice(
+      body.byteOffset,
+      body.byteOffset + body.byteLength,
+    ) as ArrayBuffer,
     signal: AbortSignal.timeout(30_000),
   });
 
