@@ -1,0 +1,35 @@
+name: Prepare backup dependency lock
+
+on:
+  push:
+    branches:
+      - build/independent-backups-2026-10-07
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: build/independent-backups-2026-10-07
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Add Vercel Blob dependency to package lock
+        run: npm install --package-lock-only --save @vercel/blob@2.8.1
+      - name: Commit lockfile update
+        shell: bash
+        run: |
+          if git diff --quiet -- package.json package-lock.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Add Vercel Blob backup dependency"
+          git push origin HEAD:build/independent-backups-2026-10-07
