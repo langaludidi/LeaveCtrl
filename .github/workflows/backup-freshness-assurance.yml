@@ -52,7 +52,9 @@ jobs:
           today=now.replace(hour=0,minute=0,second=0,microsecond=0)
           expected=max(t for day in [today-timedelta(days=1),today] for h in [0,12] if (t:=day+timedelta(hours=h,minutes=35)) <= now-timedelta(minutes=90))
           recent=[x for x in valid if x[0]>=now-timedelta(hours=15)]
-          scheduled=[x for x in valid if x[1]['event']=='schedule' and x[0]>=expected and x[0]<=now]\n          # A delayed scheduled run may start after the nominal cron time.\n          # Allow a 90-minute grace period before asserting a missed window.
+          scheduled=[x for x in valid if x[1]['event']=='schedule' and x[0]>=expected and x[0]<=now]
+          # A delayed scheduled run may start after the nominal cron time.
+          # Allow a 90-minute grace period before asserting a missed window.
           print(f'UTC now: {now.isoformat()}')
           print(f'Expected scheduled window: {expected.isoformat()}')
           print(f'Fresh successful artifact within 15h: {bool(recent)}')
