@@ -205,11 +205,11 @@ export default async function BillingPage({
           {paymentError ? (
             <p role="alert">Payment history could not be loaded.</p>
           ) : (
-            <div className="table-scroll">
-              <table className="mobile-data-table billing-payments-table">
-                <caption className="sr-only">
-                  Verified payments for this organisation
-                </caption>
+            <div className="table-scroll billing-payments-scroll">
+              <table
+                className="mobile-data-table billing-payments-table"
+                aria-label="Verified payments for this organisation"
+              >
                 <thead>
                   <tr>
                     <th>Paid</th>
