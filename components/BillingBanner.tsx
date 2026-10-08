@@ -6,14 +6,17 @@ export function BillingBanner() {
   const [summary, setSummary] = useState<BillingSummary | null>(null);
   useEffect(() => {
     let current = true;
-    fetch("/api/billing/status", { cache: "no-store" })
-      .then(async (r) => (r.ok ? r.json() : null))
-      .then((v) => {
-        if (current) setSummary(v);
-      })
-      .catch(() => {});
+    const initialLoad = window.setTimeout(() => {
+      fetch("/api/billing/status", { cache: "no-store" })
+        .then(async (r) => (r.ok ? r.json() : null))
+        .then((v) => {
+          if (current) setSummary(v);
+        })
+        .catch(() => {});
+    }, 350);
     return () => {
       current = false;
+      window.clearTimeout(initialLoad);
     };
   }, []);
   if (!summary || (summary.state !== "read_only" && summary.state !== "trial"))
