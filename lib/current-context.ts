@@ -33,7 +33,10 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
   if (!user) redirect("/login");
   if (!hasVerifiedEmailOwnership(user)) redirect("/confirm-email");
 
-  const states = await loadAccessStates(supabase);
+  const [states, { data: contextRow }] = await Promise.all([
+    loadAccessStates(supabase),
+    supabase.rpc("get_current_context_v1").maybeSingle(),
+  ]);
 
   if (states.length === 0) {
     redirect("/access/no-membership");
@@ -72,10 +75,6 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
     id: user.id,
     email: user.email ?? null,
   };
-
-  const { data: contextRow } = await supabase
-    .rpc("get_current_context_v1")
-    .maybeSingle();
 
   if (
     contextRow &&
