@@ -3,7 +3,8 @@ name: Production monitor
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    # Stagger away from quarter-hour congestion on GitHub Actions.
+    - cron: "7,22,37,52 * * * *"
   push:
     branches:
       - main
