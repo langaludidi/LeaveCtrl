@@ -29,7 +29,6 @@ export default async function SetupPage() {
   const holidayEnd = `${businessYear + 1}-12-31`;
 
   const [
-    { data: annualType },
     { data: holidays },
     { data: statutoryRules },
     { data: departments },
@@ -41,12 +40,6 @@ export default async function SetupPage() {
     { data: blockedPeriods },
     { data: coverageRules },
   ] = await Promise.all([
-    supabase
-      .from("leave_types")
-      .select("id")
-      .eq("organisation_id", employee.organisation_id)
-      .eq("code", "ANNUAL")
-      .maybeSingle(),
     supabase
       .from("public_holidays")
       .select("holiday_date, name, is_observed, is_one_off, source_kind")
@@ -91,7 +84,7 @@ export default async function SetupPage() {
       .order("name"),
     supabase
       .from("leave_policy_versions")
-      .select("leave_type_id, entitlement_method, entitlement_amount, cycle_months, cycle_basis, effective_from, effective_to")
+      .select("leave_type_id, entitlement_method, entitlement_amount, cycle_months, cycle_basis, cycle_anchor_month, cycle_anchor_day, effective_from, effective_to")
       .eq("organisation_id", employee.organisation_id)
       .lte("effective_from", businessDate)
       .or(`effective_to.is.null,effective_to.gte.${businessDate}`)
@@ -117,24 +110,20 @@ export default async function SetupPage() {
   let existingAnchorMonth = 1;
   let existingAnchorDay = 1;
 
-  if (annualType) {
-    const { data: policy } = await supabase
-      .from("leave_policy_versions")
-      .select("entitlement_amount, cycle_basis, cycle_anchor_month, cycle_anchor_day")
-      .eq("organisation_id", employee.organisation_id)
-      .eq("leave_type_id", annualType.id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
+  const annualPolicy = annualType
+    ? (policyVersions ?? []).find((policy) => policy.leave_type_id === annualType.id)
+    : null;
 
-    hasAnnualPolicy = Boolean(policy);
-    existingDays = Number(policy?.entitlement_amount ?? 15);
+  if (annualPolicy) {
+    hasAnnualPolicy = true;
+    existingDays = Number(annualPolicy.entitlement_amount ?? 15);
     existingCycleBasis =
-      policy?.cycle_basis === "employment_anniversary"
+      annualPolicy.cycle_basis === "employment_anniversary"
         ? "employment_anniversary"
         : "organisation_fixed";
-    existingAnchorMonth = Number(policy?.cycle_anchor_month ?? 1);
-    existingAnchorDay = Number(policy?.cycle_anchor_day ?? 1);
+    existingAnchorMonth = Number(annualPolicy.cycle_anchor_month ?? 1);
+    existingAnchorDay = Number(annualPolicy.cycle_anchor_day ?? 1);
   }
 
   const scheduleMap = new Map<string, string>();
