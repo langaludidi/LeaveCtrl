@@ -653,3 +653,56 @@ textarea:focus-visible{
   .page-wrap{padding:22px 20px 28px}
   .page-head h1{font-size:32px}
 }
+
+
+/* Mobile data ergonomics — phone layouts use labelled rows instead of squeezed desktop tables. */
+@media(max-width:640px){
+  .page-wrap{min-width:0;overflow-x:clip}
+
+  .mobile-data-table{display:block;width:100%;min-width:0;border-collapse:separate}
+  .mobile-data-table thead{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+  .mobile-data-table tbody{display:grid;width:100%;gap:10px}
+  .mobile-data-table tr{display:grid;width:100%;min-width:0;padding:8px 12px;border:1px solid #e4eaec;border-radius:10px;background:#fbfcfc}
+  .mobile-data-table td{display:grid;grid-template-columns:minmax(104px,.42fr) minmax(0,1fr);gap:12px;align-items:start;width:100%;min-width:0;padding:7px 0;border:0;text-align:left!important;line-height:1.45;overflow-wrap:anywhere}
+  .mobile-data-table td::before{content:attr(data-label);font-size:10px;line-height:1.35;font-weight:750;color:#687784;letter-spacing:.01em}
+  .mobile-data-table td[data-label=""]{display:block;padding:14px 0}
+  .mobile-data-table td[data-label=""]::before{display:none}
+  .mobile-data-table .status-pill{justify-self:start}
+  .mobile-data-table .request-action-cell{align-items:center}
+  .mobile-data-table .request-action-cell .request-text-action{justify-self:start;padding-left:0}
+  .mobile-data-table .billing-reference{font-size:11px;word-break:break-all}
+  .mobile-data-table .table-secondary{margin-top:3px}
+  .mobile-data-table .inline-table-select{width:100%;min-width:0;max-width:100%;height:44px}
+  .assignment-table td:first-child{font-weight:750;color:#26323d}
+  .request-history-table td:first-child{font-weight:650;color:#334155}
+
+  .billing-history .card-title{align-items:stretch;flex-direction:column}
+  .billing-history .card-title .btn{width:100%;min-height:44px;justify-content:center}
+  .liability-table-card .card-title{align-items:flex-start;flex-direction:column}
+  .liability-table-card .verified-pill{align-self:flex-start}
+
+  .setup-head .split{display:block}
+  .setup-head-actions{width:100%;margin-top:14px;align-items:stretch!important;flex-direction:column;gap:8px}
+  .setup-head-actions .btn{width:100%;min-height:44px;justify-content:center}
+  .setup-head-actions>strong{white-space:normal;padding-left:2px}
+  .page-context-icon{display:none}
+
+  .calendar-legend-wrap{width:100%;max-width:100%;margin-top:8px;padding:7px 1px 5px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .calendar-legend-wrap::-webkit-scrollbar{display:none}
+  .calendar-legend-item{flex:0 0 auto;white-space:nowrap;font-size:10px}
+  .legend-swatch{width:10px;height:10px;flex:none}
+  .company-calendar-card{max-width:100%;overflow:hidden}
+  .company-calendar-scroll{max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+  .calendar-privacy-note{font-size:10px;line-height:1.5}
+
+  .booking-grid,.leave-form,.leave-form label,.field-row,.leave-guidance,.duration-choice,.duration-box,.request-evaluation{min-width:0;max-width:100%}
+  .leave-form{padding:18px;overflow:hidden}
+  .leave-form .native-field,.leave-form input[type="date"],.leave-form select,.leave-form textarea{display:block;width:100%;max-width:100%;min-width:0;min-inline-size:0;box-sizing:border-box}
+  .leave-form .field-row{grid-template-columns:minmax(0,1fr);gap:0}
+  .leave-form .setup-reassurance{align-items:flex-start}
+  .leave-form .setup-reassurance>div{min-width:0}
+  .duration-box{align-items:flex-start}
+  .duration-box>div{min-width:0}
+  .form-actions{flex-direction:column-reverse;align-items:stretch}
+  .form-actions .btn{width:100%;min-height:44px}
+}
