@@ -2,8 +2,9 @@ name: Production database backup
 
 on:
   schedule:
-    # 00:35 UTC = 02:35 South Africa Standard Time (UTC+2).
+    # Primary 00:35 UTC = 02:35 SAST; second daily attempt limits scheduler-delay risk.
     - cron: "35 0 * * *"
+    - cron: "35 12 * * *"
   workflow_dispatch:
   push:
     branches:
