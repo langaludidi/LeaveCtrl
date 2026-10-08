@@ -156,7 +156,7 @@ export default async function RequestsPage({
         <div className="card data-card">
           <div className="card-title"><h2>My requests</h2></div>
           <div className="table-scroll">
-            <table>
+            <table className="mobile-data-table request-history-table">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -169,36 +169,36 @@ export default async function RequestsPage({
               <tbody>
                 {(myRequests ?? []).map((request) => (
                   <tr key={request.id}>
-                    <td>
+                    <td data-label="Date">
                       {formatDate(request.start_date)}
                       {request.end_date !== request.start_date
                         ? ` – ${formatDate(request.end_date)}`
                         : ""}
                     </td>
-                    <td>{typeMap.get(request.leave_type_id) ?? "Leave"}</td>
-                    <td>
+                    <td data-label="Type">{typeMap.get(request.leave_type_id) ?? "Leave"}</td>
+                    <td data-label="Duration">
                       {Number(request.quantity)} {Number(request.quantity) === 1 ? "day" : "days"}
                     </td>
-                    <td><StatusPill status={request.status}/></td>
-                    <td className="request-action-cell">
+                    <td data-label="Status"><StatusPill status={request.status}/></td>
+                    <td data-label="Action" className="request-action-cell">
                       <RequestLifecycleAction requestId={request.id} status={request.status} />
                     </td>
                   </tr>
                 ))}
                 {(myToilRequests ?? []).map((request) => (
                   <tr key={request.id}>
-                    <td>{formatDate(request.leave_date)}</td>
-                    <td>TOIL</td>
-                    <td>{Number(request.hours).toFixed(2)} hours</td>
-                    <td><StatusPill status={request.status}/></td>
-                    <td className="request-action-cell">
+                    <td data-label="Date">{formatDate(request.leave_date)}</td>
+                    <td data-label="Type">TOIL</td>
+                    <td data-label="Duration">{Number(request.hours).toFixed(2)} hours</td>
+                    <td data-label="Status"><StatusPill status={request.status}/></td>
+                    <td data-label="Action" className="request-action-cell">
                       <ToilLifecycleButton requestId={request.id} status={request.status} />
                     </td>
                   </tr>
                 ))}
                 {!myRequests?.length && !myToilRequests?.length ? (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">No leave or TOIL requests yet.</td>
+                    <td colSpan={5} className="empty-table-cell" data-label="">No leave or TOIL requests yet.</td>
                   </tr>
                 ) : null}
               </tbody>
