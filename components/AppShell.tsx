@@ -71,11 +71,12 @@ export function AppShell({
       if (active) setUnreadNotifications(count ?? 0);
     }
 
-    loadUnread();
+    const initialLoad = window.setTimeout(loadUnread, 350);
     window.addEventListener("leavectrl-notifications-changed", loadUnread);
 
     return () => {
       active = false;
+      window.clearTimeout(initialLoad);
       window.removeEventListener("leavectrl-notifications-changed", loadUnread);
     };
   }, []);
