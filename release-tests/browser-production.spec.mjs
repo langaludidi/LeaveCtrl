@@ -60,6 +60,79 @@ test("login and recovery surfaces fit the viewport without document overflow", a
   await context.close();
 });
 
+test("application shell and operational layout primitives fit the configured viewport", async () => {
+  const { context, page } = await pageForTest();
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.locator("body").waitFor({ state: "visible" });
+
+  await page.evaluate(() => {
+    document.body.innerHTML = `
+      <div class="app-shell">
+        <aside class="sidebar">
+          <div class="brand">LeaveCtrl</div>
+          <div class="mobile-header-actions"><button class="mobile-nav-toggle" aria-label="Open navigation">Menu</button></div>
+          <nav class="nav-list"><a class="nav-item active">My Leave</a><a class="nav-item">Team</a></nav>
+          <div class="sidebar-foot">Account</div>
+        </aside>
+        <main class="app-main">
+          <header class="topbar">Desktop topbar</header>
+          <div class="page-wrap">
+            <div class="page-head"><h1>Responsive release fixture</h1></div>
+            <section class="summary-grid">
+              <div class="summary-card">Balance</div><div class="summary-card">Pending</div>
+              <div class="summary-card">Next away</div><div class="summary-card">Team</div>
+            </section>
+            <section class="booking-grid">
+              <div class="card leave-form">Booking form</div><div class="card booking-side">Booking context</div>
+            </section>
+            <section class="people-admin-grid">
+              <div class="card invite-card">Invite</div><div class="card manager-card">Manager</div>
+            </section>
+            <section class="billing-fields"><label>Plan<input value="Standard" /></label><label>Seats<input value="10" /></label></section>
+            <div class="table-scroll" data-test="wide-table"><table style="min-width:900px"><tbody><tr><td>Wide operational table remains contained</td></tr></tbody></table></div>
+            <div class="company-calendar-scroll" data-test="wide-calendar"><div style="min-width:1100px;height:40px">Wide calendar remains contained</div></div>
+          </div>
+        </main>
+      </div>
+    `;
+  });
+
+  const shell = page.locator(".app-shell");
+  const sidebar = page.locator(".sidebar");
+  const topbar = page.locator(".topbar");
+  const toggle = page.locator(".mobile-nav-toggle");
+
+  if (width <= 900) {
+    await expect(shell).toHaveCSS("display", "block");
+    await expect(sidebar).toHaveCSS("height", "60px");
+    await expect(topbar).toHaveCSS("display", "none");
+    await expect(toggle).toHaveCSS("display", "grid");
+  } else {
+    await expect(shell).toHaveCSS("display", "grid");
+    await expect(topbar).toHaveCSS("display", "flex");
+    await expect(toggle).toHaveCSS("display", "none");
+  }
+
+  const layout = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+    tableContained:
+      document.querySelector('[data-test="wide-table"]').scrollWidth >
+      document.querySelector('[data-test="wide-table"]').clientWidth,
+    calendarContained:
+      document.querySelector('[data-test="wide-calendar"]').scrollWidth >
+      document.querySelector('[data-test="wide-calendar"]').clientWidth,
+  }));
+
+  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth + 2);
+  if (width < 900) {
+    expect(layout.tableContained).toBe(true);
+    expect(layout.calendarContained).toBe(true);
+  }
+
+  await context.close();
+});
+
 test("keyboard focus becomes visibly apparent on the login surface", async () => {
   const { context, page } = await pageForTest();
   await page.goto("/login", { waitUntil: "domcontentloaded" });
