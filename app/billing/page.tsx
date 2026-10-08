@@ -206,7 +206,7 @@ export default async function BillingPage({
             <p role="alert">Payment history could not be loaded.</p>
           ) : (
             <div className="table-scroll">
-              <table>
+              <table className="mobile-data-table billing-payments-table">
                 <caption className="sr-only">
                   Verified payments for this organisation
                 </caption>
@@ -223,14 +223,14 @@ export default async function BillingPage({
                 <tbody>
                   {payments?.map((p) => (
                     <tr key={p.reference}>
-                      <td>{date(p.paid_at)}</td>
-                      <td className="billing-reference">{p.reference}</td>
-                      <td>
+                      <td data-label="Paid">{date(p.paid_at)}</td>
+                      <td data-label="Reference" className="billing-reference">{p.reference}</td>
+                      <td data-label="Plan">
                         {p.price_id.replace(/_v1$/, " ").replaceAll("_", " ")}
                       </td>
-                      <td>{zar(p.amount)}</td>
-                      <td>{date(p.period_end)}</td>
-                      <td>
+                      <td data-label="Amount">{zar(p.amount)}</td>
+                      <td data-label="Access through">{date(p.period_end)}</td>
+                      <td data-label="Status">
                         {p.disputed
                           ? "Dispute under review"
                           : p.refunded_amount >= p.amount
@@ -243,7 +243,7 @@ export default async function BillingPage({
                   ))}
                   {!payments?.length ? (
                     <tr>
-                      <td colSpan={6}>No verified payments yet.</td>
+                      <td colSpan={6} className="empty-table-cell" data-label="">No verified payments yet.</td>
                     </tr>
                   ) : null}
                 </tbody>

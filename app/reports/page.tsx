@@ -325,7 +325,7 @@ export default async function ReportsPage() {
           <span className="muted-count">{scopeLabel}</span>
         </div>
         <div className="table-scroll">
-          <table>
+          <table className="mobile-data-table report-position-table">
             <thead>
               <tr>
                 <th>Employee</th>
@@ -342,17 +342,17 @@ export default async function ReportsPage() {
                   currentDepartmentMap.get(person.id) ?? person.department_id;
                 return (
                   <tr key={person.id}>
-                    <td>{person.first_name} {person.last_name}</td>
-                    <td>{departmentId ? departmentMap.get(departmentId) ?? "—" : "—"}</td>
-                    <td><strong>{days(annualBalanceMap.get(person.id) ?? 0)} days</strong></td>
-                    <td>{days(approvedByEmployee.get(person.id) ?? 0)} days</td>
-                    <td>{days(pendingByEmployee.get(person.id) ?? 0)} days</td>
-                    <td>{days(toilBalanceMap.get(person.id) ?? 0)} h</td>
+                    <td data-label="Employee">{person.first_name} {person.last_name}</td>
+                    <td data-label="Department">{departmentId ? departmentMap.get(departmentId) ?? "—" : "—"}</td>
+                    <td data-label="Annual available"><strong>{days(annualBalanceMap.get(person.id) ?? 0)} days</strong></td>
+                    <td data-label="Approved this year">{days(approvedByEmployee.get(person.id) ?? 0)} days</td>
+                    <td data-label="Pending">{days(pendingByEmployee.get(person.id) ?? 0)} days</td>
+                    <td data-label="TOIL">{days(toilBalanceMap.get(person.id) ?? 0)} h</td>
                   </tr>
                 );
               })}
               {!scopedEmployees.length ? (
-                <tr><td colSpan={6} className="empty-table-cell">No employees are visible in this reporting scope.</td></tr>
+                <tr><td colSpan={6} className="empty-table-cell" data-label="">No employees are visible in this reporting scope.</td></tr>
               ) : null}
             </tbody>
           </table>
@@ -371,7 +371,7 @@ export default async function ReportsPage() {
             <span className="verified-pill"><LockKeyhole size={14}/> Confidential</span>
           </div>
           <div className="table-scroll">
-            <table>
+            <table className="mobile-data-table liability-mobile-table">
               <thead>
                 <tr>
                   <th>Employee</th>
@@ -393,15 +393,15 @@ export default async function ReportsPage() {
 
                   return (
                     <tr key={person.id}>
-                      <td>{person.first_name} {person.last_name}</td>
-                      <td>{days(liabilityDays)}</td>
-                      <td>
+                      <td data-label="Employee">{person.first_name} {person.last_name}</td>
+                      <td data-label="Liability days">{days(liabilityDays)}</td>
+                      <td data-label="Remuneration basis">
                         {remuneration
                           ? `${money(remuneration.gross_amount, remuneration.currency_code)} / ${remuneration.pay_frequency}`
                           : "Not captured"}
                       </td>
-                      <td>{rate ? money(rate.base_daily_rate, currency) : "—"}</td>
-                      <td>
+                      <td data-label="Base daily">{rate ? money(rate.base_daily_rate, currency) : "—"}</td>
+                      <td data-label="Variable average">
                         {rate
                           ? <>
                               <strong>{money(rate.variable_daily_rate, currency)}</strong>
@@ -411,13 +411,13 @@ export default async function ReportsPage() {
                             </>
                           : "—"}
                       </td>
-                      <td>{rate ? <strong>{money(rate.effective_daily_rate, currency)}</strong> : "—"}</td>
-                      <td>
+                      <td data-label="Effective daily">{rate ? <strong>{money(rate.effective_daily_rate, currency)}</strong> : "—"}</td>
+                      <td data-label="Liability">
                         {rate
                           ? <strong>{money(liabilityAmountMap.get(person.id) ?? 0, currency)}</strong>
                           : "—"}
                       </td>
-                      <td className="liability-method">
+                      <td data-label="Calculation" className="liability-method">
                         {rate?.liability_calculation_method ?? "Capture remuneration to calculate"}
                       </td>
                     </tr>
