@@ -2,6 +2,11 @@ name: Production backup freshness assurance
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fix/backup-freshness-assurance
+    paths:
+      - ".github/workflows/backup-freshness-assurance.yml"
   schedule:
     # Independently inspect both backup windows, after a 90-minute scheduler grace.
     - cron: "5 2,14 * * *"
@@ -66,7 +71,7 @@ jobs:
           PY
 
       - name: Open or update backup incident
-        if: failure()
+        if: failure() && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
