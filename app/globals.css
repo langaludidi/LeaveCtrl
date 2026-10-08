@@ -729,3 +729,33 @@ textarea:focus-visible{
     font-size:13px!important;
   }
 }
+
+
+/* Mobile billing history — keep the payment record compact and deliberately card-like. */
+@media(max-width:640px){
+  .billing-history{padding:16px}
+  .billing-history>p{margin:0 0 14px;line-height:1.55}
+  .billing-payments-scroll{overflow:visible}
+  .billing-payments-table tbody{gap:0}
+  .billing-payments-table tr{padding:10px 13px;background:#fff;border-color:#dfe6e8}
+  .billing-payments-table td{
+    grid-template-columns:minmax(96px,.38fr) minmax(0,1fr);
+    gap:10px;
+    padding:8px 0;
+    font-size:13px;
+  }
+  .billing-payments-table td::before{font-size:10px}
+  .billing-payments-table td[data-label="Reference"]{
+    display:block;
+    padding-top:9px;
+  }
+  .billing-payments-table td[data-label="Reference"]::before{
+    display:block;
+    margin-bottom:4px;
+  }
+  .billing-payments-table .billing-reference{
+    font-size:12px;
+    line-height:1.45;
+    word-break:break-all;
+  }
+}
