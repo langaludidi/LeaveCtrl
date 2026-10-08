@@ -1,0 +1,88 @@
+name: Production backup freshness assurance
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Independently inspect both backup windows, after a 90-minute scheduler grace.
+    - cron: "5 2,14 * * *"
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-backup-freshness
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      INCIDENT_TITLE: "[backup] LeaveCtrl scheduled backup freshness failure"
+    steps:
+      - name: Verify completed backup artifact and scheduled-run evidence
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+          from datetime import datetime, timedelta, timezone
+          def api(path):
+              return json.loads(subprocess.check_output(['gh','api',path],text=True))
+          now=datetime.now(timezone.utc)
+          runs=api(f'/repos/{os.environ["REPO"]}/actions/workflows/database-backup.yml/runs?per_page=100')['workflow_runs']
+          valid=[]
+          for run in runs:
+              if run['status']!='completed' or run['conclusion']!='success':
+                  continue
+              when=datetime.fromisoformat(run['created_at'].replace('Z','+00:00'))
+              if when < now-timedelta(hours=27):
+                  continue
+              artifacts=api(f'/repos/{os.environ["REPO"]}/actions/runs/{run["id"]}/artifacts?per_page=100')['artifacts']
+              matches=[a for a in artifacts if a['name']==f'leavectrl-db-backup-{run["id"]}' and not a['expired'] and a['size_in_bytes']>0 and a.get('digest','').startswith('sha256:')]
+              if matches:
+                  valid.append((when,run,matches[0]))
+          valid.sort(key=lambda x:x[0],reverse=True)
+          # The most recent expected schedule is 00:35 or 12:35 UTC.
+          today=now.replace(hour=0,minute=0,second=0,microsecond=0)
+          expected=max(t for day in [today-timedelta(days=1),today] for h in [0,12] if (t:=day+timedelta(hours=h,minutes=35)) <= now-timedelta(minutes=90))
+          recent=[x for x in valid if x[0]>=now-timedelta(hours=15)]
+          scheduled=[x for x in valid if x[1]['event']=='schedule' and x[0]>=expected]
+          print(f'UTC now: {now.isoformat()}')
+          print(f'Expected scheduled window: {expected.isoformat()}')
+          print(f'Fresh successful artifact within 15h: {bool(recent)}')
+          print(f'Scheduled execution with artifact since expected window: {bool(scheduled)}')
+          if valid:
+              print(f'Latest artifact: {valid[0][2]["name"]}; digest={valid[0][2]["digest"]}; event={valid[0][1]["event"]}')
+          if not recent or not scheduled:
+              sys.exit(1)
+          PY
+
+      - name: Open or update backup incident
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
+          body="Backup freshness or scheduled-execution assurance failed. A manual backup does not prove the scheduler works.
+
+          Workflow: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          Time: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          Required: successful recent backup artifact with SHA-256 digest AND successful scheduled backup since the last due window (90-minute grace).
+          Keep V1 NO-GO until resolved and sustained scheduled executions are observed."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$INCIDENT_TITLE" --body "$body"
+          fi
+
+      - name: Recovery note
+        if: success()
+        shell: bash
+        run: |
+          echo "Backup freshness and scheduled-run evidence PASS. Do not close release NO-GO until sustained reliability is demonstrated." >> "$GITHUB_STEP_SUMMARY"
