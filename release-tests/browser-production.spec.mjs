@@ -63,7 +63,8 @@ test("login and recovery surfaces fit the viewport without document overflow", a
 test("application shell and operational layout primitives fit the configured viewport", async () => {
   const { context, page } = await pageForTest();
   await page.goto("/login", { waitUntil: "domcontentloaded" });
-  await page.locator("body").waitFor({ state: "visible" });
+  await page.locator(".auth-form").waitFor({ state: "visible" });
+  await page.waitForTimeout(250);
 
   await page.evaluate(() => {
     document.body.innerHTML = `
