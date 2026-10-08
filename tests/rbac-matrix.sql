@@ -204,15 +204,15 @@ select (
 \endif
 select public.create_department('Admin permitted','ADMT');
 select rbac_test.expect_error(
-  $select public.get_billing_summary_v1('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1')$,
+  $rbac$select public.get_billing_summary_v1('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1')$rbac$,
   'billing_access_denied'
 );
 select rbac_test.expect_error(
-  $select * from public.billing_operations_v1()$,
+  $rbac$select * from public.billing_operations_v1()$rbac$,
   'billing_operator_required'
 );
 select rbac_test.expect_error(
-  $select public.record_billing_operator_reconciliation_v1('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1','synthetic-ref')$,
+  $rbac$select public.record_billing_operator_reconciliation_v1('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1','synthetic-ref')$rbac$,
   'billing_operator_required'
 );
 reset role;
