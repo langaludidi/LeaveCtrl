@@ -185,7 +185,7 @@ export function OrganisationControls({
           <span className="muted-count">{people.length} people</span>
         </div>
         <div className="table-scroll">
-          <table>
+          <table className="mobile-data-table assignment-table">
             <thead>
               <tr>
                 <th>Employee</th>
@@ -196,8 +196,8 @@ export function OrganisationControls({
             <tbody>
               {people.map((person) => (
                 <tr key={person.id}>
-                  <td>{person.name}</td>
-                  <td>
+                  <td data-label="Employee">{person.name}</td>
+                  <td data-label="Department">
                     <select
                       aria-label={`Department for ${person.name}`}
                       className="inline-table-select"
@@ -215,7 +215,7 @@ export function OrganisationControls({
                       ))}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Work schedule">
                     <select
                       aria-label={`Work schedule for ${person.name}`}
                       className="inline-table-select"
@@ -238,7 +238,7 @@ export function OrganisationControls({
                 </tr>
               ))}
               {!people.length ? (
-                <tr><td colSpan={3} className="empty-table-cell">No active employees are available for assignment.</td></tr>
+                <tr><td colSpan={3} className="empty-table-cell" data-label="">No active employees are available for assignment.</td></tr>
               ) : null}
             </tbody>
           </table>
