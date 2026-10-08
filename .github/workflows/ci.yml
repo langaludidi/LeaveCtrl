@@ -42,11 +42,13 @@ jobs:
       - name: Dependency audit
         shell: bash
         run: |
+          set -euo pipefail
           for attempt in 1 2 3; do
             if npm audit --audit-level=moderate; then
               exit 0
+            else
+              status=$?
             fi
-            status=$?
             if [ "$attempt" -eq 3 ]; then
               exit "$status"
             fi
