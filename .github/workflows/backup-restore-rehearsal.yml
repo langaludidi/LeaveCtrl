@@ -7,6 +7,11 @@ on:
       - main
     paths:
       - ".github/workflows/backup-restore-rehearsal.yml"
+      - ".github/workflows/database-backup.yml"
+      - "app/api/cron/database-backup/**"
+      - "config/backup-tables.json"
+      - "scripts/verify-backup.mjs"
+      - "supabase/migrations/**"
   schedule:
     # Monthly recovery rehearsal: 01:35 UTC = 03:35 SAST.
     - cron: "35 1 1 * *"
