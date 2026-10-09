@@ -61,3 +61,27 @@ test("both server and client export endpoints fail closed when audit RPC fails",
     assert.match(source, /if \(auditError\)|if \(error\)/);
   }
 });
+
+test("history CSV applies name scope before database pagination and validates requested filters", () => {
+  const source = readFileSync(new URL("../app/reports/history/export/route.ts", import.meta.url), "utf8");
+  const scopedAt = source.indexOf("const ids = scopedEmployees.filter(");
+  const fetchAt = source.indexOf('supabase.from("leave_requests")');
+  assert.ok(scopedAt >= 0 && fetchAt > scopedAt, "employee filter must narrow query IDs before pagination");
+  assert.match(source, /\.in\("employee_id", ids\)/);
+  assert.match(source, /\.gte\("start_date", from\)\.lte\("start_date", to\)/);
+  assert.match(source, /if \(status\) query = query\.eq\("status"/);
+  assert.match(source, /if \(leaveType\) query = query\.eq\("leave_type_id"/);
+  assert.match(source, /rows\.length !== expectedRows/);
+  assert.match(source, /if \(auditError\) return new Response/);
+});
+
+test("history filters are carried to complete server-side export", () => {
+  const table = readFileSync(new URL("../components/LeaveHistoryTable.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/reports/page.tsx", import.meta.url), "utf8");
+  for (const field of ["status", "leaveType", "employee", "from", "to"]) {
+    assert.match(table, new RegExp('exportParams\\.set\\("' + field + '"'));
+  }
+  assert.match(table, /href=\{exportUrl\}/);
+  assert.match(page, /exportYear=\{historyYear\}/);
+  assert.match(page, /leaveTypeIds=\{Object\.fromEntries/);
+});
