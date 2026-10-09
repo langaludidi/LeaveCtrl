@@ -134,3 +134,14 @@ test("confidential history downloads disable MIME sniffing and caching", () => {
   assert.match(source, /"X-Content-Type-Options": "nosniff"/);
   assert.match(source, /"Cache-Control": "no-store"/);
 });
+
+test("liability reporting includes future-start approved requests in dashboard and export", () => {
+  for (const path of ["../app/reports/page.tsx", "../app/reports/export/route.ts"]) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8");
+    assert.match(source, /const futureApprovedResult = canViewLiability/);
+    assert.match(source, /\.gt\("start_date", (businessDate|today)\)/);
+    assert.match(source, /const liabilityRequests = \[\.\.\.\(requests \?\? \[\]\), \.\.\.\(futureApprovedResult\.data \?\? \[\]\)\]/);
+    assert.match(source, /const requestIds = liabilityRequests\.map/);
+    assert.match(source, /new Map\(liabilityRequests\.map/);
+  }
+});
