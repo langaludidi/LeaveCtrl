@@ -167,7 +167,18 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         .range((historyPage - 1) * historyPageSize, historyPage * historyPageSize - 1)
     : { data: [], error: null, count: 0 };
 
-  const requestIds = (requests ?? []).map((request) => request.id);
+  // Liability requires approved leave scheduled after the reporting date, even
+  // when its request starts in a future calendar period.
+  const futureApprovedResult = canViewLiability && employeeIds.length
+    ? await supabase.from("leave_requests")
+        .select("id, employee_id, quantity, status, start_date")
+        .in("employee_id", employeeIds)
+        .gt("start_date", businessDate)
+        .in("status", ["approved", "cancellation_requested"])
+    : { data: [] };
+  if ("error" in futureApprovedResult && futureApprovedResult.error) throw new Error("Future approved leave unavailable");
+  const liabilityRequests = [...(requests ?? []), ...(futureApprovedResult.data ?? [])];
+  const requestIds = liabilityRequests.map((request) => request.id);
   const futureDaysResult = requestIds.length && canViewLiability
     ? await supabase
         .from("leave_request_days")
@@ -206,7 +217,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const approvedStatuses = new Set(["approved", "cancellation_requested"]);
   const approvedByEmployee = new Map<string, number>();
   const pendingByEmployee = new Map<string, number>();
-  const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
+  const requestMap = new Map(liabilityRequests.map((request) => [request.id, request]));
 
   for (const request of requests ?? []) {
     if (approvedStatuses.has(request.status)) {
