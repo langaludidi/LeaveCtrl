@@ -80,7 +80,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const currentYear = Number(businessDate.slice(0, 4));
   const requestedYear = Number(params.historyYear);
   const historyYear = Number.isInteger(requestedYear) && requestedYear >= currentYear - 5 && requestedYear <= currentYear ? requestedYear : currentYear;
-  const yearStart = `${historyYear}-01-01`;
+  const yearStart = `${currentYear}-01-01`;
+  const historyStart = `${historyYear}-01-01`;
   const historyYearEnd = historyYear === currentYear ? businessDate : `${historyYear}-12-31`;
   const today = businessDate;
 
@@ -101,7 +102,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date")
           .in("employee_id", employeeIds)
           .gte("start_date", yearStart)
-          .lte("start_date", historyYearEnd),
+          .lte("start_date", businessDate),
         supabase
           .from("toil_balances")
           .select("employee_id, available_hours")
@@ -128,6 +129,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         { data: [] },
         { data: [] },
       ];
+
+  const { data: historyRequests } = employeeIds.length
+    ? await supabase.from("leave_requests")
+        .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date")
+        .in("employee_id", employeeIds)
+        .gte("start_date", historyStart)
+        .lte("start_date", historyYearEnd)
+        .order("start_date", { ascending: false })
+        .limit(1000)
+    : { data: [] };
 
   const requestIds = (requests ?? []).map((request) => request.id);
   const { data: futureRequestDays } = requestIds.length && canViewLiability
@@ -357,6 +368,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
+      <p className="card-subtitle">History results are limited to the most recent 1,000 requests in the selected year. A complete paginated server export is not yet available.</p>
       <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
         <label>History reporting year
           <select name="historyYear" defaultValue={String(historyYear)}>
@@ -365,7 +377,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </label>
         <button type="submit" className="btn secondary">Load year</button>
       </form>
-      <LeaveHistoryTable organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={yearStart} periodEnd={historyYearEnd} rows={(requests ?? []).map((request) => {
+      <LeaveHistoryTable organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
