@@ -24,6 +24,8 @@ export default async function ReportsPage() {
   const { supabase, employee, accessState, displayName, roles, businessDate } =
     await getCurrentContext({ requireEmployee: false });
 
+  const { data: reportOrganisation } = await supabase.from("organisations").select("name").eq("id", accessState.organisation_id).maybeSingle();
+
   const adminScope = roles.some((role) =>
     ["org_admin", "hr_admin", "reporter", "auditor"].includes(role)
   );
@@ -349,7 +351,7 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      <LeaveHistoryTable organisationName="Your organisation" periodStart={yearStart} periodEnd={businessDate} rows={(requests ?? []).map((request) => {
+      <LeaveHistoryTable organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={yearStart} periodEnd={businessDate} rows={(requests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
