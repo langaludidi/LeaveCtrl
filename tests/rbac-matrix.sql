@@ -338,7 +338,7 @@ select (
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000101',false);
 set role authenticated;
 select rbac_test.expect_error(
-  $select public.record_organisation_data_export('unsupported')$,
+  $$select public.record_organisation_data_export('unsupported')$$,
   'invalid_export_format'
 );
 reset role;
