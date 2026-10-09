@@ -185,12 +185,12 @@ export default async function SetupPage() {
     {
       label: "Work schedule coverage",
       detail: allPeopleScheduled
-        ? "Every active employee has a schedule"
+        ? (activePeopleCount === 0 ? "No employees to schedule yet" : "Every active employee has a schedule")
         : `${assignedScheduleCount} of ${activePeopleCount} active employees assigned`,
       done: allPeopleScheduled,
     },
     {
-      label: "Employee onboarding",
+      label: "Employee roster (optional initially)",
       detail: activePeopleCount
         ? `${activePeopleCount} active employee${activePeopleCount === 1 ? "" : "s"}`
         : "No employees yet — add them when ready",
