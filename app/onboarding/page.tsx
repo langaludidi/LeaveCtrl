@@ -56,9 +56,7 @@ export default function OnboardingPage() {
           <p className="eyebrow">CREATE YOUR LEAVECTRL ORGANISATION</p>
           <h1>Start with your organisation</h1>
           <p>
-            This creates a new LeaveCtrl workspace. The verified creator becomes
-            its initial organisation administrator through the controlled setup
-            transaction; no privileged role is selected in this form.
+            Create a workspace for your business. You will be its first Organisation Administrator and can invite employees and other administrators after setup.
           </p>
         </div>
 
@@ -76,7 +74,15 @@ export default function OnboardingPage() {
           </div>
 
           <label>Verified work email<input name="email" type="email" required /></label>
-          <label>Your employment start date<input name="startDate" type="date" required /></label>
+          <div className="onboarding-defaults" role="note">
+            <strong>Your access role: Organisation Administrator</strong>
+            <span>This grants organisation setup permissions. Employee, Manager, HR Admin, Reporter and Auditor access for other users is assigned through controlled invitations.</span>
+          </div>
+          <label>
+            Employment start date (temporary setup requirement)
+            <input name="startDate" type="date" required />
+            <span className="muted">The current setup also creates an employee record for the initial administrator. We are separating these processes; do not enter a made-up date.</span>
+          </label>
 
           <div className="onboarding-defaults">
             <strong>South Africa-first defaults will be prepared for review</strong>
