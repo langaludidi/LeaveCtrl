@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { reportCatalogue } from "@/lib/report-catalogue";
 
 function days(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
@@ -297,6 +298,37 @@ export default async function ReportsPage() {
           <div className="summary-head"><span className="summary-icon"><FileClock size={20}/></span><span>Pending leave</span></div>
           <div className="summary-value">{days(pendingDays)} <small>days</small></div>
           <div className="summary-foot"><span>reserved awaiting decision</span></div>
+        </div>
+      </section>
+
+      <section className="card data-card" aria-labelledby="report-catalogue-heading">
+        <div className="card-title">
+          <div>
+            <h2 id="report-catalogue-heading">Report catalogue</h2>
+            <p className="card-subtitle">Eighteen planned reports. Availability is shown explicitly; reports marked partial or requiring data are not yet downloadable as complete reports.</p>
+          </div>
+          <span className="muted-count">18 reports</span>
+        </div>
+        <div className="table-scroll">
+          <table className="mobile-data-table">
+            <thead><tr><th>Report</th><th>Category</th><th>Readiness</th><th>Requirements</th></tr></thead>
+            <tbody>
+              {reportCatalogue.filter((report) => {
+                if (roles.includes("org_admin") || roles.includes("hr_admin")) return true;
+                if (roles.includes("auditor")) return report.audiences.includes("executive");
+                if (roles.includes("reporter")) return report.audiences.includes("executive") && report.id !== 8 && report.id !== 16;
+                if (roles.includes("manager")) return report.audiences.includes("manager");
+                return report.audiences.includes("employee");
+              }).map((report) => (
+                <tr key={report.id}>
+                  <td data-label="Report"><strong>{report.id}. {report.title}</strong></td>
+                  <td data-label="Category">{report.category}</td>
+                  <td data-label="Readiness">{report.readiness === "available" ? "Existing summary" : report.readiness === "partial" ? "In development" : "Additional data required"}</td>
+                  <td data-label="Requirements">{report.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
