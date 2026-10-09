@@ -8,6 +8,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [alsoEmployee, setAlsoEmployee] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,7 +23,7 @@ export default function OnboardingPage() {
       p_first_name: String(form.get("firstName") ?? "").trim(),
       p_last_name: String(form.get("lastName") ?? "").trim(),
       p_email: String(form.get("email") ?? "").trim().toLowerCase(),
-      p_start_date: String(form.get("startDate") ?? ""),
+      p_start_date: alsoEmployee ? String(form.get("startDate") ?? "") : null,
     });
 
     if (rpcError) {
@@ -78,11 +79,19 @@ export default function OnboardingPage() {
             <strong>Your access role: Organisation Administrator</strong>
             <span>This grants organisation setup permissions. Employee, Manager, HR Admin, Reporter and Auditor access for other users is assigned through controlled invitations.</span>
           </div>
-          <label>
-            Employment start date (temporary setup requirement)
-            <input name="startDate" type="date" required />
-            <span className="muted">The current setup also creates an employee record for the initial administrator. We are separating these processes; do not enter a made-up date.</span>
+          <label className="onboarding-employment-choice">
+            <input type="checkbox" checked={alsoEmployee} onChange={(event) => setAlsoEmployee(event.target.checked)} />
+            I am also an employee of this organisation
           </label>
+          {alsoEmployee ? (
+            <label>
+              Employment start date
+              <input name="startDate" type="date" required />
+              <span className="muted">Only select this if you are employed by the organisation. Employee records, schedules and leave entitlements will then be created.</span>
+            </label>
+          ) : (
+            <p className="muted">As an administrator only, you will not consume an employee seat or receive leave entitlements.</p>
+          )}
 
           <div className="onboarding-defaults">
             <strong>South Africa-first defaults will be prepared for review</strong>
