@@ -3,6 +3,9 @@ import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lu
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 import { reportCatalogue } from "@/lib/report-catalogue";
+import { BrandLogo } from "@/components/BrandLogo";
+import { PrintReportButton } from "@/components/PrintReportButton";
+import { reportReference, reportTimestamp } from "@/lib/report-export";
 
 function days(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
@@ -253,6 +256,9 @@ export default async function ReportsPage() {
     0
   );
 
+  const generatedAt = new Date().toISOString();
+  const reportId = reportReference(generatedAt, accessState.organisation_id.slice(0, 8));
+
   const scopeLabel = adminScope
     ? "Organisation"
     : managerScope
@@ -270,11 +276,21 @@ export default async function ReportsPage() {
             TOIL and the organisation&apos;s confidential remuneration rules.
           </p>
         </div>
-        <Link href="/reports/export" className="btn secondary">
-          <Download size={17}/> Export CSV
-        </Link>
+        <div className="report-export-actions">
+          <PrintReportButton />
+          <Link href="/reports/export" className="btn secondary">
+            <Download size={17}/> Export CSV
+          </Link>
+        </div>
       </section>
 
+      <section className="report-print-header" aria-label="Report identification">
+        <BrandLogo variant="primary" />
+        <h2>Leave Balance and Workforce Summary</h2>
+        <p>Organisation scope: {scopeLabel} · Period: {businessDate.slice(0, 4)}-01-01 to {businessDate}</p>
+        <p>Generated: {reportTimestamp(generatedAt)} · Reference: {reportId}</p>
+        <p>Classification: {canViewLiability ? "Confidential" : "Internal"} · LeaveCtrl — Leave &amp; Workforce Availability</p>
+      </section>
       <section className="summary-grid">
         <div className="summary-card teal">
           <div className="summary-head"><span className="summary-icon"><Users size={20}/></span><span>Active people</span></div>
