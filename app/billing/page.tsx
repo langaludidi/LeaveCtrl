@@ -68,6 +68,7 @@ export default async function BillingPage({
       <AppShell
         displayName={user.email ?? "LeaveCtrl User"}
         role={roleLabel(state.roles)}
+        hasEmployee={Boolean(state.employee_id)}
       >
         <section className="card billing-choice">
           <h1>Billing setup in progress</h1>
