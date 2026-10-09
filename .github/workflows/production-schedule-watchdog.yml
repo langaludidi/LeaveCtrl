@@ -46,7 +46,6 @@ jobs:
           backup_age=999999
           backup_verified=false
           if [ -n "$backup_run_id" ] && [ -n "$backup_time" ]; then
-
             backup_age="$((now - $(date -u -d "$backup_time" +%s)))"
             artifact_json="$(gh api "repos/$REPO/actions/runs/$backup_run_id/artifacts?per_page=100")"
             if printf '%s' "$artifact_json" | jq -e --arg run "$backup_run_id" '[.artifacts[] | select(.expired==false and .size_in_bytes>0 and (.name | startswith("leavectrl-db-backup-")) and (.name | endswith($run)) and (.digest | startswith("sha256:")))] | length > 0' >/dev/null; then
@@ -54,10 +53,6 @@ jobs:
             fi
           fi
           monitor_age=999999
-          if [ -n "$backup" ]; then
-            backup_time="$(printf '%s' "$backup" | cut -f4)"
-            backup_age="$((now - $(date -u -d "$backup_time" +%s)))"
-          fi
           if [ -n "$monitor_time" ]; then
             monitor_age="$((now - $(date -u -d "$monitor_time" +%s)))"
           fi
@@ -66,13 +61,15 @@ jobs:
           monitor_ok=false
           [ "$backup_age" -le 50400 ] && [ "$backup_verified" = true ] && backup_ok=true
           [ "$monitor_age" -le 2700 ] && monitor_ok=true
-          echo "backup_ok=$backup_ok" >> "$GITHUB_OUTPUT"\n          echo "backup_artifact_verified=$backup_verified" >> "$GITHUB_OUTPUT"
+          echo "backup_ok=$backup_ok" >> "$GITHUB_OUTPUT"
+          echo "backup_artifact_verified=$backup_verified" >> "$GITHUB_OUTPUT"
           echo "monitor_ok=$monitor_ok" >> "$GITHUB_OUTPUT"
           {
             echo "### Production schedule assurance"
             echo "- Last successful backup age (seconds): $backup_age; threshold: 50400 (12-hour cadence + 2-hour tolerance)"
             echo "- Last successful monitor age (seconds): $monitor_age; threshold: 2700"
-            echo "- Backup artifact verified: $backup_verified"\n            echo "- Backup healthy: $backup_ok"
+            echo "- Backup artifact verified: $backup_verified"
+            echo "- Backup healthy: $backup_ok"
             echo "- Monitor healthy: $monitor_ok"
             echo "- Check time UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } >> "$GITHUB_STEP_SUMMARY"
