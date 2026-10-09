@@ -9,13 +9,13 @@ import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
 
 export default async function TeamPage() {
-  const { supabase, employee, displayName, roles } =
-    await getCurrentContext({ allowOrganisationOnboardingIncomplete: true });
-  if (!employee) return null;
+  const { supabase, employee, accessState, displayName, roles } =
+    await getCurrentContext({ requireEmployee: false, allowOrganisationOnboardingIncomplete: true });
 
   const canAdminPeople = roles.includes("org_admin") || roles.includes("hr_admin");
   const canManageTeam = canAdminPeople || roles.includes("manager");
-  if (!canManageTeam) redirect("/");
+  if (!canManageTeam) redirect(employee ? "/" : "/setup");
+  if (!canAdminPeople && !employee) redirect("/setup");
 
   const [
     { data: people },
@@ -33,50 +33,50 @@ export default async function TeamPage() {
     supabase
       .from("employees")
       .select("id, user_id, first_name, last_name, email, employee_number, department_id, manager_employee_id, employment_status")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .order("first_name"),
     supabase
       .from("departments")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("active", true)
       .order("name"),
     supabase
       .from("leave_types")
       .select("id, code")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("active", true),
     supabase
       .from("leave_balances")
       .select("employee_id, leave_type_id, available_balance")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
     supabase
       .from("work_schedules")
       .select("id, name, schedule_kind")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .order("name"),
     supabase
       .from("locations")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("active", true)
       .order("name"),
     supabase
       .from("employee_current_conditions")
       .select("employee_id, department_id, manager_employee_id, work_schedule_id, location_id, work_mode")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
     canAdminPeople
       ? supabase
           .from("overtime_settings")
           .select("default_treatment, default_multiplier, toil_expiry_days, liability_averaging_weeks, include_paid_overtime_in_liability")
-          .eq("organisation_id", employee.organisation_id)
+          .eq("organisation_id", accessState.organisation_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
     canAdminPeople
       ? supabase
           .from("overtime_events")
           .select("id, employee_id, work_date, hours, treatment, multiplier")
-          .eq("organisation_id", employee.organisation_id)
+          .eq("organisation_id", accessState.organisation_id)
           .order("work_date", { ascending: false })
           .limit(15)
       : Promise.resolve({ data: [] }),
@@ -84,12 +84,12 @@ export default async function TeamPage() {
       ? supabase
           .from("overtime_event_payments")
           .select("overtime_event_id, amount")
-          .eq("organisation_id", employee.organisation_id)
+          .eq("organisation_id", accessState.organisation_id)
       : Promise.resolve({ data: [] }),
     supabase
       .from("toil_balances")
       .select("employee_id, available_hours")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
   ]);
 
   let activeInvitations: { employee_id: string | null }[] = [];
@@ -98,7 +98,7 @@ export default async function TeamPage() {
     const { data } = await supabase
       .from("employee_invitations")
       .select("employee_id")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .is("accepted_at", null)
       .gt("expires_at", now);
 
@@ -143,9 +143,9 @@ export default async function TeamPage() {
   const visiblePeople = canAdminPeople
     ? activePeople
     : activePeople.filter((person) => {
-        if (person.id === employee.id) return true;
+        if (person.id === employee?.id) return true;
         const condition = conditionMap.get(person.id);
-        return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
+        return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
       });
 
   const assignmentPeople = activePeople.map((person) => {
@@ -178,7 +178,7 @@ export default async function TeamPage() {
   };
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
       <section className="page-head">
         <h1>Team</h1>
         <p>
@@ -227,7 +227,7 @@ export default async function TeamPage() {
           />
 
           <EmployeeExitControl
-            people={workforcePeople.filter((person) => person.id !== employee.id)}
+            people={workforcePeople.filter((person) => person.id !== employee?.id)}
           />
 
           <OvertimeControls
