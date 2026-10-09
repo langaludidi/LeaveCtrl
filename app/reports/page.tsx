@@ -20,7 +20,8 @@ function money(value: number, currency = "ZAR") {
   }).format(value);
 }
 
-export default async function ReportsPage() {
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ historyYear?: string }> }) {
+  const params = await searchParams;
   const { supabase, employee, accessState, displayName, roles, businessDate } =
     await getCurrentContext({ requireEmployee: false });
 
@@ -76,7 +77,11 @@ export default async function ReportsPage() {
       : (allEmployees ?? []).filter((person) => person.id === employee?.id);
 
   const employeeIds = scopedEmployees.map((person) => person.id);
-  const yearStart = `${businessDate.slice(0, 4)}-01-01`;
+  const currentYear = Number(businessDate.slice(0, 4));
+  const requestedYear = Number(params.historyYear);
+  const historyYear = Number.isInteger(requestedYear) && requestedYear >= currentYear - 5 && requestedYear <= currentYear ? requestedYear : currentYear;
+  const yearStart = `${historyYear}-01-01`;
+  const historyYearEnd = historyYear === currentYear ? businessDate : `${historyYear}-12-31`;
   const today = businessDate;
 
   const [
@@ -95,7 +100,8 @@ export default async function ReportsPage() {
           .from("leave_requests")
           .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date")
           .in("employee_id", employeeIds)
-          .gte("start_date", yearStart),
+          .gte("start_date", yearStart)
+          .lte("start_date", historyYearEnd),
         supabase
           .from("toil_balances")
           .select("employee_id, available_hours")
@@ -351,7 +357,15 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      <LeaveHistoryTable organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={yearStart} periodEnd={businessDate} rows={(requests ?? []).map((request) => {
+      <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
+        <label>History reporting year
+          <select name="historyYear" defaultValue={String(historyYear)}>
+            {Array.from({ length: 6 }, (_, i) => currentYear - i).map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
+        </label>
+        <button type="submit" className="btn secondary">Load year</button>
+      </form>
+      <LeaveHistoryTable organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={yearStart} periodEnd={historyYearEnd} rows={(requests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
