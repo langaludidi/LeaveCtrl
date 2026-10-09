@@ -15,6 +15,7 @@ export type LeaveHistoryRow = {
 };
 
 const PAGE_SIZE = 25;
+const ALL_REQUEST_STATUSES = ["draft", "submitted", "pending_approval", "approved", "declined", "withdrawn", "cancellation_requested", "cancelled"] as const;
 
 export function LeaveHistoryTable({ rows, organisationName, periodStart, periodEnd, exportAllowed, exportYear, leaveTypeIds = {} }: { rows: LeaveHistoryRow[]; organisationName: string; periodStart: string; periodEnd: string; exportAllowed: boolean; exportYear?: number; leaveTypeIds?: Record<string, string> }) {
   const [status, setStatus] = useState("all");
@@ -94,7 +95,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
         <label>Status
           <select value={status} onChange={(event) => { setStatus(event.target.value); resetPage(); }}>
             <option value="all">All statuses</option>
-            {Array.from(new Set(rows.map((row) => row.status))).sort().map((value) =>
+            {Array.from(new Set([...ALL_REQUEST_STATUSES, ...rows.map((row) => row.status)])).sort().map((value) =>
               <option key={value} value={value}>{value.replaceAll("_", " ")}</option>
             )}
           </select>
@@ -102,7 +103,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
         <label>Leave type
           <select value={leaveType} onChange={(event) => { setLeaveType(event.target.value); resetPage(); }}>
             <option value="all">All leave types</option>
-            {Array.from(new Set(rows.map((row) => row.leaveType))).sort().map((value) => <option key={value} value={value}>{value}</option>)}
+            {Array.from(new Set([...Object.keys(leaveTypeIds), ...rows.map((row) => row.leaveType)])).sort().map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </label>
         <label>Employee name
