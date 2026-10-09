@@ -259,7 +259,7 @@ export default async function ReportsPage() {
       : "My leave";
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">LIVE LEDGER REPORTING</p>
