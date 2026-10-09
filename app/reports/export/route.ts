@@ -1,67 +1,68 @@
-import { dateInTimeZone } from "@/lib/current-context";
-import { createClient } from "@/lib/supabase/server";
-
-import { safeCsvCell } from "@/lib/csv-export";
-
-const csvCell = safeCsvCell;
+import { dateInTimeZone, getCurrentContext } from "@/lib/current-context";
+import { reportCsv, reportReference } from "@/lib/report-export";
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return new Response("Authentication required", { status: 401 });
-
-  const { data: employee } = await supabase.from("employees").select("id, organisation_id").eq("user_id", user.id).eq("employment_status", "active").maybeSingle();
-  if (!employee) return new Response("Employee profile required", { status: 403 });
-
-  const [{ data: memberships }, { data: organisation }] = await Promise.all([
-    supabase.from("organisation_memberships").select("role").eq("organisation_id", employee.organisation_id).eq("user_id", user.id).eq("is_active", true),
-    supabase.from("organisations").select("timezone").eq("id", employee.organisation_id).maybeSingle(),
-  ]);
-
-  const roles = memberships?.map((membership) => membership.role) ?? [];
+  const { supabase, employee, accessState, roles: membershipRoles } = await getCurrentContext({ requireEmployee: false });
+  const organisationId = accessState.organisation_id;
+  const { data: organisation } = await supabase.from("organisations").select("name, timezone").eq("id", organisationId).maybeSingle();
+  const roles = membershipRoles;
   const adminScope = roles.some((role) => ["org_admin", "hr_admin", "reporter", "auditor"].includes(role));
   const managerScope = roles.includes("manager") && !adminScope;
   const canViewLiability = roles.some((role) => ["org_admin", "hr_admin", "reporter"].includes(role));
-  const shouldAuditOrganisationExport = roles.some((role) => ["org_admin", "hr_admin"].includes(role));
 
-  const [{ data: allPeople }, { data: departments }, { data: annualType }, { data: currentConditions }] = await Promise.all([
-    supabase.from("employees").select("id, first_name, last_name, department_id, manager_employee_id").eq("organisation_id", employee.organisation_id).eq("employment_status", "active").order("first_name"),
-    supabase.from("departments").select("id, name").eq("organisation_id", employee.organisation_id),
-    supabase.from("leave_types").select("id").eq("organisation_id", employee.organisation_id).eq("code", "ANNUAL").maybeSingle(),
-    supabase.from("employee_current_conditions").select("employee_id, department_id, manager_employee_id").eq("organisation_id", employee.organisation_id),
+  const [{ data: allPeople, error: peopleError }, { data: departments, error: departmentError }, { data: annualType, error: annualTypeError }, { data: currentConditions, error: conditionsError }] = await Promise.all([
+    supabase.from("employees").select("id, first_name, last_name, department_id, manager_employee_id").eq("organisation_id", organisationId).eq("employment_status", "active").order("first_name"),
+    supabase.from("departments").select("id, name").eq("organisation_id", organisationId),
+    supabase.from("leave_types").select("id").eq("organisation_id", organisationId).eq("code", "ANNUAL").maybeSingle(),
+    supabase.from("employee_current_conditions").select("employee_id, department_id, manager_employee_id").eq("organisation_id", organisationId),
   ]);
 
+  if (peopleError || departmentError || annualTypeError || conditionsError) return new Response("Report source data unavailable", { status: 500 });
   const conditionMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row]));
   const people = adminScope ? allPeople ?? [] : managerScope ? (allPeople ?? []).filter((person) => {
-    if (person.id === employee.id) return true;
+    if (person.id === employee?.id) return true;
     const condition = conditionMap.get(person.id);
-    return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
-  }) : (allPeople ?? []).filter((person) => person.id === employee.id);
+    return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
+  }) : (allPeople ?? []).filter((person) => person.id === employee?.id);
 
   const employeeIds = people.map((person) => person.id);
   const today = dateInTimeZone(new Date(), organisation?.timezone ?? "UTC");
   const yearStart = `${today.slice(0, 4)}-01-01`;
 
-  const [{ data: balances }, { data: requests }, { data: toilBalances }, remunerationResult, liabilityRateResult] = employeeIds.length
+  const [{ data: balances, error: balancesError }, { data: requests, error: requestsError }, { data: toilBalances, error: toilError }, remunerationResult, liabilityRateResult] = employeeIds.length
     ? await Promise.all([
         supabase.from("leave_balances").select("employee_id, available_balance").in("employee_id", employeeIds).eq("leave_type_id", annualType?.id ?? "00000000-0000-0000-0000-000000000000"),
-        supabase.from("leave_requests").select("id, employee_id, quantity, status, start_date").in("employee_id", employeeIds).gte("start_date", yearStart),
+        supabase.from("leave_requests").select("id, employee_id, quantity, status, start_date").in("employee_id", employeeIds).gte("start_date", yearStart).lte("start_date", today),
         supabase.from("toil_balances").select("employee_id, available_hours").in("employee_id", employeeIds),
         canViewLiability ? supabase.from("employee_remuneration_history").select("employee_id, gross_amount, pay_frequency, currency_code, effective_from, effective_to").in("employee_id", employeeIds).lte("effective_from", today).order("effective_from", { ascending: false }) : Promise.resolve({ data: [] }),
         canViewLiability ? supabase.from("employee_leave_liability_rates").select("employee_id, currency_code, base_daily_rate, variable_earnings_total, averaging_weeks, scheduled_days, variable_daily_rate, effective_daily_rate, liability_calculation_method").in("employee_id", employeeIds) : Promise.resolve({ data: [] }),
       ])
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
-  const requestIds = (requests ?? []).map((request) => request.id);
-  const { data: futureRequestDays } = requestIds.length && canViewLiability
+  if (balancesError || requestsError || toilError || ("error" in remunerationResult && remunerationResult.error) || ("error" in liabilityRateResult && liabilityRateResult.error)) return new Response("Report source data unavailable", { status: 500 });
+  // Liability requires approved leave scheduled after the reporting date, even
+  // when its request starts in a future calendar period.
+  const futureApprovedResult = canViewLiability && employeeIds.length
+    ? await supabase.from("leave_requests")
+        .select("id, employee_id, quantity, status, start_date")
+        .in("employee_id", employeeIds)
+        .gt("start_date", today)
+        .in("status", ["approved", "cancellation_requested"])
+    : { data: [] };
+  if ("error" in futureApprovedResult && futureApprovedResult.error) return new Response("Future approved leave unavailable", { status: 500 });
+  const liabilityRequests = [...(requests ?? []), ...(futureApprovedResult.data ?? [])];
+  const requestIds = liabilityRequests.map((request) => request.id);
+  const futureDaysResult = requestIds.length && canViewLiability
     ? await supabase.from("leave_request_days").select("request_id, leave_date, chargeable_quantity").in("request_id", requestIds).gt("leave_date", today)
     : { data: [] };
 
+  const futureRequestDays = futureDaysResult.data;
+  if ("error" in futureDaysResult && futureDaysResult.error) return new Response("Report source data unavailable", { status: 500 });
   const departmentMap = new Map((departments ?? []).map((department) => [department.id, department.name]));
   const currentDepartmentMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row.department_id]));
   const balanceMap = new Map((balances ?? []).map((row) => [row.employee_id, Number(row.available_balance ?? 0)]));
   const toilMap = new Map((toilBalances ?? []).map((row) => [row.employee_id, Number(row.available_hours ?? 0)]));
-  const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
+  const requestMap = new Map(liabilityRequests.map((request) => [request.id, request]));
   const approvedMap = new Map<string, number>();
   const pendingMap = new Map<string, number>();
   const futureApprovedMap = new Map<string, number>();
@@ -95,11 +96,21 @@ export async function GET() {
 
   // Organisation-wide exports are privileged disclosure events. Record them before
   // releasing the CSV so an audit failure cannot silently produce an unaudited file.
-  if (shouldAuditOrganisationExport) {
-    const { error: auditError } = await supabase.rpc("record_organisation_data_export", { p_format: "csv" });
-    if (auditError) return new Response("Unable to record export audit event", { status: 500 });
-  }
+  const { error: auditError } = await supabase.rpc("record_organisation_data_export", { p_format: "csv" });
+  if (auditError) return new Response("Unable to record export audit event", { status: 500 });
 
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+  const generatedAt = new Date().toISOString();
+  const reference = reportReference(generatedAt, crypto.randomUUID());
+  const csv = reportCsv({
+    reportTitle: "Employee Leave Balance and Liability",
+    organisationName: organisation?.name ?? "Organisation",
+    periodStart: yearStart,
+    periodEnd: today,
+    generatedAt,
+    reference,
+    dataCutoff: today,
+    classification: canViewLiability ? "Confidential" : "Internal",
+    filters: { Scope: adminScope ? "Organisation" : managerScope ? "Team" : "Employee" },
+  }, header, rows);
   return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="leavectrl-report-${today}.csv"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }

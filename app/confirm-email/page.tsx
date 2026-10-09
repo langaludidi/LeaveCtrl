@@ -1,4 +1,6 @@
 import { resendConfirmation } from "@/app/auth/actions";
+import { createClient } from "@/lib/supabase/server";
+import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 import { BrandLogo } from "@/components/BrandLogo";
 import { safeInternalPath } from "@/lib/safe-internal-path";
 
@@ -14,6 +16,10 @@ export default async function ConfirmEmailPage({
   const params = await searchParams;
   const next = safeInternalPath(params.next, "/onboarding");
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const verified = hasVerifiedEmailOwnership(user);
+
   return (
     <main className="auth-page">
       <section className="auth-panel">
@@ -23,26 +29,27 @@ export default async function ConfirmEmailPage({
 
         <div className="auth-copy">
           <p className="eyebrow">EMAIL VERIFICATION</p>
-          <h1>Check your email</h1>
+          <h1>{verified ? "Email verified" : "Check your email"}</h1>
           <p>
-            We&apos;ve sent a confirmation link to the email address you
-            registered. Open the link to verify your email address and activate
-            your LeaveCtrl account.
+            {verified ? "Your account is confirmed. You can continue to LeaveCtrl." : "Open the confirmation link sent to your registered email address to activate your account."}
           </p>
         </div>
 
-        {params.error && (
+        {verified && <a className="btn primary" href={next}>Continue to LeaveCtrl</a>}
+
+        {params.error && !verified && (
           <div className="auth-alert error" role="alert">
             {params.error}
           </div>
         )}
-        {params.message && (
+        {params.message && !verified && (
           <div className="auth-alert success" role="status" aria-live="polite">
             {params.message}
           </div>
         )}
 
-        <form action={resendConfirmation} className="auth-recovery-form">
+        {!verified && (
+          <form action={resendConfirmation} className="auth-recovery-form">
           <input type="hidden" name="next" value={next} />
           <div>
             <strong>Send confirmation email again</strong>
@@ -62,7 +69,8 @@ export default async function ConfirmEmailPage({
           <button className="btn secondary" type="submit">
             Send confirmation email again
           </button>
-        </form>
+          </form>
+        )}
 
         <p className="auth-switch">
           <a href={`/login?mode=signup&next=${encodeURIComponent(next)}`}>

@@ -8,6 +8,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [alsoEmployee, setAlsoEmployee] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,7 +23,7 @@ export default function OnboardingPage() {
       p_first_name: String(form.get("firstName") ?? "").trim(),
       p_last_name: String(form.get("lastName") ?? "").trim(),
       p_email: String(form.get("email") ?? "").trim().toLowerCase(),
-      p_start_date: String(form.get("startDate") ?? ""),
+      p_start_date: alsoEmployee ? String(form.get("startDate") ?? "") : undefined,
     });
 
     if (rpcError) {
@@ -39,8 +40,8 @@ export default function OnboardingPage() {
       return;
     }
 
-    const next=new URLSearchParams(window.location.search).get("next");
-    router.replace(next==="/billing"?"/billing":"/setup");
+    // Every new organisation must review setup before accessing billing.
+    router.replace("/setup");
     router.refresh();
   }
 
@@ -56,9 +57,7 @@ export default function OnboardingPage() {
           <p className="eyebrow">CREATE YOUR LEAVECTRL ORGANISATION</p>
           <h1>Start with your organisation</h1>
           <p>
-            This creates a new LeaveCtrl workspace. The verified creator becomes
-            its initial organisation administrator through the controlled setup
-            transaction; no privileged role is selected in this form.
+            Create a workspace for your business. You will become its initial Organisation Administrator through a controlled setup transaction; no privileged role is selected in this form. Invite other users after setup.
           </p>
         </div>
 
@@ -76,7 +75,23 @@ export default function OnboardingPage() {
           </div>
 
           <label>Verified work email<input name="email" type="email" required /></label>
-          <label>Your employment start date<input name="startDate" type="date" required /></label>
+          <div className="onboarding-defaults" role="note">
+            <strong>Your access role: Organisation Administrator</strong>
+            <span>This grants organisation setup permissions. Employee, Manager, HR Admin, Reporter and Auditor access for other users is assigned through controlled invitations.</span>
+          </div>
+          <label className="onboarding-employment-choice">
+            <input type="checkbox" checked={alsoEmployee} onChange={(event) => setAlsoEmployee(event.target.checked)} />
+            I am also an employee of this organisation
+          </label>
+          {alsoEmployee ? (
+            <label>
+              Employment start date
+              <input name="startDate" type="date" required />
+              <span className="muted">Only select this if you are employed by the organisation. Employee records, schedules and leave entitlements will then be created.</span>
+            </label>
+          ) : (
+            <p className="muted">As an administrator only, you will not consume an employee seat or receive leave entitlements.</p>
+          )}
 
           <div className="onboarding-defaults">
             <strong>South Africa-first defaults will be prepared for review</strong>

@@ -19,11 +19,11 @@ function formatHolidayDate(value: string) {
 
 export default async function SetupPage() {
   const { supabase, employee, displayName, roles, businessDate, accessState } =
-    await getCurrentContext({ allowOrganisationOnboardingIncomplete: true });
-  if (!employee) return null;
+    await getCurrentContext({ requireEmployee: false, allowOrganisationOnboardingIncomplete: true });
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
   if (!canAdmin) redirect("/");
+  const organisationId = accessState.organisation_id;
   const businessYear = Number(businessDate.slice(0, 4));
   const holidayStart = `${businessYear}-01-01`;
   const holidayEnd = `${businessYear + 1}-12-31`;
@@ -43,7 +43,7 @@ export default async function SetupPage() {
     supabase
       .from("public_holidays")
       .select("holiday_date, name, is_observed, is_one_off, source_kind")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .gte("holiday_date", holidayStart)
       .lte("holiday_date", holidayEnd)
       .order("holiday_date", { ascending: true }),
@@ -56,36 +56,36 @@ export default async function SetupPage() {
     supabase
       .from("departments")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("active", true)
       .order("name"),
     supabase
       .from("work_schedules")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .order("name"),
     supabase
       .from("employees")
       .select("id, first_name, last_name, department_id")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("employment_status", "active")
       .order("first_name"),
     supabase
       .from("employee_schedule_assignments")
       .select("employee_id, work_schedule_id, effective_from")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .is("effective_to", null)
       .order("effective_from", { ascending: false }),
     supabase
       .from("leave_types")
       .select("id, name, code, is_statutory")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("active", true)
       .order("name"),
     supabase
       .from("leave_policy_versions")
       .select("leave_type_id, entitlement_method, entitlement_amount, cycle_months, cycle_basis, cycle_anchor_month, cycle_anchor_day, effective_from, effective_to")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .lte("effective_from", businessDate)
       .or(`effective_to.is.null,effective_to.gte.${businessDate}`)
       .order("effective_from", { ascending: false })
@@ -93,12 +93,12 @@ export default async function SetupPage() {
     supabase
       .from("blocked_periods")
       .select("id, name, start_date, end_date, hard_block")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .order("start_date"),
     supabase
       .from("coverage_rules")
       .select("id, name, department_id, minimum_available, severity")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("active", true)
       .order("name"),
   ]);
@@ -174,7 +174,7 @@ export default async function SetupPage() {
   const activePeopleCount = people?.length ?? 0;
   const assignedScheduleCount = assignmentPeople.filter((person) => person.scheduleId).length;
   const allPeopleScheduled =
-    activePeopleCount > 0 && assignedScheduleCount === activePeopleCount;
+    assignedScheduleCount === activePeopleCount;
 
   const readinessChecks = [
     {
@@ -185,16 +185,16 @@ export default async function SetupPage() {
     {
       label: "Work schedule coverage",
       detail: allPeopleScheduled
-        ? "Every active employee has a schedule"
+        ? (activePeopleCount === 0 ? "No employees to schedule yet" : "Every active employee has a schedule")
         : `${assignedScheduleCount} of ${activePeopleCount} active employees assigned`,
       done: allPeopleScheduled,
     },
     {
-      label: "Employee records",
+      label: "Employee roster (optional initially)",
       detail: activePeopleCount
         ? `${activePeopleCount} active employee${activePeopleCount === 1 ? "" : "s"}`
-        : "Add at least one employee",
-      done: activePeopleCount > 0,
+        : "No employees yet — add them when ready",
+      done: true,
     },
     {
       label: "Public holiday calendar",
@@ -208,15 +208,16 @@ export default async function SetupPage() {
   const readinessComplete = readinessChecks.filter((check) => check.done).length;
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
       <section className="page-head setup-head">
-        <Link className="back-link" href="/">← Back to Home</Link>
+        {employee ? <Link className="back-link" href="/">← Back to Home</Link> : null}
         <div className="split">
           <div>
-            <h1>Administration</h1>
+            <h1>{accessState.organisation_onboarding_completed_at ? "Administration" : "Set up your organisation"}</h1>
             <p>
-              Configure organisation structure, working patterns, leave policy and the
-              statutory references LeaveCtrl uses to govern calculations.
+              {accessState.organisation_onboarding_completed_at
+                ? "Manage organisation structure, schedules, leave policies and workforce rules."
+                : "Your workspace is created. Review the essentials first; advanced controls can be configured later."}
             </p>
           </div>
           <div className="setup-head-actions">
@@ -241,12 +242,11 @@ export default async function SetupPage() {
                 <span className="liability-kicker">SETUP READINESS</span>
                 <h2>
                   {readinessComplete === readinessChecks.length
-                    ? "Core leave controls are ready"
+                    ? "Core controls prepared for your review"
                     : `${readinessComplete} of ${readinessChecks.length} core checks complete`}
                 </h2>
                 <p>
-                  LeaveCtrl only calls the workspace ready when policy, schedules,
-                  people and the public-holiday calendar can support reliable calculations.
+                  These checks confirm that the core records exist. Complete initial setup to confirm the defaults before using the workspace.
                 </p>
               </div>
               <Link href="/team" className="btn secondary">
@@ -268,7 +268,7 @@ export default async function SetupPage() {
               <div className="readiness-overview">
                 <div>
                   <span className="liability-kicker">INITIAL ORGANISATION ONBOARDING</span>
-                  <h3>Review the core controls, then open the workspace</h3>
+                  <h3>Review the essentials, then open your workspace</h3>
                   <p>
                     Advanced configuration can continue later. LeaveCtrl will not
                     route a new organisation creator into normal operations until
@@ -310,28 +310,39 @@ export default async function SetupPage() {
             </aside>
           </section>
 
+          <details className="card" open={Boolean(!accessState.organisation_onboarding_completed_at)}>
+            <summary><strong>Organisation structure and working schedules</strong> — departments, employee assignments and schedules</summary>
           <OrganisationControls
             people={assignmentPeople}
             departments={departments ?? []}
             schedules={schedules ?? []}
             businessDate={businessDate}
           />
+          </details>
 
+          <details className="card">
+            <summary><strong>Additional leave types and allocations</strong> — advanced policy controls</summary>
           <LeavePolicyControls
             people={assignmentPeople.map(({ id, name }) => ({ id, name }))}
             leaveTypes={policyLeaveTypes}
             businessDate={businessDate}
           />
+          </details>
 
+          <details className="card">
+            <summary><strong>Workforce availability rules</strong> — blocked periods and minimum coverage</summary>
           <AvailabilityControls
             departments={departments ?? []}
             leaveTypes={leaveTypes ?? []}
             blockedPeriods={blockedPeriods ?? []}
             coverageRules={coverageRules ?? []}
           />
+          </details>
         </>
       ) : null}
 
+      <details className="card">
+        <summary><strong>South African statutory reference</strong> — governed legislation and entitlements</summary>
       <section className="card statutory-card">
         <div className="availability-head">
           <div>
@@ -359,6 +370,10 @@ export default async function SetupPage() {
         </div>
       </section>
 
+      </details>
+
+      <details className="card">
+        <summary><strong>South African public holidays</strong> — view the loaded calendar</summary>
       <section className="card holiday-admin-card">
         <div className="availability-head">
           <div>
@@ -390,6 +405,7 @@ export default async function SetupPage() {
           ))}
         </div>
       </section>
+      </details>
     </AppShell>
   );
 }

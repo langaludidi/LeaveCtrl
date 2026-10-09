@@ -281,5 +281,136 @@ select (
 \endif
 reset role;
 
+-- Export audit: every authorised role records an event in its own organisation.
+\echo 'Verifying six-role report export audit and tenant isolation'
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000101',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000102',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000105',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000106',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000107',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000108',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select (
+  (select count(*) from public.audit_events
+    where event_type='organisation.data.exported'
+      and organisation_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'
+      and actor_user_id in (
+        '00000000-0000-0000-0000-000000000101',
+        '00000000-0000-0000-0000-000000000102',
+        '00000000-0000-0000-0000-000000000105',
+        '00000000-0000-0000-0000-000000000106',
+        '00000000-0000-0000-0000-000000000107',
+        '00000000-0000-0000-0000-000000000108'
+      ))=6
+  and (select count(*) from public.audit_events
+    where event_type='organisation.data.exported'
+      and organisation_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1')=0
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: export audit event counts or tenant attribution'
+  \quit 1
+\endif
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000101',false);
+set role authenticated;
+select rbac_test.expect_error(
+  $$select public.record_organisation_data_export('unsupported')$$,
+  'invalid_export_format'
+);
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000201',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select (
+  (select count(*) from public.audit_events
+    where event_type='organisation.data.exported'
+      and organisation_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
+      and actor_user_id='00000000-0000-0000-0000-000000000201')=1
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: second-tenant export audit attribution'
+  \quit 1
+\endif
+
+-- Rejected exports must not produce audit events.
+\echo 'Verifying rejected export attempts cannot create audit events'
+select (
+  (select count(*) from public.audit_events where event_type='organisation.data.exported')=7
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: unexpected export audit count after invalid format'
+  \quit 1
+\endif
+
+-- A valid identity with no active organisation must be denied.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000103',false);
+update public.organisation_memberships
+set is_active=false
+where user_id='00000000-0000-0000-0000-000000000103';
+set role authenticated;
+select rbac_test.expect_error(
+  $$select public.record_organisation_data_export('csv')$$,
+  'ambiguous_organisation_context'
+);
+reset role;
+
+-- The database prevents creation of ambiguous active tenant membership.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000104',false);
+set role authenticated;
+select rbac_test.expect_error(
+  $$insert into public.organisation_memberships(organisation_id,user_id,role,is_active)
+    values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
+            '00000000-0000-0000-0000-000000000104','employee',true)$$,
+  'account_already_linked_to_organisation'
+);
+reset role;
+
+-- No caller identity is rejected before membership lookup.
+select set_config('request.jwt.claim.sub','',false);
+set role authenticated;
+select rbac_test.expect_error(
+  $$select public.record_organisation_data_export('csv')$$,
+  'authentication_required'
+);
+reset role;
+
+select (
+  (select count(*) from public.audit_events where event_type='organisation.data.exported')=7
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: denied exports created audit events'
+  \quit 1
+\endif
+
 drop schema rbac_test cascade;
 \echo 'PASS: six-role synthetic RBAC and tenant-isolation matrix'
