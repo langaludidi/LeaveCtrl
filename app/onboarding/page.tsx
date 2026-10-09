@@ -40,8 +40,8 @@ export default function OnboardingPage() {
       return;
     }
 
-    const next=new URLSearchParams(window.location.search).get("next");
-    router.replace(next==="/billing"?"/billing":"/setup");
+    // Every new organisation must review setup before accessing billing.
+    router.replace("/setup");
     router.refresh();
   }
 
