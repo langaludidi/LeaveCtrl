@@ -39,11 +39,13 @@ export function AppShell({
   displayName = "LeaveCtrl User",
   role = "Employee",
   requestCount = 0,
+  hasEmployee = true,
 }: {
   children: React.ReactNode;
   displayName?: string;
   role?: string;
   requestCount?: number;
+  hasEmployee?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -91,14 +93,14 @@ export function AppShell({
   const canAudit = ["Organisation Admin", "HR Admin", "Auditor"].includes(role);
 
   const nav = [
-    { href: "/", label: "Home", icon: Home, visible: role !== "Employee" },
-    { href: "/my-leave", label: "My Leave", icon: CalendarDays, visible: true },
-    { href: "/book-leave", label: "Book Leave", icon: CalendarPlus, visible: true },
-    { href: "/calendar", label: "Calendar", icon: CalendarDays, visible: true },
-    { href: "/requests", label: "Requests", icon: FileText, visible: true },
-    { href: "/team", label: "Team", icon: Users, visible: canManagePeople },
-    { href: "/reports", label: "Reports", icon: BarChart3, visible: canReport },
-    { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: canAudit },
+    { href: "/", label: "Home", icon: Home, visible: role !== "Employee" && hasEmployee },
+    { href: "/my-leave", label: "My Leave", icon: CalendarDays, visible: hasEmployee },
+    { href: "/book-leave", label: "Book Leave", icon: CalendarPlus, visible: hasEmployee },
+    { href: "/calendar", label: "Calendar", icon: CalendarDays, visible: hasEmployee },
+    { href: "/requests", label: "Requests", icon: FileText, visible: hasEmployee },
+    { href: "/team", label: "Team", icon: Users, visible: canManagePeople && hasEmployee },
+    { href: "/reports", label: "Reports", icon: BarChart3, visible: canReport && hasEmployee },
+    { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: canAudit && hasEmployee },
     { href: "/setup", label: "Administration", icon: Settings, visible: canAdmin },
     { href: "/billing", label: "Billing & subscription", icon: CreditCard, visible: role === "Organisation Admin" },
   ].filter((item) => item.visible);
@@ -113,7 +115,7 @@ export function AppShell({
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
-        <Link href={role === "Employee" ? "/my-leave" : "/"} className="brand" aria-label="LeaveCtrl home">
+        <Link href={!hasEmployee ? "/setup" : role === "Employee" ? "/my-leave" : "/"} className="brand" aria-label="LeaveCtrl home">
           <BrandLogo className="shell-brand-logo" />
         </Link>
 
