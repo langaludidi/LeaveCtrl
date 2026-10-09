@@ -1,0 +1,64 @@
+name: Browser release regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "e2e/**"
+      - "playwright.release.config.mjs"
+      - ".github/workflows/browser-release-regression.yml"
+      - "app/**"
+      - "components/**"
+      - "lib/**"
+  pull_request:
+    paths:
+      - "e2e/**"
+      - "playwright.release.config.mjs"
+      - ".github/workflows/browser-release-regression.yml"
+      - "app/**"
+      - "components/**"
+      - "lib/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LEAVECTRL_BASE_URL: https://app.leavectrl.co.za
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install pinned browser test tooling
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0 @axe-core/playwright@4.10.2
+
+      - name: Install Chromium Firefox and WebKit
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run production cross-browser responsive and WCAG regression
+        run: npx playwright test --config=playwright.release.config.mjs
+
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-release-failure-${{ github.run_id }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
