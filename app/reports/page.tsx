@@ -349,7 +349,7 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      <LeaveHistoryTable rows={(requests ?? []).map((request) => {
+      <LeaveHistoryTable organisationName="Your organisation" periodStart={yearStart} periodEnd={businessDate} rows={(requests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
