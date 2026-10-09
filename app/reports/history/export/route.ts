@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const managerScope = roles.includes("manager") && !adminScope;
     const managerByEmployee = new Map((conditions ?? []).map((row) => [row.employee_id, row.manager_employee_id]));
     const scopedEmployees = (employees ?? []).filter((person) => adminScope ||
-      (managerScope ? person.id === employee?.id || (managerByEmployee.get(person.id) ?? person.manager_employee_id) === employee?.id : person.id === employee?.id));
+      (managerScope ? person.id === employee?.id || (person.employment_status === "active" && (managerByEmployee.get(person.id) ?? person.manager_employee_id) === employee?.id) : person.id === employee?.id));
     const ids = scopedEmployees.map((person) => person.id);
     const employeeMap = new Map(scopedEmployees.map((person) => [person.id, `${person.first_name} ${person.last_name}`]));
     const typeMap = new Map((leaveTypes ?? []).map((type) => [type.id, type.name]));
