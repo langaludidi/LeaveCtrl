@@ -85,3 +85,23 @@ test("history filters are carried to complete server-side export", () => {
   assert.match(page, /exportYear=\{historyYear\}/);
   assert.match(page, /leaveTypeIds=\{Object\.fromEntries/);
 });
+
+test("balance and liability CSV fail closed for source failures and all role exports are audited", () => {
+  const source = readFileSync(new URL("../app/reports/export/route.ts", import.meta.url), "utf8");
+  assert.match(source, /peopleError \|\| departmentError \|\| annualTypeError \|\| conditionsError/);
+  assert.match(source, /balancesError \|\| requestsError \|\| toilError/);
+  assert.match(source, /"error" in remunerationResult/);
+  assert.match(source, /"error" in liabilityRateResult/);
+  assert.match(source, /"error" in futureDaysResult/);
+  assert.match(source, /\.gte\("start_date", yearStart\)\.lte\("start_date", today\)/);
+  assert.doesNotMatch(source, /shouldAuditOrganisationExport/);
+  assert.match(source, /rpc\("record_organisation_data_export", \{ p_format: "csv" \}\)/);
+  assert.match(source, /if \(auditError\) return new Response/);
+});
+
+test("history export validates actual calendar dates", () => {
+  const source = readFileSync(new URL("../app/reports/history/export/route.ts", import.meta.url), "utf8");
+  assert.match(source, /function isValidIsoDate/);
+  assert.match(source, /date\.toISOString\(\)\.slice\(0, 10\) === value/);
+  assert.match(source, /!isValidIsoDate\(from\) \|\| !isValidIsoDate\(to\)/);
+});
