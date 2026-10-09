@@ -281,5 +281,84 @@ select (
 \endif
 reset role;
 
+-- Export audit: every authorised role records an event in its own organisation.
+\echo 'Verifying six-role report export audit and tenant isolation'
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000101',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000102',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000105',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000106',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000107',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000108',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select (
+  (select count(*) from public.audit_events
+    where event_type='organisation.data.exported'
+      and organisation_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'
+      and actor_user_id in (
+        '00000000-0000-0000-0000-000000000101',
+        '00000000-0000-0000-0000-000000000102',
+        '00000000-0000-0000-0000-000000000105',
+        '00000000-0000-0000-0000-000000000106',
+        '00000000-0000-0000-0000-000000000107',
+        '00000000-0000-0000-0000-000000000108'
+      ))=6
+  and (select count(*) from public.audit_events
+    where event_type='organisation.data.exported'
+      and organisation_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1')=0
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: export audit event counts or tenant attribution'
+  \quit 1
+\endif
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000101',false);
+set role authenticated;
+select rbac_test.expect_error(
+  $select public.record_organisation_data_export('unsupported')$,
+  'invalid_export_format'
+);
+reset role;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000201',false);
+set role authenticated;
+select public.record_organisation_data_export('csv');
+reset role;
+
+select (
+  (select count(*) from public.audit_events
+    where event_type='organisation.data.exported'
+      and organisation_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
+      and actor_user_id='00000000-0000-0000-0000-000000000201')=1
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: second-tenant export audit attribution'
+  \quit 1
+\endif
+
 drop schema rbac_test cascade;
 \echo 'PASS: six-role synthetic RBAC and tenant-isolation matrix'
