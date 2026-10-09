@@ -371,7 +371,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
-      <p className="card-subtitle">{historyError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. CSV export is disabled for paginated history until complete server-side export is implemented.`}</p>
+      <p className="card-subtitle">{historyError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. Use the complete-year CSV action for server-side audited export; table filters apply only to the displayed page.`}</p>
       <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
         <label>History reporting year
           <select name="historyYear" defaultValue={String(historyYear)}>
@@ -380,6 +380,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </label>
         <button type="submit" className="btn secondary">Load year</button>
       </form>
+      <div className="report-export-actions">
+        <Link className="btn secondary" href={`/reports/history/export?year=${historyYear}`}>Export complete year CSV</Link>
+      </div>
       <LeaveHistoryTable exportAllowed={false} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
