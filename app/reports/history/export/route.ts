@@ -5,7 +5,7 @@ const PAGE_SIZE = 500;
 const MAX_ROWS = 10000;
 
 function isValidIsoDate(value: string): boolean {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     if (leaveType && !(leaveTypes ?? []).some((type) => type.id === leaveType)) return new Response("Invalid leave type", { status: 400 });
     const from = params.get("from") || yearStart;
     const to = params.get("to") || yearEnd;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || !Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(to)) || from < yearStart || to > yearEnd || from > to) {
+    if (!isValidIsoDate(from) || !isValidIsoDate(to) || from < yearStart || to > yearEnd || from > to) {
       return new Response("Invalid date range", { status: 400 });
     }
     const rows: Array<{employee_id:string;leave_type_id:string;start_date:string;end_date:string;quantity:number;status:string}> = [];
