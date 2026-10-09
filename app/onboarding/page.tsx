@@ -56,7 +56,7 @@ export default function OnboardingPage() {
           <p className="eyebrow">CREATE YOUR LEAVECTRL ORGANISATION</p>
           <h1>Start with your organisation</h1>
           <p>
-            Create a workspace for your business. You will be its first Organisation Administrator and can invite employees and other administrators after setup.
+            Create a workspace for your business. You will become its initial Organisation Administrator through a controlled setup transaction; no privileged role is selected in this form. Invite other users after setup.
           </p>
         </div>
 
