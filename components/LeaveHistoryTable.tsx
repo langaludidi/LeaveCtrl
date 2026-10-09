@@ -17,6 +17,8 @@ const PAGE_SIZE = 25;
 
 export function LeaveHistoryTable({ rows, organisationName, periodStart, periodEnd }: { rows: LeaveHistoryRow[]; organisationName: string; periodStart: string; periodEnd: string }) {
   const [status, setStatus] = useState("all");
+  const [leaveType, setLeaveType] = useState("all");
+  const [employeeFilter, setEmployeeFilter] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [page, setPage] = useState(1);
@@ -24,9 +26,11 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   const [exportError, setExportError] = useState("");
   const filtered = useMemo(() => rows.filter((row) =>
     (status === "all" || row.status === status) &&
+    (leaveType === "all" || row.leaveType === leaveType) &&
+    (!employeeFilter || row.employee.toLocaleLowerCase().includes(employeeFilter.trim().toLocaleLowerCase())) &&
     (!start || row.startDate >= start) &&
     (!end || row.startDate <= end)
-  ).sort((a, b) => b.startDate.localeCompare(a.startDate)), [rows, status, start, end]);
+  ).sort((a, b) => b.startDate.localeCompare(a.startDate)), [rows, status, leaveType, employeeFilter, start, end]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -46,7 +50,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
       generatedAt,
       reference: reportReference(generatedAt, crypto.randomUUID()),
       classification: "Confidential",
-      filters: { Status: status === "all" ? "All" : status },
+      filters: { Status: status === "all" ? "All" : status, "Leave type": leaveType === "all" ? "All" : leaveType, Employee: employeeFilter || "All" },
       dataCutoff: periodEnd,
     }, ["Employee", "Leave Type", "Start", "End", "Days Requested", "Status"],
       filtered.map((row) => [row.employee, row.leaveType, row.startDate, row.endDate, row.quantity, row.status]));
@@ -85,13 +89,22 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
             )}
           </select>
         </label>
+        <label>Leave type
+          <select value={leaveType} onChange={(event) => { setLeaveType(event.target.value); resetPage(); }}>
+            <option value="all">All leave types</option>
+            {Array.from(new Set(rows.map((row) => row.leaveType))).sort().map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label>Employee name
+          <input type="search" value={employeeFilter} placeholder="Search employee" onChange={(event) => { setEmployeeFilter(event.target.value); resetPage(); }}/>
+        </label>
         <label>From (leave start)
           <input type="date" value={start} onChange={(event) => { setStart(event.target.value); resetPage(); }}/>
         </label>
         <label>To (leave start)
           <input type="date" min={start || undefined} value={end} onChange={(event) => { setEnd(event.target.value); resetPage(); }}/>
         </label>
-        <button type="button" className="btn secondary" onClick={() => { setStatus("all"); setStart(""); setEnd(""); resetPage(); }}>Clear filters</button>
+        <button type="button" className="btn secondary" onClick={() => { setStatus("all"); setLeaveType("all"); setEmployeeFilter(""); setStart(""); setEnd(""); resetPage(); }}>Clear filters</button>
       </div>
       <div className="table-scroll">
         <table className="mobile-data-table">
