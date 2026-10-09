@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { reportCsv, reportReference } from "@/lib/report-export";
 
 export type LeaveHistoryRow = {
@@ -15,7 +16,7 @@ export type LeaveHistoryRow = {
 
 const PAGE_SIZE = 25;
 
-export function LeaveHistoryTable({ rows, organisationName, periodStart, periodEnd, exportAllowed }: { rows: LeaveHistoryRow[]; organisationName: string; periodStart: string; periodEnd: string; exportAllowed: boolean }) {
+export function LeaveHistoryTable({ rows, organisationName, periodStart, periodEnd, exportAllowed, exportYear, leaveTypeIds = {} }: { rows: LeaveHistoryRow[]; organisationName: string; periodStart: string; periodEnd: string; exportAllowed: boolean; exportYear?: number; leaveTypeIds?: Record<string, string> }) {
   const [status, setStatus] = useState("all");
   const [leaveType, setLeaveType] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("");
@@ -34,6 +35,13 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const exportParams = new URLSearchParams({ year: String(exportYear ?? Number(periodStart.slice(0, 4))) });
+  if (status !== "all") exportParams.set("status", status);
+  if (leaveType !== "all" && leaveTypeIds[leaveType]) exportParams.set("leaveType", leaveTypeIds[leaveType]);
+  if (employeeFilter.trim()) exportParams.set("employee", employeeFilter.trim());
+  if (start !== periodStart) exportParams.set("from", start);
+  if (end !== periodEnd) exportParams.set("to", end);
+  const exportUrl = `/reports/history/export?${exportParams.toString()}`;
   const resetPage = () => setPage(1);
   const downloadFilteredCsv = async () => {
     if (!exportAllowed) return;
@@ -76,9 +84,9 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
       <div className="card-title">
         <div>
           <h2 id="leave-history-report-heading">Leave request history</h2>
-          <p className="card-subtitle">Requests starting in the current calendar year, within your authorised reporting scope. Approved bookings may be future leave, not leave already taken.</p>
+          <p className="card-subtitle">Requests starting in the selected reporting year, within your authorised reporting scope. Approved bookings may be future leave, not leave already taken.</p>
         </div>
-        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span><button type="button" className="btn secondary" disabled={exporting || !exportAllowed} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button></div>
+        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span>{exportAllowed ? <button type="button" className="btn secondary" disabled={exporting} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button> : <Link className="btn secondary" href={exportUrl}>Export full filtered CSV</Link>}</div>
       </div>
       {exportError && <p role="alert">{exportError}</p>}
       <p className="card-subtitle">Available source data: {periodStart} to {periodEnd}. Dates outside this range are not loaded into this report.</p>
