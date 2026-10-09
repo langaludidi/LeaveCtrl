@@ -97,6 +97,7 @@ export async function GET(request: Request) {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="leavectrl-history-${requestedYear}.csv"`,
       "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     } });
   } catch {
     return new Response("Authentication required or report unavailable", { status: 401 });
