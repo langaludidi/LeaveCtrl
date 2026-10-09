@@ -36,10 +36,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   );
 
   const [
-    { data: allEmployees },
-    { data: departments },
-    { data: leaveTypes },
-    { data: currentConditions },
+    { data: allEmployees, error: employeesError },
+    { data: departments, error: departmentsError },
+    { data: leaveTypes, error: leaveTypesError },
+    { data: currentConditions, error: conditionsError },
   ] = await Promise.all([
     supabase
       .from("employees")
@@ -61,6 +61,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       .select("employee_id, department_id, manager_employee_id")
       .eq("organisation_id", accessState.organisation_id),
   ]);
+
+  if (employeesError || departmentsError || leaveTypesError || conditionsError) throw new Error("Reporting sources unavailable");
 
   const conditionByEmployee = new Map(
     (currentConditions ?? []).map((condition) => [condition.employee_id, condition])
@@ -89,9 +91,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const today = businessDate;
 
   const [
-    { data: balances },
-    { data: requests },
-    { data: toilBalances },
+    { data: balances, error: balancesError },
+    { data: requests, error: requestsError },
+    { data: toilBalances, error: toilError },
     remunerationResult,
     liabilityRateResult,
   ] = employeeIds.length
@@ -133,6 +135,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         { data: [] },
       ];
 
+  if (balancesError || requestsError || toilError || ("error" in remunerationResult && remunerationResult.error) || ("error" in liabilityRateResult && liabilityRateResult.error)) throw new Error("Reporting ledger unavailable");
+
   // Historical reporting includes former employees; current balances and dashboard
   // continue to use active employees only.
   const { data: historyLeaveTypes, error: historyTypesError } = await supabase.from("leave_types")
@@ -164,13 +168,17 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     : { data: [], error: null, count: 0 };
 
   const requestIds = (requests ?? []).map((request) => request.id);
-  const { data: futureRequestDays } = requestIds.length && canViewLiability
+  const futureDaysResult = requestIds.length && canViewLiability
     ? await supabase
         .from("leave_request_days")
         .select("request_id, leave_date, chargeable_quantity")
         .in("request_id", requestIds)
         .gt("leave_date", today)
     : { data: [] };
+
+  const futureRequestDays = futureDaysResult.data;
+  if ("error" in futureDaysResult && futureDaysResult.error) throw new Error("Reporting request days unavailable");
+  if (historyError || historyEmployeesError || historyTypesError) throw new Error("Historical reporting unavailable");
 
   const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
   const departmentMap = new Map(
