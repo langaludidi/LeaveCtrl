@@ -20,7 +20,7 @@ function money(value: number, currency = "ZAR") {
   }).format(value);
 }
 
-export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ historyYear?: string }> }) {
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ historyYear?: string; historyPage?: string }> }) {
   const params = await searchParams;
   const { supabase, employee, accessState, displayName, roles, businessDate } =
     await getCurrentContext({ requireEmployee: false });
@@ -83,6 +83,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const yearStart = `${currentYear}-01-01`;
   const historyStart = `${historyYear}-01-01`;
   const historyYearEnd = historyYear === currentYear ? businessDate : `${historyYear}-12-31`;
+  const requestedPage = Number(params.historyPage);
+  const historyPage = Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 10000 ? requestedPage : 1;
+  const historyPageSize = 100;
   const today = businessDate;
 
   const [
@@ -137,7 +140,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         .gte("start_date", historyStart)
         .lte("start_date", historyYearEnd)
         .order("start_date", { ascending: false })
-        .limit(1000)
+        .range((historyPage - 1) * historyPageSize, historyPage * historyPageSize - 1)
     : { data: [], error: null, count: 0 };
 
   const requestIds = (requests ?? []).map((request) => request.id);
@@ -368,7 +371,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
-      <p className="card-subtitle">{historyError ? "History records could not be loaded. Export is unavailable." : `History: ${(historyRequests ?? []).length} of ${historyTotal ?? 0} requests loaded for ${historyYear}. ${historyTotal !== null && historyTotal > 1000 ? "Results are incomplete; export is disabled until full pagination is implemented." : "The selected year is fully loaded within the 1,000-row limit."}`}</p>
+      <p className="card-subtitle">{historyError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. CSV export is disabled for paginated history until complete server-side export is implemented.`}</p>
       <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
         <label>History reporting year
           <select name="historyYear" defaultValue={String(historyYear)}>
@@ -377,7 +380,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </label>
         <button type="submit" className="btn secondary">Load year</button>
       </form>
-      <LeaveHistoryTable exportAllowed={!historyError && historyTotal !== null && historyTotal <= 1000} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
+      <LeaveHistoryTable exportAllowed={false} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
@@ -390,6 +393,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           status: request.status,
         };
       })} />
+      <nav className="report-history-pagination" aria-label="Historical report server pages">
+        {historyPage > 1 ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage - 1}`}>Previous 100</Link> : <span>First page</span>}
+        <span>Page {historyPage} of {Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}</span>
+        {!historyError && historyPage * historyPageSize < (historyTotal ?? 0) ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage + 1}`}>Next 100</Link> : <span>Last page</span>}
+      </nav>
+
 
       {canViewLiability ? (
         <section className="card liability-summary-card">
