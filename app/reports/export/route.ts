@@ -39,13 +39,14 @@ export async function GET() {
       ])
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
-  if (balancesError || requestsError || toilError || remunerationResult.error || liabilityRateResult.error) return new Response("Report source data unavailable", { status: 500 });
+  if (balancesError || requestsError || toilError || ("error" in remunerationResult && remunerationResult.error) || ("error" in liabilityRateResult && liabilityRateResult.error)) return new Response("Report source data unavailable", { status: 500 });
   const requestIds = (requests ?? []).map((request) => request.id);
-  const { data: futureRequestDays, error: futureDaysError } = requestIds.length && canViewLiability
+  const futureDaysResult = requestIds.length && canViewLiability
     ? await supabase.from("leave_request_days").select("request_id, leave_date, chargeable_quantity").in("request_id", requestIds).gt("leave_date", today)
     : { data: [] };
 
-  if (futureDaysError) return new Response("Report source data unavailable", { status: 500 });
+  const futureRequestDays = futureDaysResult.data;
+  if ("error" in futureDaysResult && futureDaysResult.error) return new Response("Report source data unavailable", { status: 500 });
   const departmentMap = new Map((departments ?? []).map((department) => [department.id, department.name]));
   const currentDepartmentMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row.department_id]));
   const balanceMap = new Map((balances ?? []).map((row) => [row.employee_id, Number(row.available_balance ?? 0)]));
