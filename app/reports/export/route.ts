@@ -40,7 +40,18 @@ export async function GET() {
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   if (balancesError || requestsError || toilError || ("error" in remunerationResult && remunerationResult.error) || ("error" in liabilityRateResult && liabilityRateResult.error)) return new Response("Report source data unavailable", { status: 500 });
-  const requestIds = (requests ?? []).map((request) => request.id);
+  // Liability requires approved leave scheduled after the reporting date, even
+  // when its request starts in a future calendar period.
+  const futureApprovedResult = canViewLiability && employeeIds.length
+    ? await supabase.from("leave_requests")
+        .select("id, employee_id, quantity, status, start_date")
+        .in("employee_id", employeeIds)
+        .gt("start_date", today)
+        .in("status", ["approved", "cancellation_requested"])
+    : { data: [] };
+  if ("error" in futureApprovedResult && futureApprovedResult.error) return new Response("Future approved leave unavailable", { status: 500 });
+  const liabilityRequests = [...(requests ?? []), ...(futureApprovedResult.data ?? [])];
+  const requestIds = liabilityRequests.map((request) => request.id);
   const futureDaysResult = requestIds.length && canViewLiability
     ? await supabase.from("leave_request_days").select("request_id, leave_date, chargeable_quantity").in("request_id", requestIds).gt("leave_date", today)
     : { data: [] };
@@ -51,7 +62,7 @@ export async function GET() {
   const currentDepartmentMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row.department_id]));
   const balanceMap = new Map((balances ?? []).map((row) => [row.employee_id, Number(row.available_balance ?? 0)]));
   const toilMap = new Map((toilBalances ?? []).map((row) => [row.employee_id, Number(row.available_hours ?? 0)]));
-  const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
+  const requestMap = new Map(liabilityRequests.map((request) => [request.id, request]));
   const approvedMap = new Map<string, number>();
   const pendingMap = new Map<string, number>();
   const futureApprovedMap = new Map<string, number>();
