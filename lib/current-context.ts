@@ -83,7 +83,7 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
     redirect("/access/organisation-context");
   }
 
-  const employee = contextRow
+  const employee = contextRow?.employee_id
     ? {
         id: contextRow.employee_id,
         organisation_id: contextRow.organisation_id,
