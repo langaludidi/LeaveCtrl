@@ -118,3 +118,19 @@ test("historical filters offer values beyond the currently loaded server page", 
   assert.match(source, /ALL_REQUEST_STATUSES/);
   assert.match(source, /Object\.keys\(leaveTypeIds\)/);
 });
+
+test("reports dashboard fails closed rather than presenting partial financial figures", () => {
+  const source = readFileSync(new URL("../app/reports/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /employeesError \|\| departmentsError \|\| leaveTypesError \|\| conditionsError/);
+  assert.match(source, /balancesError \|\| requestsError \|\| toilError/);
+  assert.match(source, /"error" in remunerationResult/);
+  assert.match(source, /"error" in liabilityRateResult/);
+  assert.match(source, /"error" in futureDaysResult/);
+  assert.match(source, /historyError \|\| historyEmployeesError \|\| historyTypesError/);
+});
+
+test("confidential history downloads disable MIME sniffing and caching", () => {
+  const source = readFileSync(new URL("../app/reports/history/export/route.ts", import.meta.url), "utf8");
+  assert.match(source, /"X-Content-Type-Options": "nosniff"/);
+  assert.match(source, /"Cache-Control": "no-store"/);
+});
