@@ -213,10 +213,11 @@ export default async function SetupPage() {
         <Link className="back-link" href="/">← Back to Home</Link>
         <div className="split">
           <div>
-            <h1>Administration</h1>
+            <h1>{accessState.organisation_onboarding_completed_at ? "Administration" : "Set up your organisation"}</h1>
             <p>
-              Configure organisation structure, working patterns, leave policy and the
-              statutory references LeaveCtrl uses to govern calculations.
+              {accessState.organisation_onboarding_completed_at
+                ? "Manage organisation structure, schedules, leave policies and workforce rules."
+                : "Your workspace is created. Review the essentials first; advanced controls can be configured later."}
             </p>
           </div>
           <div className="setup-head-actions">
@@ -241,12 +242,11 @@ export default async function SetupPage() {
                 <span className="liability-kicker">SETUP READINESS</span>
                 <h2>
                   {readinessComplete === readinessChecks.length
-                    ? "Core leave controls are ready"
+                    ? "Core controls prepared for your review"
                     : `${readinessComplete} of ${readinessChecks.length} core checks complete`}
                 </h2>
                 <p>
-                  LeaveCtrl only calls the workspace ready when policy, schedules,
-                  people and the public-holiday calendar can support reliable calculations.
+                  These checks confirm that the core records exist. Complete initial setup to confirm the defaults before using the workspace.
                 </p>
               </div>
               <Link href="/team" className="btn secondary">
@@ -268,7 +268,7 @@ export default async function SetupPage() {
               <div className="readiness-overview">
                 <div>
                   <span className="liability-kicker">INITIAL ORGANISATION ONBOARDING</span>
-                  <h3>Review the core controls, then open the workspace</h3>
+                  <h3>Review the essentials, then open your workspace</h3>
                   <p>
                     Advanced configuration can continue later. LeaveCtrl will not
                     route a new organisation creator into normal operations until
@@ -310,28 +310,39 @@ export default async function SetupPage() {
             </aside>
           </section>
 
+          <details className="card" open={Boolean(!accessState.organisation_onboarding_completed_at)}>
+            <summary><strong>Organisation structure and working schedules</strong> — departments, employee assignments and schedules</summary>
           <OrganisationControls
             people={assignmentPeople}
             departments={departments ?? []}
             schedules={schedules ?? []}
             businessDate={businessDate}
           />
+          </details>
 
+          <details className="card">
+            <summary><strong>Additional leave types and allocations</strong> — advanced policy controls</summary>
           <LeavePolicyControls
             people={assignmentPeople.map(({ id, name }) => ({ id, name }))}
             leaveTypes={policyLeaveTypes}
             businessDate={businessDate}
           />
+          </details>
 
+          <details className="card">
+            <summary><strong>Workforce availability rules</strong> — blocked periods and minimum coverage</summary>
           <AvailabilityControls
             departments={departments ?? []}
             leaveTypes={leaveTypes ?? []}
             blockedPeriods={blockedPeriods ?? []}
             coverageRules={coverageRules ?? []}
           />
+          </details>
         </>
       ) : null}
 
+      <details className="card">
+        <summary><strong>South African statutory reference</strong> — governed legislation and entitlements</summary>
       <section className="card statutory-card">
         <div className="availability-head">
           <div>
@@ -359,6 +370,10 @@ export default async function SetupPage() {
         </div>
       </section>
 
+      </details>
+
+      <details className="card">
+        <summary><strong>South African public holidays</strong> — view the loaded calendar</summary>
       <section className="card holiday-admin-card">
         <div className="availability-head">
           <div>
@@ -390,6 +405,7 @@ export default async function SetupPage() {
           ))}
         </div>
       </section>
+      </details>
     </AppShell>
   );
 }
