@@ -18,7 +18,7 @@ function formatHolidayDate(value: string) {
 }
 
 export default async function SetupPage() {
-  const { supabase, displayName, roles, businessDate, accessState } =
+  const { supabase, employee, displayName, roles, businessDate, accessState } =
     await getCurrentContext({ requireEmployee: false, allowOrganisationOnboardingIncomplete: true });
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
@@ -208,9 +208,9 @@ export default async function SetupPage() {
   const readinessComplete = readinessChecks.filter((check) => check.done).length;
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
       <section className="page-head setup-head">
-        <Link className="back-link" href="/">← Back to Home</Link>
+        {employee ? <Link className="back-link" href="/">← Back to Home</Link> : null}
         <div className="split">
           <div>
             <h1>{accessState.organisation_onboarding_completed_at ? "Administration" : "Set up your organisation"}</h1>
