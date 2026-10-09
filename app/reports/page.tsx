@@ -133,10 +133,25 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         { data: [] },
       ];
 
-  const { data: historyRequests, error: historyError, count: historyTotal } = employeeIds.length
+  // Historical reporting includes former employees; current balances and dashboard
+  // continue to use active employees only.
+  const { data: historyEmployees, error: historyEmployeesError } = await supabase
+    .from("employees")
+    .select("id, first_name, last_name, manager_employee_id")
+    .eq("organisation_id", accessState.organisation_id);
+  const historyScopedEmployees = (historyEmployees ?? []).filter((person) => {
+    if (adminScope) return true;
+    if (person.id === employee?.id) return true;
+    if (!managerScope) return false;
+    const condition = conditionByEmployee.get(person.id);
+    return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
+  });
+  const historyEmployeeIds = historyScopedEmployees.map((person) => person.id);
+
+  const { data: historyRequests, error: historyError, count: historyTotal } = historyEmployeeIds.length
     ? await supabase.from("leave_requests")
         .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date", { count: "exact" })
-        .in("employee_id", employeeIds)
+        .in("employee_id", historyEmployeeIds)
         .gte("start_date", historyStart)
         .lte("start_date", historyYearEnd)
         .order("start_date", { ascending: false })
@@ -371,7 +386,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
-      <p className="card-subtitle">{historyError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. Use the complete-year CSV action for server-side audited export; table filters apply only to the displayed page.`}</p>
+      <p className="card-subtitle">{historyError || historyEmployeesError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. Use the complete-year CSV action for server-side audited export; table filters apply only to the displayed page.`}</p>
       <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
         <label>History reporting year
           <select name="historyYear" defaultValue={String(historyYear)}>
@@ -384,7 +399,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         <Link className="btn secondary" href={`/reports/history/export?year=${historyYear}`}>Export complete year CSV</Link>
       </div>
       <LeaveHistoryTable exportAllowed={false} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
-        const person = scopedEmployees.find((row) => row.id === request.employee_id);
+        const person = historyScopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
           id: request.id,
@@ -399,7 +414,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <nav className="report-history-pagination" aria-label="Historical report server pages">
         {historyPage > 1 ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage - 1}`}>Previous 100</Link> : <span>First page</span>}
         <span>Page {historyPage} of {Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}</span>
-        {!historyError && historyPage * historyPageSize < (historyTotal ?? 0) ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage + 1}`}>Next 100</Link> : <span>Last page</span>}
+        {!historyError && !historyEmployeesError && historyPage * historyPageSize < (historyTotal ?? 0) ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage + 1}`}>Next 100</Link> : <span>Last page</span>}
       </nav>
 
 
