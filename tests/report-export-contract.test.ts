@@ -105,3 +105,16 @@ test("history export validates actual calendar dates", () => {
   assert.match(source, /date\.toISOString\(\)\.slice\(0, 10\) === value/);
   assert.match(source, /!isValidIsoDate\(from\) \|\| !isValidIsoDate\(to\)/);
 });
+
+test("server-paged history does not impose a second 25-row pagination", () => {
+  const source = readFileSync(new URL("../components/LeaveHistoryTable.tsx", import.meta.url), "utf8");
+  assert.match(source, /const pageSize = exportAllowed \? PAGE_SIZE : 100/);
+  assert.match(source, /filtered\.slice\(\(currentPage - 1\) \* pageSize, currentPage \* pageSize\)/);
+  assert.match(source, /requests on this server page/);
+});
+
+test("historical filters offer values beyond the currently loaded server page", () => {
+  const source = readFileSync(new URL("../components/LeaveHistoryTable.tsx", import.meta.url), "utf8");
+  assert.match(source, /ALL_REQUEST_STATUSES/);
+  assert.match(source, /Object\.keys\(leaveTypeIds\)/);
+});
