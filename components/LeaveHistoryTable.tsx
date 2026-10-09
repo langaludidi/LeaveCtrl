@@ -19,8 +19,8 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   const [status, setStatus] = useState("all");
   const [leaveType, setLeaveType] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [start, setStart] = useState(periodStart);
+  const [end, setEnd] = useState(periodEnd);
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -28,8 +28,8 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
     (status === "all" || row.status === status) &&
     (leaveType === "all" || row.leaveType === leaveType) &&
     (!employeeFilter || row.employee.toLocaleLowerCase().includes(employeeFilter.trim().toLocaleLowerCase())) &&
-    (!start || row.startDate >= start) &&
-    (!end || row.startDate <= end)
+    (row.startDate >= (start || periodStart)) &&
+    (row.startDate <= (end || periodEnd))
   ).sort((a, b) => b.startDate.localeCompare(a.startDate)), [rows, status, leaveType, employeeFilter, start, end]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -80,6 +80,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
         <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span><button type="button" className="btn secondary" disabled={exporting} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button></div>
       </div>
       {exportError && <p role="alert">{exportError}</p>}
+      <p className="card-subtitle">Available source data: {periodStart} to {periodEnd}. Dates outside this range are not loaded into this report.</p>
       <div className="report-history-filters">
         <label>Status
           <select value={status} onChange={(event) => { setStatus(event.target.value); resetPage(); }}>
@@ -99,12 +100,12 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
           <input type="search" value={employeeFilter} placeholder="Search employee" onChange={(event) => { setEmployeeFilter(event.target.value); resetPage(); }}/>
         </label>
         <label>From (leave start)
-          <input type="date" value={start} onChange={(event) => { setStart(event.target.value); resetPage(); }}/>
+          <input type="date" min={periodStart} max={periodEnd} value={start} onChange={(event) => { setStart(event.target.value); resetPage(); }}/>
         </label>
         <label>To (leave start)
-          <input type="date" min={start || undefined} value={end} onChange={(event) => { setEnd(event.target.value); resetPage(); }}/>
+          <input type="date" min={start || periodStart} max={periodEnd} value={end} onChange={(event) => { setEnd(event.target.value); resetPage(); }}/>
         </label>
-        <button type="button" className="btn secondary" onClick={() => { setStatus("all"); setLeaveType("all"); setEmployeeFilter(""); setStart(""); setEnd(""); resetPage(); }}>Clear filters</button>
+        <button type="button" className="btn secondary" onClick={() => { setStatus("all"); setLeaveType("all"); setEmployeeFilter(""); setStart(periodStart); setEnd(periodEnd); resetPage(); }}>Clear filters</button>
       </div>
       <div className="table-scroll">
         <table className="mobile-data-table">
