@@ -174,7 +174,7 @@ export default async function SetupPage() {
   const activePeopleCount = people?.length ?? 0;
   const assignedScheduleCount = assignmentPeople.filter((person) => person.scheduleId).length;
   const allPeopleScheduled =
-    activePeopleCount > 0 && assignedScheduleCount === activePeopleCount;
+    assignedScheduleCount === activePeopleCount;
 
   const readinessChecks = [
     {
@@ -190,11 +190,11 @@ export default async function SetupPage() {
       done: allPeopleScheduled,
     },
     {
-      label: "Employee records",
+      label: "Employee onboarding",
       detail: activePeopleCount
         ? `${activePeopleCount} active employee${activePeopleCount === 1 ? "" : "s"}`
-        : "Add at least one employee",
-      done: activePeopleCount > 0,
+        : "No employees yet — add them when ready",
+      done: true,
     },
     {
       label: "Public holiday calendar",
