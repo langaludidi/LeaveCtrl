@@ -49,7 +49,7 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
   const accessState = states[0];
 
   if (!accessState.employee_id && options?.requireEmployee !== false) {
-    redirect("/access/membership-incomplete");
+    redirect(isOrganisationSetupOperator(accessState) ? "/setup" : "/access/membership-incomplete");
   }
 
   if (
@@ -83,7 +83,7 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
     redirect("/access/organisation-context");
   }
 
-  const employee = contextRow
+  const employee = contextRow?.employee_id
     ? {
         id: contextRow.employee_id,
         organisation_id: contextRow.organisation_id,
@@ -110,7 +110,9 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
       }
     : null;
 
-  const roles = contextRow?.roles ?? accessState.roles;
+  // The employee-context RPC can return no row for an administrator-only founder.
+  // Access-state membership remains authoritative for role checks in that case.
+  const roles = accessState.employee_id && contextRow?.roles ? contextRow.roles : accessState.roles;
   const timezone = organisation?.timezone ?? "UTC";
   const businessDate = dateInTimeZone(new Date(), timezone);
 

@@ -93,6 +93,15 @@ export async function GET(request: Request) {
       return redirectNoStore(new URL(next, baseUrl));
     }
 
+    // A mail client may reopen a one-time confirmation URL after the first
+    // successful exchange. Never treat an unverified session as confirmed.
+    if (error) {
+      const { data: existing } = await supabase.auth.getUser();
+      if (hasVerifiedEmailOwnership(existing.user)) {
+        return redirectNoStore(new URL(next, baseUrl));
+      }
+    }
+
     if (!error) {
       await supabase.auth.signOut({ scope: "local" });
     }

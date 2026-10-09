@@ -136,7 +136,7 @@ above are historical and must be reconciled against current provider evidence.
 - [x] Email-verification behavior has direct tests, including accidental auto-confirm rejection.
 - [x] Signup displays all password requirements and links to privacy/terms information. Those links do not represent adoption of the current draft legal pages.
 - [x] README application and authentication callback domains match `app.leavectrl.co.za`.
-- [ ] Draft PR reviewed; reconcile overlapping reporting changes in onboarding PR #65 before either combined candidate is accepted.
+- [x] PR #67 reconciled and stacked on onboarding PR #65 (`2b1f2d06b54d565552f6f05e139954436a4e45d3`); combined reporting preserves historical exports, role auditing and optional founder employment. Both remain draft pending review and acceptance.
 - [ ] Confirm current CI and preview result for the exact candidate commit, then approve its release through the existing process.
 - [ ] Complete/adopt Privacy, service Terms and applicable PAIA documentation: Information Officer details, processing and retention facts, subprocessors/transfers, contracting entity, subscription/renewal/cancellation terms and effective dates.
 - [ ] Enable Supabase compromised-password protection if supported by the selected plan; verify password creation/reset behavior.

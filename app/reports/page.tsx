@@ -1,8 +1,13 @@
+import { loadAnnualLeaveLiability } from "@/lib/report-liability";
 import Link from "next/link";
 import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
-import { loadAnnualLeaveLiability } from "@/lib/report-liability";
+import { reportCatalogue } from "@/lib/report-catalogue";
+import { BrandLogo } from "@/components/BrandLogo";
+import { PrintReportButton } from "@/components/PrintReportButton";
+import { LeaveHistoryTable } from "@/components/LeaveHistoryTable";
+import { reportReference, reportTimestamp } from "@/lib/report-export";
 
 function days(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
@@ -16,10 +21,12 @@ function money(value: number, currency = "ZAR") {
   }).format(value);
 }
 
-export default async function ReportsPage() {
-  const { supabase, employee, displayName, roles, businessDate } =
-    await getCurrentContext();
-  if (!employee) return null;
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ historyYear?: string; historyPage?: string }> }) {
+  const params = await searchParams;
+  const { supabase, employee, accessState, displayName, roles, businessDate } =
+    await getCurrentContext({ requireEmployee: false });
+
+  const { data: reportOrganisation } = await supabase.from("organisations").select("name").eq("id", accessState.organisation_id).maybeSingle();
 
   const adminScope = roles.some((role) =>
     ["org_admin", "hr_admin", "reporter", "auditor"].includes(role)
@@ -38,22 +45,22 @@ export default async function ReportsPage() {
     supabase
       .from("employees")
       .select("id, first_name, last_name, department_id, employment_status, manager_employee_id")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("employment_status", "active")
       .order("first_name"),
     supabase
       .from("departments")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
     supabase
       .from("leave_types")
       .select("id, code, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("active", true),
     supabase
       .from("employee_current_conditions")
       .select("employee_id, department_id, manager_employee_id")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
   ]);
 
   if (employeesError || departmentsError || leaveTypesError || conditionsError) throw new Error("Reporting sources unavailable");
@@ -66,14 +73,22 @@ export default async function ReportsPage() {
     ? allEmployees ?? []
     : managerScope
       ? (allEmployees ?? []).filter((person) => {
-          if (person.id === employee.id) return true;
+          if (person.id === employee?.id) return true;
           const condition = conditionByEmployee.get(person.id);
-          return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
+          return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
         })
-      : (allEmployees ?? []).filter((person) => person.id === employee.id);
+      : (allEmployees ?? []).filter((person) => person.id === employee?.id);
 
   const employeeIds = scopedEmployees.map((person) => person.id);
-  const yearStart = `${businessDate.slice(0, 4)}-01-01`;
+  const currentYear = Number(businessDate.slice(0, 4));
+  const requestedYear = Number(params.historyYear);
+  const historyYear = Number.isInteger(requestedYear) && requestedYear >= currentYear - 5 && requestedYear <= currentYear ? requestedYear : currentYear;
+  const yearStart = `${currentYear}-01-01`;
+  const historyStart = `${historyYear}-01-01`;
+  const historyYearEnd = historyYear === currentYear ? businessDate : `${historyYear}-12-31`;
+  const requestedPage = Number(params.historyPage);
+  const historyPage = Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 10000 ? requestedPage : 1;
+  const historyPageSize = 100;
   const today = businessDate;
 
   const [
@@ -86,13 +101,14 @@ export default async function ReportsPage() {
     ? await Promise.all([
         supabase
           .from("leave_balances")
-          .select("employee_id, leave_type_id, entitlement_id, available_balance")
+          .select("employee_id, entitlement_id, leave_type_id, available_balance")
           .in("employee_id", employeeIds),
         supabase
           .from("leave_requests")
           .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date")
           .in("employee_id", employeeIds)
-          .gte("start_date", yearStart),
+          .gte("start_date", yearStart)
+          .lte("start_date", businessDate),
         supabase
           .from("toil_balances")
           .select("employee_id, available_hours")
@@ -104,23 +120,55 @@ export default async function ReportsPage() {
               .in("employee_id", employeeIds)
               .lte("effective_from", today)
               .order("effective_from", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
+          : Promise.resolve({ data: [] }),
         canViewLiability
           ? supabase
               .from("employee_leave_liability_rates")
               .select("employee_id, currency_code, base_daily_rate, variable_earnings_total, averaging_weeks, scheduled_days, variable_daily_rate, effective_daily_rate, liability_calculation_method")
               .in("employee_id", employeeIds)
-          : Promise.resolve({ data: [], error: null }),
+          : Promise.resolve({ data: [] }),
       ])
     : [
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
+        { data: [] },
+        { data: [] },
+        { data: [] },
+        { data: [] },
+        { data: [] },
       ];
 
-  if (balancesError || requestsError || toilError || remunerationResult.error || liabilityRateResult.error) throw new Error("Reporting sources unavailable");
+  if (balancesError || requestsError || toilError || ("error" in remunerationResult && remunerationResult.error) || ("error" in liabilityRateResult && liabilityRateResult.error)) throw new Error("Reporting ledger unavailable");
+
+  // Historical reporting includes former employees; current balances and dashboard
+  // continue to use active employees only.
+  const { data: historyLeaveTypes, error: historyTypesError } = await supabase.from("leave_types")
+    .select("id, name").eq("organisation_id", accessState.organisation_id);
+  const historyTypeMap = new Map((historyLeaveTypes ?? []).map((type) => [type.id, type.name]));
+  const { data: historyEmployees, error: historyEmployeesError } = await supabase
+    .from("employees")
+    .select("id, first_name, last_name, manager_employee_id")
+    .eq("organisation_id", accessState.organisation_id);
+  const historyScopedEmployees = (historyEmployees ?? []).filter((person) => {
+    if (adminScope) return true;
+    if (person.id === employee?.id) return true;
+    if (!managerScope) return false;
+    // Former employees require HR/organisation-level reporting access.
+    if (!(allEmployees ?? []).some((active) => active.id === person.id)) return false;
+    const condition = conditionByEmployee.get(person.id);
+    return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
+  });
+  const historyEmployeeIds = historyScopedEmployees.map((person) => person.id);
+
+  const { data: historyRequests, error: historyError, count: historyTotal } = historyEmployeeIds.length
+    ? await supabase.from("leave_requests")
+        .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date", { count: "exact" })
+        .in("employee_id", historyEmployeeIds)
+        .gte("start_date", historyStart)
+        .lte("start_date", historyYearEnd)
+        .order("start_date", { ascending: false })
+        .range((historyPage - 1) * historyPageSize, historyPage * historyPageSize - 1)
+    : { data: [], error: null, count: 0 };
+
+  if (historyError || historyEmployeesError || historyTypesError) throw new Error("Historical reporting unavailable");
 
   const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
   const departmentMap = new Map(
@@ -148,6 +196,7 @@ export default async function ReportsPage() {
   const approvedStatuses = new Set(["approved", "cancellation_requested"]);
   const approvedByEmployee = new Map<string, number>();
   const pendingByEmployee = new Map<string, number>();
+
   for (const request of requests ?? []) {
     if (approvedStatuses.has(request.status)) {
       approvedByEmployee.set(
@@ -202,9 +251,7 @@ export default async function ReportsPage() {
   );
 
   const liabilityDaysMap = canViewLiability
-    ? await loadAnnualLeaveLiability(supabase,
-        (balances ?? []).filter((balance) => balance.leave_type_id === annualType?.id),
-        annualType?.id, today)
+    ? await loadAnnualLeaveLiability(supabase, (balances ?? []).filter((row) => row.leave_type_id === annualType?.id), annualType?.id, today)
     : new Map<string, number>();
   const liabilityAmountMap = new Map<string, number>();
   let totalLiability = 0;
@@ -234,6 +281,9 @@ export default async function ReportsPage() {
     0
   );
 
+  const generatedAt = new Date().toISOString();
+  const reportId = reportReference(generatedAt, accessState.organisation_id.slice(0, 8));
+
   const scopeLabel = adminScope
     ? "Organisation"
     : managerScope
@@ -241,7 +291,7 @@ export default async function ReportsPage() {
       : "My leave";
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">LIVE LEDGER REPORTING</p>
@@ -251,11 +301,21 @@ export default async function ReportsPage() {
             TOIL and the organisation&apos;s confidential remuneration rules.
           </p>
         </div>
-        <Link href="/reports/export" className="btn secondary">
-          <Download size={17}/> Export CSV
-        </Link>
+        <div className="report-export-actions">
+          <PrintReportButton />
+          <Link href="/reports/export" className="btn secondary">
+            <Download size={17}/> Export CSV
+          </Link>
+        </div>
       </section>
 
+      <section className="report-print-header" aria-label="Report identification">
+        <BrandLogo variant="primary" />
+        <h2>Leave Balance and Workforce Summary</h2>
+        <p>Organisation scope: {scopeLabel} · Period: {businessDate.slice(0, 4)}-01-01 to {businessDate}</p>
+        <p>Generated: {reportTimestamp(generatedAt)} · Reference: {reportId}</p>
+        <p>Classification: {canViewLiability ? "Confidential" : "Internal"} · LeaveCtrl — Leave &amp; Workforce Availability</p>
+      </section>
       <section className="summary-grid">
         <div className="summary-card teal">
           <div className="summary-head"><span className="summary-icon"><Users size={20}/></span><span>Active people</span></div>
@@ -281,6 +341,69 @@ export default async function ReportsPage() {
           <div className="summary-foot"><span>reserved awaiting decision</span></div>
         </div>
       </section>
+
+      <section className="card data-card" aria-labelledby="report-catalogue-heading">
+        <div className="card-title">
+          <div>
+            <h2 id="report-catalogue-heading">Report catalogue</h2>
+            <p className="card-subtitle">Eighteen planned reports. Availability is shown explicitly; reports marked partial or requiring data are not yet downloadable as complete reports.</p>
+          </div>
+          <span className="muted-count">18 reports</span>
+        </div>
+        <div className="table-scroll">
+          <table className="mobile-data-table">
+            <thead><tr><th>Report</th><th>Category</th><th>Readiness</th><th>Requirements</th></tr></thead>
+            <tbody>
+              {reportCatalogue.filter((report) => {
+                if (roles.includes("org_admin") || roles.includes("hr_admin")) return true;
+                if (roles.includes("auditor")) return report.audiences.includes("executive");
+                if (roles.includes("reporter")) return report.audiences.includes("executive") && report.id !== 8 && report.id !== 16;
+                if (roles.includes("manager")) return report.audiences.includes("manager");
+                return report.audiences.includes("employee");
+              }).map((report) => (
+                <tr key={report.id}>
+                  <td data-label="Report"><strong>{report.id}. {report.title}</strong></td>
+                  <td data-label="Category">{report.category}</td>
+                  <td data-label="Readiness">{report.readiness === "available" ? "Existing summary" : report.readiness === "partial" ? "In development" : "Additional data required"}</td>
+                  <td data-label="Requirements">{report.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p className="card-subtitle">{historyError || historyEmployeesError || historyTypesError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. Use the complete-year CSV action for server-side audited export; table filters apply to the displayed page and the full filtered CSV export.`}</p>
+      <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
+        <label>History reporting year
+          <select name="historyYear" defaultValue={String(historyYear)}>
+            {Array.from({ length: 6 }, (_, i) => currentYear - i).map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
+        </label>
+        <button type="submit" className="btn secondary">Load year</button>
+      </form>
+      <div className="report-export-actions">
+        <Link className="btn secondary" href={`/reports/history/export?year=${historyYear}`}>Export complete year CSV</Link>
+      </div>
+      <LeaveHistoryTable exportAllowed={false} exportYear={historyYear} leaveTypeIds={Object.fromEntries((historyLeaveTypes ?? []).map((type) => [type.name, type.id]))} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
+        const person = historyScopedEmployees.find((row) => row.id === request.employee_id);
+        const leaveTypeName = historyTypeMap.get(request.leave_type_id);
+        return {
+          id: request.id,
+          employee: person ? `${person.first_name} ${person.last_name}` : "Employee",
+          leaveType: leaveTypeName ?? "Leave",
+          startDate: request.start_date,
+          endDate: request.end_date,
+          quantity: Number(request.quantity ?? 0),
+          status: request.status,
+        };
+      })} />
+      <nav className="report-history-pagination" aria-label="Historical report server pages">
+        {historyPage > 1 ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage - 1}`}>Previous 100</Link> : <span>First page</span>}
+        <span>Page {historyPage} of {Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}</span>
+        {!historyError && !historyEmployeesError && historyPage * historyPageSize < (historyTotal ?? 0) ? <Link className="btn secondary" href={`/reports?historyYear=${historyYear}&historyPage=${historyPage + 1}`}>Next 100</Link> : <span>Last page</span>}
+      </nav>
+
 
       {canViewLiability ? (
         <section className="card liability-summary-card">
