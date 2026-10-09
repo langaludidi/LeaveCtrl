@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     }
     const rows: Array<{employee_id:string;leave_type_id:string;start_date:string;end_date:string;quantity:number;status:string}> = [];
     let expectedRows = 0;
+    let lastSeenStartDate: string | null = null;
     if (ids.length) {
       for (let offset = 0; offset <= MAX_ROWS; offset += PAGE_SIZE) {
         let query = supabase.from("leave_requests")
@@ -64,6 +65,12 @@ export async function GET(request: Request) {
         }
         if (error) return new Response("Unable to retrieve full report", { status: 500 });
         if (!data?.length) break;
+        // Verify stable descending date order across pages; fail closed on anomalies.
+        if (lastSeenStartDate !== null && data[0].start_date > lastSeenStartDate) return new Response("Export changed during retrieval; retry", { status: 503 });
+        for (let i = 1; i < data.length; i++) {
+          if (data[i].start_date > data[i - 1].start_date) return new Response("Export ordering inconsistent; retry", { status: 503 });
+        }
+        lastSeenStartDate = data[data.length - 1].start_date;
         rows.push(...data);
         if (rows.length > MAX_ROWS) return new Response("Report exceeds 10,000 rows; narrow the filters", { status: 413 });
         if (data.length < PAGE_SIZE) break;
