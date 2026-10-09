@@ -98,7 +98,7 @@ export function AppShell({
     { href: "/book-leave", label: "Book Leave", icon: CalendarPlus, visible: hasEmployee },
     { href: "/calendar", label: "Calendar", icon: CalendarDays, visible: hasEmployee },
     { href: "/requests", label: "Requests", icon: FileText, visible: hasEmployee },
-    { href: "/team", label: "Team", icon: Users, visible: canManagePeople && hasEmployee },
+    { href: "/team", label: "Team", icon: Users, visible: canManagePeople && (hasEmployee || canAdmin) },
     { href: "/reports", label: "Reports", icon: BarChart3, visible: canReport && hasEmployee },
     { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: canAudit },
     { href: "/setup", label: "Administration", icon: Settings, visible: canAdmin },
