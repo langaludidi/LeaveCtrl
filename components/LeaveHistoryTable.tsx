@@ -15,7 +15,7 @@ export type LeaveHistoryRow = {
 
 const PAGE_SIZE = 25;
 
-export function LeaveHistoryTable({ rows, organisationName, periodStart, periodEnd }: { rows: LeaveHistoryRow[]; organisationName: string; periodStart: string; periodEnd: string }) {
+export function LeaveHistoryTable({ rows, organisationName, periodStart, periodEnd, exportAllowed }: { rows: LeaveHistoryRow[]; organisationName: string; periodStart: string; periodEnd: string; exportAllowed: boolean }) {
   const [status, setStatus] = useState("all");
   const [leaveType, setLeaveType] = useState("all");
   const [employeeFilter, setEmployeeFilter] = useState("");
@@ -36,6 +36,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const resetPage = () => setPage(1);
   const downloadFilteredCsv = async () => {
+    if (!exportAllowed) return;
     setExporting(true);
     setExportError("");
     try {
@@ -77,7 +78,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
           <h2 id="leave-history-report-heading">Leave request history</h2>
           <p className="card-subtitle">Requests starting in the current calendar year, within your authorised reporting scope. Approved bookings may be future leave, not leave already taken.</p>
         </div>
-        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span><button type="button" className="btn secondary" disabled={exporting} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button></div>
+        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span><button type="button" className="btn secondary" disabled={exporting || !exportAllowed} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button></div>
       </div>
       {exportError && <p role="alert">{exportError}</p>}
       <p className="card-subtitle">Available source data: {periodStart} to {periodEnd}. Dates outside this range are not loaded into this report.</p>
