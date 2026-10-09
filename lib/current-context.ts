@@ -110,7 +110,9 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
       }
     : null;
 
-  const roles = contextRow?.roles ?? accessState.roles;
+  // The employee-context RPC can return no row for an administrator-only founder.
+  // Access-state membership remains authoritative for role checks in that case.
+  const roles = accessState.employee_id && contextRow?.roles ? contextRow.roles : accessState.roles;
   const timezone = organisation?.timezone ?? "UTC";
   const businessDate = dateInTimeZone(new Date(), timezone);
 
