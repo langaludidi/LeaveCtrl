@@ -10,11 +10,20 @@ declare
   v_user_id uuid := auth.uid();
   v_org_id uuid;
   v_event_id uuid;
+  v_organisation_count integer;
 begin
   if v_user_id is null then raise exception 'authentication_required'; end if;
   if lower(coalesce(nullif(btrim(p_format), ''), 'json')) not in ('csv', 'pdf', 'xlsx', 'json') then
     raise exception 'invalid_export_format';
   end if;
+
+  select count(distinct m.organisation_id) into v_organisation_count
+  from public.organisation_memberships m
+  where m.user_id = v_user_id and m.is_active;
+
+  -- The application requires an unambiguous organisation context.
+  -- Never audit against an arbitrary first membership.
+  if v_organisation_count <> 1 then raise exception 'ambiguous_organisation_context'; end if;
 
   select m.organisation_id into v_org_id
   from public.organisation_memberships m
