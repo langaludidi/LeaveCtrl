@@ -759,3 +759,19 @@ textarea:focus-visible{
     word-break:break-all;
   }
 }
+
+/* Report identification is visible in printed/PDF copies, without crowding the dashboard. */
+.report-print-header{display:none}
+.report-export-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media print{
+  @page{size:A4 landscape;margin:14mm}
+  body{background:#fff!important;color:#17212b!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .report-print-header{display:block!important;border-bottom:2px solid #17212b;padding:0 0 12px;margin:0 0 18px}
+  .report-print-header .brand-logo{display:inline-flex;margin-bottom:12px}
+  .report-print-header h2{font-size:19pt;margin:0 0 6px}
+  .report-print-header p{font-size:9pt;margin:3px 0}
+  .report-export-actions,.page-head,.report-print-header~.card.data-card{display:none!important}
+  .summary-grid,.liability-summary-card,.card{break-inside:avoid}
+  .table-scroll{overflow:visible!important}
+  a{color:inherit;text-decoration:none}
+}
