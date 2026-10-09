@@ -67,7 +67,7 @@ export default async function AuditPage({
     supabase
       .from("employees")
       .select("user_id, first_name, last_name")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
   ]);
 
   const actorMap = new Map(
