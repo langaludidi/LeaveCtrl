@@ -92,16 +92,26 @@ export default async function LoginPage({
               type="password"
               minLength={signingUp ? 12 : undefined}
               autoComplete={signingUp ? "new-password" : "current-password"}
+              aria-describedby={signingUp ? "signup-password-policy" : undefined}
               required
             />
           </label>
 
           <AuthCaptcha siteKey={captchaSiteKey} label="Sign-in security check" />
 
+          {signingUp && <p id="signup-password-policy" className="auth-captcha-note">
+            Use at least 12 characters, including uppercase and lowercase letters, a number and a symbol.
+          </p>}
+
           <button className="btn primary auth-submit" type="submit">
             {signingUp ? "Create account" : "Sign in"}
           </button>
         </form>
+
+        {signingUp && <p className="auth-switch">
+          Read our <a href="https://leavectrl.co.za/privacy">privacy information</a> and{" "}
+          <a href="https://leavectrl.co.za/terms">terms information</a> before creating an account.
+        </p>}
 
         <p className="auth-switch">
           {signingUp ? "Already have an account?" : "New to LeaveCtrl?"}{" "}

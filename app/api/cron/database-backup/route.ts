@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { put, type PutBlobResult } from "@vercel/blob";
 import backupTables from "@/config/backup-tables.json";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { cronAuthorizationMatches } from "@/lib/machine-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,9 +25,7 @@ function serviceClient() {
 }
 
 function requireCron(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) throw new Error("backup_cron_secret_missing");
-  return request.headers.get("authorization") === `Bearer ${secret}`;
+  return cronAuthorizationMatches(request.headers.get("authorization"), process.env.CRON_SECRET);
 }
 
 async function exportTable(client: SupabaseClient, spec: TableSpec) {

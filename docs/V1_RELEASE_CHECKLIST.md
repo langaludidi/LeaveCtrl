@@ -121,3 +121,31 @@
 ## Go-live gate
 
 Production sign-off requires the P0 deployment reconciliation gate above, all other unchecked release items, and controlled human UAT to pass without an unresolved P0/P1 issue.
+
+## 9 October 2026 audit-remediation candidate
+
+Branch: `release/audit-fixes-2026-10-09`, based on production/main
+`f61096d46fe862c80c3ed8bad26bcbdcb7de9115`. The items below describe the
+review candidate, not production acceptance. Earlier deployment/email entries
+above are historical and must be reconciled against current provider evidence.
+
+- [x] Annual liability uses only net annual reservations charged to the current entitlement; pending requests and future approved days are independent of reporting-year filters.
+- [x] Screen and CSV use the same liability calculation and reject failed source reads.
+- [x] Liability source reads paginate and bound ID batches; mixed leave types, partial days, cancellation and entitlement/year boundaries have regression protection.
+- [x] Exact backup-cron path reaches its bearer authorization without a browser session; missing/invalid secrets fail closed.
+- [x] Email-verification behavior has direct tests, including accidental auto-confirm rejection.
+- [x] Signup displays all password requirements and links to privacy/terms information. Those links do not represent adoption of the current draft legal pages.
+- [x] README application and authentication callback domains match `app.leavectrl.co.za`.
+- [ ] Draft PR reviewed; reconcile overlapping reporting changes in onboarding PR #65 before either combined candidate is accepted.
+- [ ] Confirm current CI and preview result for the exact candidate commit, then approve its release through the existing process.
+- [ ] Complete/adopt Privacy, service Terms and applicable PAIA documentation: Information Officer details, processing and retention facts, subprocessors/transfers, contracting entity, subscription/renewal/cancellation terms and effective dates.
+- [ ] Enable Supabase compromised-password protection if supported by the selected plan; verify password creation/reset behavior.
+- [ ] Complete signed-in employee, manager and HR/admin UAT: email confirmation/recovery, setup, invitation, submission, approval/cancellation, mixed-type financial reporting and CSV parity.
+- [ ] Verify tenant/role boundaries and representative mobile/keyboard/accessibility journeys against the accepted candidate.
+- [ ] After approved deployment, verify exact release SHA, invalid cron token rejection and a controlled successful encrypted backup/restore check. Do not confuse the successful GitHub logical restore rehearsal with acceptance of the Vercel Blob backup.
+- [ ] Reconcile historical checklist entries with fresh evidence and close all remaining P0/P1 release blockers before sign-off.
+
+Current production evidence from the audit: app health matches the base SHA;
+GitHub logical backup run `37973478336` succeeded on 9 October; logical restore
+rehearsal run `37781164715` succeeded on 8 October. These facts do not certify
+email delivery, authentication recovery or the full release.

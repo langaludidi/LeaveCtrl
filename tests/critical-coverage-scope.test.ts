@@ -11,6 +11,8 @@ import * as billingVerification from "../lib/billing/verification.ts";
 import * as csvExport from "../lib/csv-export.ts";
 import * as employeeCsv from "../lib/employee-csv.ts";
 import * as passwordPolicy from "../lib/password-policy.ts";
+import * as leaveLiability from "../lib/leave-liability.ts";
+import * as machineAccess from "../lib/machine-access.ts";
 import * as safeInternalPath from "../lib/safe-internal-path.ts";
 
 test("critical coverage scope remains explicitly loaded", () => {
@@ -24,5 +26,7 @@ test("critical coverage scope remains explicitly loaded", () => {
   assert.equal(typeof csvExport.safeCsvCell, "function");
   assert.equal(typeof employeeCsv.parseCsv, "function");
   assert.equal(typeof passwordPolicy.validatePassword, "function");
+  assert.equal(typeof leaveLiability.annualLeaveLiabilityByEmployee, "function");
+  assert.equal(typeof machineAccess.cronAuthorizationMatches, "function");
   assert.equal(typeof safeInternalPath.safeInternalPath, "function");
 });

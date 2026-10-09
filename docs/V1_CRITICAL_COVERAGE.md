@@ -16,6 +16,8 @@ The enforced Node coverage scope is:
 - `lib/csv-export.ts`
 - `lib/employee-csv.ts`
 - `lib/password-policy.ts`
+- `lib/leave-liability.ts`
+- `lib/machine-access.ts`
 - `lib/safe-internal-path.ts`
 
 CI fails unless this scope achieves at least:

@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test": "node --test",
     "backup:verify": "node scripts/verify-backup.mjs",
-    "test:critical-coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=70 --test-coverage-include=lib/access-gate.ts --test-coverage-include=lib/app-base-url.ts --test-coverage-include=lib/auth-messages.ts --test-coverage-include=lib/auth-verification.ts --test-coverage-include=lib/billing/catalog.ts --test-coverage-include=lib/billing/retry.ts --test-coverage-include=lib/billing/verification.ts --test-coverage-include=lib/csv-export.ts --test-coverage-include=lib/employee-csv.ts --test-coverage-include=lib/password-policy.ts --test-coverage-include=lib/safe-internal-path.ts"
+    "test:critical-coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=70 --test-coverage-include=lib/access-gate.ts --test-coverage-include=lib/app-base-url.ts --test-coverage-include=lib/auth-messages.ts --test-coverage-include=lib/auth-verification.ts --test-coverage-include=lib/billing/catalog.ts --test-coverage-include=lib/billing/retry.ts --test-coverage-include=lib/billing/verification.ts --test-coverage-include=lib/csv-export.ts --test-coverage-include=lib/employee-csv.ts --test-coverage-include=lib/password-policy.ts --test-coverage-include=lib/safe-internal-path.ts --test-coverage-include=lib/leave-liability.ts --test-coverage-include=lib/machine-access.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

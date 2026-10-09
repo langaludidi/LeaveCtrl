@@ -2,6 +2,7 @@ import { dateInTimeZone } from "@/lib/current-context";
 import { createClient } from "@/lib/supabase/server";
 
 import { safeCsvCell } from "@/lib/csv-export";
+import { loadAnnualLeaveLiability } from "@/lib/report-liability";
 
 const csvCell = safeCsvCell;
 
@@ -24,12 +25,14 @@ export async function GET() {
   const canViewLiability = roles.some((role) => ["org_admin", "hr_admin", "reporter"].includes(role));
   const shouldAuditOrganisationExport = roles.some((role) => ["org_admin", "hr_admin"].includes(role));
 
-  const [{ data: allPeople }, { data: departments }, { data: annualType }, { data: currentConditions }] = await Promise.all([
+  const [{ data: allPeople, error: peopleError }, { data: departments, error: departmentsError }, { data: annualType, error: annualTypeError }, { data: currentConditions, error: conditionsError }] = await Promise.all([
     supabase.from("employees").select("id, first_name, last_name, department_id, manager_employee_id").eq("organisation_id", employee.organisation_id).eq("employment_status", "active").order("first_name"),
     supabase.from("departments").select("id, name").eq("organisation_id", employee.organisation_id),
     supabase.from("leave_types").select("id").eq("organisation_id", employee.organisation_id).eq("code", "ANNUAL").maybeSingle(),
     supabase.from("employee_current_conditions").select("employee_id, department_id, manager_employee_id").eq("organisation_id", employee.organisation_id),
   ]);
+
+  if (peopleError || departmentsError || annualTypeError || conditionsError) return new Response("Report source data unavailable", { status: 503 });
 
   const conditionMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row]));
   const people = adminScope ? allPeople ?? [] : managerScope ? (allPeople ?? []).filter((person) => {
@@ -42,50 +45,48 @@ export async function GET() {
   const today = dateInTimeZone(new Date(), organisation?.timezone ?? "UTC");
   const yearStart = `${today.slice(0, 4)}-01-01`;
 
-  const [{ data: balances }, { data: requests }, { data: toilBalances }, remunerationResult, liabilityRateResult] = employeeIds.length
+  const [{ data: balances, error: balancesError }, { data: requests, error: requestsError }, { data: toilBalances, error: toilError }, remunerationResult, liabilityRateResult] = employeeIds.length
     ? await Promise.all([
-        supabase.from("leave_balances").select("employee_id, available_balance").in("employee_id", employeeIds).eq("leave_type_id", annualType?.id ?? "00000000-0000-0000-0000-000000000000"),
+        supabase.from("leave_balances").select("employee_id, entitlement_id, available_balance").in("employee_id", employeeIds).eq("leave_type_id", annualType?.id ?? "00000000-0000-0000-0000-000000000000"),
         supabase.from("leave_requests").select("id, employee_id, quantity, status, start_date").in("employee_id", employeeIds).gte("start_date", yearStart),
         supabase.from("toil_balances").select("employee_id, available_hours").in("employee_id", employeeIds),
-        canViewLiability ? supabase.from("employee_remuneration_history").select("employee_id, gross_amount, pay_frequency, currency_code, effective_from, effective_to").in("employee_id", employeeIds).lte("effective_from", today).order("effective_from", { ascending: false }) : Promise.resolve({ data: [] }),
-        canViewLiability ? supabase.from("employee_leave_liability_rates").select("employee_id, currency_code, base_daily_rate, variable_earnings_total, averaging_weeks, scheduled_days, variable_daily_rate, effective_daily_rate, liability_calculation_method").in("employee_id", employeeIds) : Promise.resolve({ data: [] }),
+        canViewLiability ? supabase.from("employee_remuneration_history").select("employee_id, gross_amount, pay_frequency, currency_code, effective_from, effective_to").in("employee_id", employeeIds).lte("effective_from", today).order("effective_from", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+        canViewLiability ? supabase.from("employee_leave_liability_rates").select("employee_id, currency_code, base_daily_rate, variable_earnings_total, averaging_weeks, scheduled_days, variable_daily_rate, effective_daily_rate, liability_calculation_method").in("employee_id", employeeIds) : Promise.resolve({ data: [], error: null }),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
+    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
 
-  const requestIds = (requests ?? []).map((request) => request.id);
-  const { data: futureRequestDays } = requestIds.length && canViewLiability
-    ? await supabase.from("leave_request_days").select("request_id, leave_date, chargeable_quantity").in("request_id", requestIds).gt("leave_date", today)
-    : { data: [] };
+  if (balancesError || requestsError || toilError || remunerationResult.error || liabilityRateResult.error) return new Response("Report source data unavailable", { status: 503 });
 
   const departmentMap = new Map((departments ?? []).map((department) => [department.id, department.name]));
   const currentDepartmentMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row.department_id]));
   const balanceMap = new Map((balances ?? []).map((row) => [row.employee_id, Number(row.available_balance ?? 0)]));
   const toilMap = new Map((toilBalances ?? []).map((row) => [row.employee_id, Number(row.available_hours ?? 0)]));
-  const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
   const approvedMap = new Map<string, number>();
   const pendingMap = new Map<string, number>();
-  const futureApprovedMap = new Map<string, number>();
 
   for (const request of requests ?? []) {
     if (["approved", "cancellation_requested"].includes(request.status)) approvedMap.set(request.employee_id, (approvedMap.get(request.employee_id) ?? 0) + Number(request.quantity));
     if (request.status === "pending_approval") pendingMap.set(request.employee_id, (pendingMap.get(request.employee_id) ?? 0) + Number(request.quantity));
   }
-  for (const day of futureRequestDays ?? []) {
-    const request = requestMap.get(day.request_id);
-    if (!request || !["approved", "cancellation_requested"].includes(request.status)) continue;
-    futureApprovedMap.set(request.employee_id, (futureApprovedMap.get(request.employee_id) ?? 0) + Number(day.chargeable_quantity ?? 0));
-  }
-
   const remunerationMap = new Map<string, NonNullable<typeof remunerationResult.data>[number]>();
   for (const row of remunerationResult.data ?? []) if (!remunerationMap.has(row.employee_id) && (!row.effective_to || row.effective_to >= today)) remunerationMap.set(row.employee_id, row);
   const liabilityRateMap = new Map((liabilityRateResult.data ?? []).map((row) => [row.employee_id, row]));
+
+  let liabilityDaysMap = new Map<string, number>();
+  if (canViewLiability) {
+    try {
+      liabilityDaysMap = await loadAnnualLeaveLiability(supabase, balances ?? [], annualType?.id, today);
+    } catch {
+      return new Response("Annual leave liability unavailable", { status: 503 });
+    }
+  }
 
   const header = ["Employee", "Department", "Annual Leave Available", "Approved Leave This Year", "Pending Leave", "TOIL Available Hours", ...(canViewLiability ? ["Liability Days", "Remuneration Basis", "Base Daily Rate", "Variable Earnings in Averaging Window", "Variable Daily Rate", "Effective Daily Rate", "Estimated Leave Liability", "Liability Calculation"] : [])];
   const rows = people.map((person) => {
     const departmentId = currentDepartmentMap.get(person.id) ?? person.department_id;
     const balance = balanceMap.get(person.id) ?? 0;
     const pending = pendingMap.get(person.id) ?? 0;
-    const liabilityDays = Math.max(0, balance + pending + (futureApprovedMap.get(person.id) ?? 0));
+    const liabilityDays = liabilityDaysMap.get(person.id) ?? 0;
     const remuneration = remunerationMap.get(person.id);
     const rate = liabilityRateMap.get(person.id);
     const effectiveRate = rate ? Number(rate.effective_daily_rate ?? 0) : 0;

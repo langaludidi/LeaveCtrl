@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { loadAnnualLeaveLiability } from "@/lib/report-liability";
 
 function days(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
@@ -29,10 +30,10 @@ export default async function ReportsPage() {
   );
 
   const [
-    { data: allEmployees },
-    { data: departments },
-    { data: leaveTypes },
-    { data: currentConditions },
+    { data: allEmployees, error: employeesError },
+    { data: departments, error: departmentsError },
+    { data: leaveTypes, error: leaveTypesError },
+    { data: currentConditions, error: conditionsError },
   ] = await Promise.all([
     supabase
       .from("employees")
@@ -55,6 +56,8 @@ export default async function ReportsPage() {
       .eq("organisation_id", employee.organisation_id),
   ]);
 
+  if (employeesError || departmentsError || leaveTypesError || conditionsError) throw new Error("Reporting sources unavailable");
+
   const conditionByEmployee = new Map(
     (currentConditions ?? []).map((condition) => [condition.employee_id, condition])
   );
@@ -74,16 +77,16 @@ export default async function ReportsPage() {
   const today = businessDate;
 
   const [
-    { data: balances },
-    { data: requests },
-    { data: toilBalances },
+    { data: balances, error: balancesError },
+    { data: requests, error: requestsError },
+    { data: toilBalances, error: toilError },
     remunerationResult,
     liabilityRateResult,
   ] = employeeIds.length
     ? await Promise.all([
         supabase
           .from("leave_balances")
-          .select("employee_id, leave_type_id, available_balance")
+          .select("employee_id, leave_type_id, entitlement_id, available_balance")
           .in("employee_id", employeeIds),
         supabase
           .from("leave_requests")
@@ -101,30 +104,23 @@ export default async function ReportsPage() {
               .in("employee_id", employeeIds)
               .lte("effective_from", today)
               .order("effective_from", { ascending: false })
-          : Promise.resolve({ data: [] }),
+          : Promise.resolve({ data: [], error: null }),
         canViewLiability
           ? supabase
               .from("employee_leave_liability_rates")
               .select("employee_id, currency_code, base_daily_rate, variable_earnings_total, averaging_weeks, scheduled_days, variable_daily_rate, effective_daily_rate, liability_calculation_method")
               .in("employee_id", employeeIds)
-          : Promise.resolve({ data: [] }),
+          : Promise.resolve({ data: [], error: null }),
       ])
     : [
-        { data: [] },
-        { data: [] },
-        { data: [] },
-        { data: [] },
-        { data: [] },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
       ];
 
-  const requestIds = (requests ?? []).map((request) => request.id);
-  const { data: futureRequestDays } = requestIds.length && canViewLiability
-    ? await supabase
-        .from("leave_request_days")
-        .select("request_id, leave_date, chargeable_quantity")
-        .in("request_id", requestIds)
-        .gt("leave_date", today)
-    : { data: [] };
+  if (balancesError || requestsError || toilError || remunerationResult.error || liabilityRateResult.error) throw new Error("Reporting sources unavailable");
 
   const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
   const departmentMap = new Map(
@@ -152,8 +148,6 @@ export default async function ReportsPage() {
   const approvedStatuses = new Set(["approved", "cancellation_requested"]);
   const approvedByEmployee = new Map<string, number>();
   const pendingByEmployee = new Map<string, number>();
-  const requestMap = new Map((requests ?? []).map((request) => [request.id, request]));
-
   for (const request of requests ?? []) {
     if (approvedStatuses.has(request.status)) {
       approvedByEmployee.set(
@@ -167,17 +161,6 @@ export default async function ReportsPage() {
         (pendingByEmployee.get(request.employee_id) ?? 0) + Number(request.quantity)
       );
     }
-  }
-
-  const futureApprovedByEmployee = new Map<string, number>();
-  for (const day of futureRequestDays ?? []) {
-    const request = requestMap.get(day.request_id);
-    if (!request || !approvedStatuses.has(request.status)) continue;
-    futureApprovedByEmployee.set(
-      request.employee_id,
-      (futureApprovedByEmployee.get(request.employee_id) ?? 0) +
-        Number(day.chargeable_quantity ?? 0)
-    );
   }
 
   const remunerationMap = new Map<
@@ -218,18 +201,16 @@ export default async function ReportsPage() {
     ])
   );
 
-  const liabilityDaysMap = new Map<string, number>();
+  const liabilityDaysMap = canViewLiability
+    ? await loadAnnualLeaveLiability(supabase,
+        (balances ?? []).filter((balance) => balance.leave_type_id === annualType?.id),
+        annualType?.id, today)
+    : new Map<string, number>();
   const liabilityAmountMap = new Map<string, number>();
   let totalLiability = 0;
 
   for (const person of scopedEmployees ?? []) {
-    const liabilityDays = Math.max(
-      0,
-      (annualBalanceMap.get(person.id) ?? 0) +
-        (pendingByEmployee.get(person.id) ?? 0) +
-        (futureApprovedByEmployee.get(person.id) ?? 0)
-    );
-    liabilityDaysMap.set(person.id, liabilityDays);
+    const liabilityDays = liabilityDaysMap.get(person.id) ?? 0;
 
     const rate = liabilityRateMap.get(person.id);
     if (rate) {
