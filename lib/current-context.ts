@@ -49,7 +49,7 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
   const accessState = states[0];
 
   if (!accessState.employee_id && options?.requireEmployee !== false) {
-    redirect("/access/membership-incomplete");
+    redirect(isOrganisationSetupOperator(accessState) ? "/setup" : "/access/membership-incomplete");
   }
 
   if (
