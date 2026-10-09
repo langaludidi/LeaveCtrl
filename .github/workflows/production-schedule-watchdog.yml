@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           now="$(date -u +%s)"
-          runs="$(gh api "repos/$REPO/actions/runs?per_page=100" --paginate --jq '.workflow_runs[] | [.name,.status,.conclusion,.created_at,.html_url] | @tsv' | head -n 500)"
+          runs="$(gh api "repos/$REPO/actions/runs?per_page=100" --paginate --jq '.workflow_runs[] | [.name,.status,.conclusion,.created_at,.html_url] | @tsv' )"
           backup="$(printf '%s\n' "$runs" | awk -F '\t' 'tolower($1) ~ /backup/ && $2 == "completed" && $3 == "success" {print; exit}')"
           monitor="$(printf '%s\n' "$runs" | awk -F '\t' '$1 == "Production monitor" && $2 == "completed" && $3 == "success" {print; exit}')"
           backup_age=999999
