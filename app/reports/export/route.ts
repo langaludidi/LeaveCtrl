@@ -1,8 +1,5 @@
-import { dateInTimeZone } from "@/lib/current-context";
-import { createClient } from "@/lib/supabase/server";
-
+import { dateInTimeZone, getCurrentContext } from "@/lib/current-context";
 import { reportCsv, reportReference } from "@/lib/report-export";
-import { getCurrentContext } from "@/lib/current-context";
 
 export async function GET() {
   const { supabase, employee, accessState, roles: membershipRoles } = await getCurrentContext({ requireEmployee: false });
