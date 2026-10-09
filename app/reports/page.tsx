@@ -5,6 +5,7 @@ import { getCurrentContext, roleLabel } from "@/lib/current-context";
 import { reportCatalogue } from "@/lib/report-catalogue";
 import { BrandLogo } from "@/components/BrandLogo";
 import { PrintReportButton } from "@/components/PrintReportButton";
+import { LeaveHistoryTable } from "@/components/LeaveHistoryTable";
 import { reportReference, reportTimestamp } from "@/lib/report-export";
 
 function days(value: number) {
@@ -348,40 +349,19 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      <section className="card data-card" aria-labelledby="leave-history-report-heading">
-        <div className="card-title">
-          <div>
-            <h2 id="leave-history-report-heading">Leave request history — {businessDate.slice(0, 4)}</h2>
-            <p className="card-subtitle">Requests starting this calendar year, within your authorised reporting scope. Approved requests include future bookings and are not necessarily leave already taken.</p>
-          </div>
-          <span className="muted-count">{(requests ?? []).length} requests</span>
-        </div>
-        <div className="table-scroll">
-          <table className="mobile-data-table">
-            <thead>
-              <tr><th>Employee</th><th>Leave type</th><th>Start</th><th>End</th><th>Days requested</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {(requests ?? []).length ? (requests ?? []).slice().sort((a, b) => b.start_date.localeCompare(a.start_date)).map((request) => {
-                const person = scopedEmployees.find((row) => row.id === request.employee_id);
-                const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
-                return (
-                  <tr key={request.id}>
-                    <td data-label="Employee">{person ? `${person.first_name} ${person.last_name}` : "Employee"}</td>
-                    <td data-label="Leave type">{leaveType?.name ?? "Leave"}</td>
-                    <td data-label="Start">{request.start_date}</td>
-                    <td data-label="End">{request.end_date}</td>
-                    <td data-label="Days requested">{days(Number(request.quantity ?? 0))}</td>
-                    <td data-label="Status">{request.status.replaceAll("_", " ")}</td>
-                  </tr>
-                );
-              }) : (
-                <tr><td colSpan={6}>No leave requests in the current reporting period.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <LeaveHistoryTable rows={(requests ?? []).map((request) => {
+        const person = scopedEmployees.find((row) => row.id === request.employee_id);
+        const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
+        return {
+          id: request.id,
+          employee: person ? `${person.first_name} ${person.last_name}` : "Employee",
+          leaveType: leaveType?.name ?? "Leave",
+          startDate: request.start_date,
+          endDate: request.end_date,
+          quantity: Number(request.quantity ?? 0),
+          status: request.status,
+        };
+      })} />
 
       {canViewLiability ? (
         <section className="card liability-summary-card">
