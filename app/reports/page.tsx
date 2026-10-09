@@ -16,9 +16,8 @@ function money(value: number, currency = "ZAR") {
 }
 
 export default async function ReportsPage() {
-  const { supabase, employee, displayName, roles, businessDate } =
-    await getCurrentContext();
-  if (!employee) return null;
+  const { supabase, employee, accessState, displayName, roles, businessDate } =
+    await getCurrentContext({ requireEmployee: false });
 
   const adminScope = roles.some((role) =>
     ["org_admin", "hr_admin", "reporter", "auditor"].includes(role)
@@ -37,22 +36,22 @@ export default async function ReportsPage() {
     supabase
       .from("employees")
       .select("id, first_name, last_name, department_id, employment_status, manager_employee_id")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("employment_status", "active")
       .order("first_name"),
     supabase
       .from("departments")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
     supabase
       .from("leave_types")
       .select("id, code, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", accessState.organisation_id)
       .eq("active", true),
     supabase
       .from("employee_current_conditions")
       .select("employee_id, department_id, manager_employee_id")
-      .eq("organisation_id", employee.organisation_id),
+      .eq("organisation_id", accessState.organisation_id),
   ]);
 
   const conditionByEmployee = new Map(
@@ -63,11 +62,11 @@ export default async function ReportsPage() {
     ? allEmployees ?? []
     : managerScope
       ? (allEmployees ?? []).filter((person) => {
-          if (person.id === employee.id) return true;
+          if (person.id === employee?.id) return true;
           const condition = conditionByEmployee.get(person.id);
-          return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
+          return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
         })
-      : (allEmployees ?? []).filter((person) => person.id === employee.id);
+      : (allEmployees ?? []).filter((person) => person.id === employee?.id);
 
   const employeeIds = scopedEmployees.map((person) => person.id);
   const yearStart = `${businessDate.slice(0, 4)}-01-01`;
