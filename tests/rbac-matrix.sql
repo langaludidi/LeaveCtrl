@@ -378,7 +378,7 @@ set is_active=false
 where user_id='00000000-0000-0000-0000-000000000103';
 set role authenticated;
 select rbac_test.expect_error(
-  $select public.record_organisation_data_export('csv')$,
+  $$select public.record_organisation_data_export('csv')$$,
   'ambiguous_organisation_context'
 );
 reset role;
@@ -390,7 +390,7 @@ values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000104',false);
 set role authenticated;
 select rbac_test.expect_error(
-  $select public.record_organisation_data_export('csv')$,
+  $$select public.record_organisation_data_export('csv')$$,
   'ambiguous_organisation_context'
 );
 reset role;
@@ -399,7 +399,7 @@ reset role;
 select set_config('request.jwt.claim.sub','',false);
 set role authenticated;
 select rbac_test.expect_error(
-  $select public.record_organisation_data_export('csv')$,
+  $$select public.record_organisation_data_export('csv')$$,
   'authentication_required'
 );
 reset role;
