@@ -129,3 +129,88 @@ $function$;
 
 
 -- No change to the function's grant or signature; original migration already governs execution.
+
+-- Allow zero-employee organisations to complete their initial administration setup.
+create or replace function public.complete_organisation_onboarding()
+returns timestamptz
+language plpgsql
+security definer
+set search_path to 'public','private'
+as $function$
+declare
+  v_user_id uuid:=auth.uid();
+  v_org_id uuid;
+  v_completed_at timestamptz;
+begin
+  if v_user_id is null then raise exception 'authentication_required'; end if;
+  if not private.is_verified_email_identity(v_user_id) then
+    raise exception 'email_verification_required';
+  end if;
+
+  select m.organisation_id
+    into v_org_id
+  from public.organisation_memberships m
+  where m.user_id=v_user_id
+    and m.is_active
+    and m.role='org_admin'
+  order by m.created_at
+  limit 1;
+
+  if v_org_id is null then raise exception 'organisation_admin_required'; end if;
+
+  -- A new administrator-only organisation may complete setup with no employees.
+  -- If employees exist, each must have an active schedule assignment.
+  if exists(
+    select 1 from public.employees e
+    where e.organisation_id=v_org_id and e.employment_status='active'
+      and not exists(
+        select 1 from public.employee_schedule_assignments esa
+        where esa.organisation_id=v_org_id and esa.employee_id=e.id
+          and esa.effective_to is null
+      )
+  ) then raise exception 'work_schedule_setup_required'; end if;
+
+  if not exists(
+    select 1
+    from public.leave_policy_versions p
+    join public.leave_types lt on lt.id=p.leave_type_id
+    where p.organisation_id=v_org_id
+      and lt.organisation_id=v_org_id
+      and lt.code='ANNUAL'
+  ) then raise exception 'annual_leave_policy_required'; end if;
+
+  if not exists(
+    select 1 from public.public_holidays ph
+    where ph.organisation_id=v_org_id
+  ) then raise exception 'public_holiday_setup_required'; end if;
+
+  update public.organisations o
+  set onboarding_completed_at=coalesce(o.onboarding_completed_at,now()),
+      updated_at=case
+        when o.onboarding_completed_at is null then now()
+        else o.updated_at
+      end
+  where o.id=v_org_id
+  returning o.onboarding_completed_at into v_completed_at;
+
+  if not exists(
+    select 1 from public.audit_events a
+    where a.organisation_id=v_org_id
+      and a.event_type='organisation.onboarding.completed'
+  ) then
+    insert into public.audit_events(
+      organisation_id,actor_user_id,entity_type,entity_id,event_type,payload
+    ) values(
+      v_org_id,v_user_id,'organisation',v_org_id,
+      'organisation.onboarding.completed',
+      jsonb_build_object(
+        'completed_by',v_user_id,
+        'core_readiness_verified',true
+      )
+    );
+  end if;
+
+  return v_completed_at;
+end;
+$function$;
+
