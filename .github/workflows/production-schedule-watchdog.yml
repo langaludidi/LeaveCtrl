@@ -1,0 +1,101 @@
+name: Production schedule watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Independent of the application monitor and database backup schedules.
+    - cron: "13,43 * * * *"
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-schedule-watchdog
+  cancel-in-progress: false
+
+jobs:
+  verify-scheduled-operations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      INCIDENT_TITLE: "[operations] LeaveCtrl scheduled backup or monitoring overdue"
+    steps:
+      - name: Verify recent successful backup and production monitor executions
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          now="$(date -u +%s)"
+          # Query the exact workflow files rather than all repository CI runs.
+          backup_runs="$(gh api "repos/$REPO/actions/workflows/database-backup.yml/runs?per_page=100&status=success")"
+          monitor_runs="$(gh api "repos/$REPO/actions/workflows/production-monitor.yml/runs?per_page=100&status=success")"
+          backup_run_id="$(printf '%s' "$backup_runs" | jq -r '[.workflow_runs[] | select(.conclusion=="success" and .head_branch=="main")] | sort_by(.created_at) | reverse | .[0].id // empty')"
+          backup_time="$(printf '%s' "$backup_runs" | jq -r --argjson id "${backup_run_id:-0}" '[.workflow_runs[] | select(.id==$id)] | .[0].created_at // empty')"
+          monitor_time="$(printf '%s' "$monitor_runs" | jq -r '[.workflow_runs[] | select(.conclusion=="success" and .head_branch=="main")] | sort_by(.created_at) | reverse | .[0].created_at // empty')"
+          backup_age=999999
+          backup_verified=false
+          if [ -n "$backup_run_id" ] && [ -n "$backup_time" ]; then
+            backup_age="$((now - $(date -u -d "$backup_time" +%s)))"
+            artifact_json="$(gh api "repos/$REPO/actions/runs/$backup_run_id/artifacts?per_page=100")"
+            if printf '%s' "$artifact_json" | jq -e --arg run "$backup_run_id" '[.artifacts[] | select(.expired==false and .size_in_bytes>0 and (.name | startswith("leavectrl-db-backup-")) and (.name | endswith($run)) and (.digest | startswith("sha256:")))] | length > 0' >/dev/null; then
+              backup_verified=true
+            fi
+          fi
+          monitor_age=999999
+          if [ -n "$monitor_time" ]; then
+            monitor_age="$((now - $(date -u -d "$monitor_time" +%s)))"
+          fi
+          # A missed backup must not be masked by a successful health check.
+          backup_ok=false
+          monitor_ok=false
+          [ "$backup_age" -le 50400 ] && [ "$backup_verified" = true ] && backup_ok=true
+          [ "$monitor_age" -le 2700 ] && monitor_ok=true
+          echo "backup_ok=$backup_ok" >> "$GITHUB_OUTPUT"
+          echo "backup_artifact_verified=$backup_verified" >> "$GITHUB_OUTPUT"
+          echo "monitor_ok=$monitor_ok" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Production schedule assurance"
+            echo "- Last successful backup age (seconds): $backup_age; threshold: 50400 (12-hour cadence + 2-hour tolerance)"
+            echo "- Last successful monitor age (seconds): $monitor_age; threshold: 2700"
+            echo "- Backup artifact verified: $backup_verified"
+            echo "- Backup healthy: $backup_ok"
+            echo "- Monitor healthy: $monitor_ok"
+            echo "- Check time UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$backup_ok" != true ] || [ "$monitor_ok" != true ]; then
+            echo "::error::Scheduled operations overdue: backup=$backup_ok monitor=$monitor_ok"
+            exit 1
+          fi
+
+      - name: Create or update incident for missed executions
+        if: failure() && steps.verify.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
+          body="Scheduled operations watchdog detected missing or overdue successful executions.
+          - Verified backup within 14 hours: ${{ steps.verify.outputs.backup_ok }}
+          - Production monitor within 45 minutes: ${{ steps.verify.outputs.monitor_ok }}
+          - Watchdog run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          This is a scheduling/recovery assurance incident, even when the application health endpoint is healthy."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$INCIDENT_TITLE" --body "$body"
+          fi
+
+      - name: Close recovered scheduling incident
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          open_issues="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[].number')"
+          for issue in $open_issues; do
+            gh issue comment "$issue" --body "Successful backup and monitoring execution recency are both within their configured limits. Watchdog run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue close "$issue" --reason completed
+          done
