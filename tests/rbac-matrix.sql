@@ -383,15 +383,14 @@ select rbac_test.expect_error(
 );
 reset role;
 
--- Multi-organisation memberships must not be silently assigned to one tenant.
-insert into public.organisation_memberships(organisation_id,user_id,role,is_active)
-values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
-        '00000000-0000-0000-0000-000000000104','employee',true);
+-- The database prevents creation of ambiguous active tenant membership.
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000104',false);
 set role authenticated;
 select rbac_test.expect_error(
-  $$select public.record_organisation_data_export('csv')$$,
-  'ambiguous_organisation_context'
+  $$insert into public.organisation_memberships(organisation_id,user_id,role,is_active)
+    values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
+            '00000000-0000-0000-0000-000000000104','employee',true)$$,
+  'account_already_linked_to_organisation'
 );
 reset role;
 
