@@ -1,42 +1,32 @@
 import { dateInTimeZone } from "@/lib/current-context";
 import { createClient } from "@/lib/supabase/server";
 
-import { safeCsvCell } from "@/lib/csv-export";
-
-const csvCell = safeCsvCell;
+import { reportCsv, reportReference } from "@/lib/report-export";
+import { getCurrentContext } from "@/lib/current-context";
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return new Response("Authentication required", { status: 401 });
-
-  const { data: employee } = await supabase.from("employees").select("id, organisation_id").eq("user_id", user.id).eq("employment_status", "active").maybeSingle();
-  if (!employee) return new Response("Employee profile required", { status: 403 });
-
-  const [{ data: memberships }, { data: organisation }] = await Promise.all([
-    supabase.from("organisation_memberships").select("role").eq("organisation_id", employee.organisation_id).eq("user_id", user.id).eq("is_active", true),
-    supabase.from("organisations").select("timezone").eq("id", employee.organisation_id).maybeSingle(),
-  ]);
-
-  const roles = memberships?.map((membership) => membership.role) ?? [];
+  const { supabase, employee, accessState, roles: membershipRoles } = await getCurrentContext({ requireEmployee: false });
+  const organisationId = accessState.organisation_id;
+  const { data: organisation } = await supabase.from("organisations").select("name, timezone").eq("id", organisationId).maybeSingle();
+  const roles = membershipRoles;
   const adminScope = roles.some((role) => ["org_admin", "hr_admin", "reporter", "auditor"].includes(role));
   const managerScope = roles.includes("manager") && !adminScope;
   const canViewLiability = roles.some((role) => ["org_admin", "hr_admin", "reporter"].includes(role));
   const shouldAuditOrganisationExport = roles.some((role) => ["org_admin", "hr_admin"].includes(role));
 
   const [{ data: allPeople }, { data: departments }, { data: annualType }, { data: currentConditions }] = await Promise.all([
-    supabase.from("employees").select("id, first_name, last_name, department_id, manager_employee_id").eq("organisation_id", employee.organisation_id).eq("employment_status", "active").order("first_name"),
-    supabase.from("departments").select("id, name").eq("organisation_id", employee.organisation_id),
-    supabase.from("leave_types").select("id").eq("organisation_id", employee.organisation_id).eq("code", "ANNUAL").maybeSingle(),
-    supabase.from("employee_current_conditions").select("employee_id, department_id, manager_employee_id").eq("organisation_id", employee.organisation_id),
+    supabase.from("employees").select("id, first_name, last_name, department_id, manager_employee_id").eq("organisation_id", organisationId).eq("employment_status", "active").order("first_name"),
+    supabase.from("departments").select("id, name").eq("organisation_id", organisationId),
+    supabase.from("leave_types").select("id").eq("organisation_id", organisationId).eq("code", "ANNUAL").maybeSingle(),
+    supabase.from("employee_current_conditions").select("employee_id, department_id, manager_employee_id").eq("organisation_id", organisationId),
   ]);
 
   const conditionMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row]));
   const people = adminScope ? allPeople ?? [] : managerScope ? (allPeople ?? []).filter((person) => {
-    if (person.id === employee.id) return true;
+    if (person.id === employee?.id) return true;
     const condition = conditionMap.get(person.id);
-    return (condition?.manager_employee_id ?? person.manager_employee_id) === employee.id;
-  }) : (allPeople ?? []).filter((person) => person.id === employee.id);
+    return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
+  }) : (allPeople ?? []).filter((person) => person.id === employee?.id);
 
   const employeeIds = people.map((person) => person.id);
   const today = dateInTimeZone(new Date(), organisation?.timezone ?? "UTC");
@@ -100,6 +90,18 @@ export async function GET() {
     if (auditError) return new Response("Unable to record export audit event", { status: 500 });
   }
 
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+  const generatedAt = new Date().toISOString();
+  const reference = reportReference(generatedAt, crypto.randomUUID());
+  const csv = reportCsv({
+    reportTitle: "Employee Leave Balance and Liability",
+    organisationName: organisation?.name ?? "Organisation",
+    periodStart: yearStart,
+    periodEnd: today,
+    generatedAt,
+    reference,
+    dataCutoff: today,
+    classification: canViewLiability ? "Confidential" : "Internal",
+    filters: { Scope: adminScope ? "Organisation" : managerScope ? "Team" : "Employee" },
+  }, header, rows);
   return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="leavectrl-report-${today}.csv"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }
