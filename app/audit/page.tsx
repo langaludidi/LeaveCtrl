@@ -39,8 +39,7 @@ export default async function AuditPage({
   searchParams: Promise<{ q?: string; entity?: string }>;
 }) {
   const params = await searchParams;
-  const { supabase, employee, displayName, roles } = await getCurrentContext();
-  if (!employee) return null;
+  const { supabase, employee, accessState, displayName, roles } = await getCurrentContext({ requireEmployee: false });
 
   const canAudit = roles.some((role) =>
     ["org_admin", "hr_admin", "auditor"].includes(role)
@@ -52,7 +51,7 @@ export default async function AuditPage({
     .select(
       "id, actor_user_id, entity_type, entity_id, event_type, payload, created_at"
     )
-    .eq("organisation_id", employee.organisation_id)
+    .eq("organisation_id", accessState.organisation_id)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -85,7 +84,7 @@ export default async function AuditPage({
   ).sort();
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">GOVERNANCE</p>
