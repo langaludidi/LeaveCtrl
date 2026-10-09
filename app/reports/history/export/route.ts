@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     if (organisationError) return new Response("Organisation unavailable", { status: 500 });
     const { data: employees, error: employeesError } = await supabase.from("employees")
       .select("id, first_name, last_name, manager_employee_id, employment_status")
-      .eq("organisation_id", accessState.organisation_id).eq("employment_status", "active");
+      .eq("organisation_id", accessState.organisation_id);
     const { data: conditions, error: conditionsError } = await supabase.from("employee_current_conditions")
       .select("employee_id, manager_employee_id").eq("organisation_id", accessState.organisation_id);
     const { data: leaveTypes, error: typesError } = await supabase.from("leave_types")
@@ -37,10 +37,12 @@ export async function GET(request: Request) {
     const allowedStatuses = ["submitted", "approved", "declined", "withdrawn", "draft", "pending_approval", "cancellation_requested", "cancelled"] as const;
     if (status && !allowedStatuses.some((value) => value === status)) return new Response("Invalid status", { status: 400 });
     const leaveType = params.get("leaveType") ?? "";
+    if (leaveType && !(leaveTypes ?? []).some((type) => type.id === leaveType)) return new Response("Invalid leave type", { status: 400 });
     const employeeName = (params.get("employee") ?? "").trim().toLocaleLowerCase();
+    if (employeeName.length > 120) return new Response("Employee filter too long", { status: 400 });
     const from = params.get("from") || yearStart;
     const to = params.get("to") || yearEnd;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from < yearStart || to > yearEnd || from > to) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || !Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(to)) || from < yearStart || to > yearEnd || from > to) {
       return new Response("Invalid date range", { status: 400 });
     }
     const rows: Array<{employee_id:string;leave_type_id:string;start_date:string;end_date:string;quantity:number;status:string}> = [];
