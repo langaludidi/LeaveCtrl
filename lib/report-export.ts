@@ -1,4 +1,4 @@
-import { safeCsvCell } from "./csv-export";
+import { safeCsvCell } from "./csv-export.ts";
 
 export type ReportExportMetadata = {
   reportTitle: string;
