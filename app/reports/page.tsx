@@ -135,6 +135,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   // Historical reporting includes former employees; current balances and dashboard
   // continue to use active employees only.
+  const { data: historyLeaveTypes, error: historyTypesError } = await supabase.from("leave_types")
+    .select("id, name").eq("organisation_id", accessState.organisation_id);
+  const historyTypeMap = new Map((historyLeaveTypes ?? []).map((type) => [type.id, type.name]));
   const { data: historyEmployees, error: historyEmployeesError } = await supabase
     .from("employees")
     .select("id, first_name, last_name, manager_employee_id")
@@ -388,7 +391,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
-      <p className="card-subtitle">{historyError || historyEmployeesError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. Use the complete-year CSV action for server-side audited export; table filters apply to the displayed page and the full filtered CSV export.`}</p>
+      <p className="card-subtitle">{historyError || historyEmployeesError || historyTypesError ? "History records could not be loaded. Export is unavailable." : `History: page ${historyPage} of ${Math.max(1, Math.ceil((historyTotal ?? 0) / historyPageSize))}, showing ${(historyRequests ?? []).length} of ${historyTotal ?? 0} matching requests. Use the complete-year CSV action for server-side audited export; table filters apply to the displayed page and the full filtered CSV export.`}</p>
       <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
         <label>History reporting year
           <select name="historyYear" defaultValue={String(historyYear)}>
@@ -400,13 +403,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <div className="report-export-actions">
         <Link className="btn secondary" href={`/reports/history/export?year=${historyYear}`}>Export complete year CSV</Link>
       </div>
-      <LeaveHistoryTable exportAllowed={false} exportYear={historyYear} leaveTypeIds={Object.fromEntries((leaveTypes ?? []).map((type) => [type.name, type.id]))} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
+      <LeaveHistoryTable exportAllowed={false} exportYear={historyYear} leaveTypeIds={Object.fromEntries((historyLeaveTypes ?? []).map((type) => [type.name, type.id]))} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
         const person = historyScopedEmployees.find((row) => row.id === request.employee_id);
-        const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
+        const leaveTypeName = historyTypeMap.get(request.leave_type_id);
         return {
           id: request.id,
           employee: person ? `${person.first_name} ${person.last_name}` : "Employee",
-          leaveType: leaveType?.name ?? "Leave",
+          leaveType: leaveTypeName ?? "Leave",
           startDate: request.start_date,
           endDate: request.end_date,
           quantity: Number(request.quantity ?? 0),
