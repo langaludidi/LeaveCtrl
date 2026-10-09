@@ -42,13 +42,14 @@ export default async function ConfirmEmailPage({
             {params.error}
           </div>
         )}
-        {params.message && (
+        {params.message && !verified && (
           <div className="auth-alert success" role="status" aria-live="polite">
             {params.message}
           </div>
         )}
 
-        {!verified && <form action={resendConfirmation} className="auth-recovery-form">
+        {!verified && (
+          <form action={resendConfirmation} className="auth-recovery-form">
           <input type="hidden" name="next" value={next} />
           <div>
             <strong>Send confirmation email again</strong>
@@ -68,7 +69,8 @@ export default async function ConfirmEmailPage({
           <button className="btn secondary" type="submit">
             Send confirmation email again
           </button>
-        </form>}
+          </form>
+        )}
 
         <p className="auth-switch">
           <a href={`/login?mode=signup&next=${encodeURIComponent(next)}`}>
