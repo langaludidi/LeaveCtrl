@@ -46,16 +46,22 @@ export async function GET(request: Request) {
       return new Response("Invalid date range", { status: 400 });
     }
     const rows: Array<{employee_id:string;leave_type_id:string;start_date:string;end_date:string;quantity:number;status:string}> = [];
+    let expectedRows = 0;
     if (ids.length) {
       for (let offset = 0; offset <= MAX_ROWS; offset += PAGE_SIZE) {
         let query = supabase.from("leave_requests")
-          .select("employee_id, leave_type_id, start_date, end_date, quantity, status")
+          .select("employee_id, leave_type_id, start_date, end_date, quantity, status", { count: "exact" })
           .in("employee_id", ids).gte("start_date", from).lte("start_date", to)
           .order("start_date", { ascending: false }).order("id", { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
         if (status) query = query.eq("status", status as typeof allowedStatuses[number]);
         if (leaveType) query = query.eq("leave_type_id", leaveType);
-        const { data, error } = await query;
+        const { data, error, count } = await query;
+        if (offset === 0) {
+          if (count === null) return new Response("Unable to verify export completeness", { status: 500 });
+          expectedRows = count;
+          if (expectedRows > MAX_ROWS) return new Response("Report exceeds 10,000 rows; narrow the filters", { status: 413 });
+        }
         if (error) return new Response("Unable to retrieve full report", { status: 500 });
         if (!data?.length) break;
         rows.push(...data);
@@ -63,6 +69,7 @@ export async function GET(request: Request) {
         if (data.length < PAGE_SIZE) break;
       }
     }
+    if (rows.length !== expectedRows) return new Response("Incomplete export data; retry or narrow the filters", { status: 503 });
     const output = rows.filter((row) => !employeeName || (employeeMap.get(row.employee_id) ?? "").toLocaleLowerCase().includes(employeeName))
       .map((row) => [employeeMap.get(row.employee_id) ?? "Employee", typeMap.get(row.leave_type_id) ?? "Leave", row.start_date, row.end_date, Number(row.quantity ?? 0), row.status]);
     const { error: auditError } = await supabase.rpc("record_organisation_data_export", { p_format: "csv" });
