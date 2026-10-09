@@ -130,15 +130,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         { data: [] },
       ];
 
-  const { data: historyRequests } = employeeIds.length
+  const { data: historyRequests, error: historyError, count: historyTotal } = employeeIds.length
     ? await supabase.from("leave_requests")
-        .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date")
+        .select("id, employee_id, leave_type_id, quantity, status, start_date, end_date", { count: "exact" })
         .in("employee_id", employeeIds)
         .gte("start_date", historyStart)
         .lte("start_date", historyYearEnd)
         .order("start_date", { ascending: false })
         .limit(1000)
-    : { data: [] };
+    : { data: [], error: null, count: 0 };
 
   const requestIds = (requests ?? []).map((request) => request.id);
   const { data: futureRequestDays } = requestIds.length && canViewLiability
@@ -368,7 +368,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
-      <p className="card-subtitle">History results are limited to the most recent 1,000 requests in the selected year. A complete paginated server export is not yet available.</p>
+      <p className="card-subtitle">{historyError ? "History records could not be loaded. Export is unavailable." : `History: ${(historyRequests ?? []).length} of ${historyTotal ?? 0} requests loaded for ${historyYear}. ${historyTotal !== null && historyTotal > 1000 ? "Results are incomplete; export is disabled until full pagination is implemented." : "The selected year is fully loaded within the 1,000-row limit."}`}</p>
       <form action="/reports" method="get" className="report-history-filters" aria-label="History reporting year">
         <label>History reporting year
           <select name="historyYear" defaultValue={String(historyYear)}>
@@ -377,7 +377,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </label>
         <button type="submit" className="btn secondary">Load year</button>
       </form>
-      <LeaveHistoryTable organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
+      <LeaveHistoryTable exportAllowed={!historyError && historyTotal !== null && historyTotal <= 1000} organisationName={reportOrganisation?.name ?? "Organisation"} periodStart={historyStart} periodEnd={historyYearEnd} rows={(historyRequests ?? []).map((request) => {
         const person = scopedEmployees.find((row) => row.id === request.employee_id);
         const leaveType = (leaveTypes ?? []).find((row) => row.id === request.leave_type_id);
         return {
