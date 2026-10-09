@@ -19,11 +19,11 @@ function formatHolidayDate(value: string) {
 
 export default async function SetupPage() {
   const { supabase, employee, displayName, roles, businessDate, accessState } =
-    await getCurrentContext({ allowOrganisationOnboardingIncomplete: true });
-  if (!employee) return null;
+    await getCurrentContext({ requireEmployee: false, allowOrganisationOnboardingIncomplete: true });
 
   const canAdmin = roles.includes("org_admin") || roles.includes("hr_admin");
   if (!canAdmin) redirect("/");
+  const organisationId = accessState.organisation_id;
   const businessYear = Number(businessDate.slice(0, 4));
   const holidayStart = `${businessYear}-01-01`;
   const holidayEnd = `${businessYear + 1}-12-31`;
@@ -43,7 +43,7 @@ export default async function SetupPage() {
     supabase
       .from("public_holidays")
       .select("holiday_date, name, is_observed, is_one_off, source_kind")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .gte("holiday_date", holidayStart)
       .lte("holiday_date", holidayEnd)
       .order("holiday_date", { ascending: true }),
@@ -56,36 +56,36 @@ export default async function SetupPage() {
     supabase
       .from("departments")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("active", true)
       .order("name"),
     supabase
       .from("work_schedules")
       .select("id, name")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .order("name"),
     supabase
       .from("employees")
       .select("id, first_name, last_name, department_id")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("employment_status", "active")
       .order("first_name"),
     supabase
       .from("employee_schedule_assignments")
       .select("employee_id, work_schedule_id, effective_from")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .is("effective_to", null)
       .order("effective_from", { ascending: false }),
     supabase
       .from("leave_types")
       .select("id, name, code, is_statutory")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("active", true)
       .order("name"),
     supabase
       .from("leave_policy_versions")
       .select("leave_type_id, entitlement_method, entitlement_amount, cycle_months, cycle_basis, cycle_anchor_month, cycle_anchor_day, effective_from, effective_to")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .lte("effective_from", businessDate)
       .or(`effective_to.is.null,effective_to.gte.${businessDate}`)
       .order("effective_from", { ascending: false })
@@ -93,12 +93,12 @@ export default async function SetupPage() {
     supabase
       .from("blocked_periods")
       .select("id, name, start_date, end_date, hard_block")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .order("start_date"),
     supabase
       .from("coverage_rules")
       .select("id, name, department_id, minimum_available, severity")
-      .eq("organisation_id", employee.organisation_id)
+      .eq("organisation_id", organisationId)
       .eq("active", true)
       .order("name"),
   ]);
