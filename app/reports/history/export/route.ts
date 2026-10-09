@@ -2,6 +2,7 @@ import { getCurrentContext } from "@/lib/current-context";
 import { reportCsv, reportReference } from "@/lib/report-export";
 
 const PAGE_SIZE = 500;
+const MAX_SCOPED_EMPLOYEES = 5000;
 const MAX_ROWS = 10000;
 
 function isValidIsoDate(value: string): boolean {
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
     const employeeName = (params.get("employee") ?? "").trim().toLocaleLowerCase();
     if (employeeName.length > 120) return new Response("Employee filter too long", { status: 400 });
     const ids = scopedEmployees.filter((person) => !employeeName || `${person.first_name} ${person.last_name}`.toLocaleLowerCase().includes(employeeName)).map((person) => person.id);
+    if (ids.length > MAX_SCOPED_EMPLOYEES) return new Response("Report employee scope too large; contact your administrator", { status: 413 });
     const employeeMap = new Map(scopedEmployees.map((person) => [person.id, `${person.first_name} ${person.last_name}`]));
     const typeMap = new Map((leaveTypes ?? []).map((type) => [type.id, type.name]));
     const status = params.get("status") ?? "";
