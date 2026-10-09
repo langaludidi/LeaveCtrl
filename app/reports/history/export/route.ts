@@ -34,6 +34,8 @@ export async function GET(request: Request) {
     const employeeMap = new Map(scopedEmployees.map((person) => [person.id, `${person.first_name} ${person.last_name}`]));
     const typeMap = new Map((leaveTypes ?? []).map((type) => [type.id, type.name]));
     const status = params.get("status") ?? "";
+    const allowedStatuses = ["submitted", "approved", "declined", "withdrawn", "draft", "pending_approval", "cancellation_requested", "cancelled"] as const;
+    if (status && !allowedStatuses.some((value) => value === status)) return new Response("Invalid status", { status: 400 });
     const leaveType = params.get("leaveType") ?? "";
     const employeeName = (params.get("employee") ?? "").trim().toLocaleLowerCase();
     const from = params.get("from") || yearStart;
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
           .in("employee_id", ids).gte("start_date", from).lte("start_date", to)
           .order("start_date", { ascending: false }).order("id", { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
-        if (status) query = query.eq("status", status);
+        if (status) query = query.eq("status", status as typeof allowedStatuses[number]);
         if (leaveType) query = query.eq("leave_type_id", leaveType);
         const { data, error } = await query;
         if (error) return new Response("Unable to retrieve full report", { status: 500 });
