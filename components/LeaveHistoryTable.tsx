@@ -33,9 +33,10 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
     (row.startDate >= (start || periodStart)) &&
     (row.startDate <= (end || periodEnd))
   ).sort((a, b) => b.startDate.localeCompare(a.startDate)), [rows, status, leaveType, employeeFilter, start, end]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageSize = exportAllowed ? PAGE_SIZE : 100;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const exportParams = new URLSearchParams({ year: String(exportYear ?? Number(periodStart.slice(0, 4))) });
   if (status !== "all") exportParams.set("status", status);
   if (leaveType !== "all" && leaveTypeIds[leaveType]) exportParams.set("leaveType", leaveTypeIds[leaveType]);
@@ -43,6 +44,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   if (start !== periodStart) exportParams.set("from", start);
   if (end !== periodEnd) exportParams.set("to", end);
   const exportUrl = `/reports/history/export?${exportParams.toString()}`;
+  const filteredPageNote = exportAllowed ? `${filtered.length} of ${rows.length} requests` : `${filtered.length} of ${rows.length} requests on this server page`;
   const resetPage = () => setPage(1);
   const downloadFilteredCsv = async () => {
     if (!exportAllowed) return;
@@ -87,7 +89,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
           <h2 id="leave-history-report-heading">Leave request history</h2>
           <p className="card-subtitle">Requests starting in the selected reporting year, within your authorised reporting scope. Approved bookings may be future leave, not leave already taken.</p>
         </div>
-        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span>{exportAllowed ? <button type="button" className="btn secondary" disabled={exporting} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button> : <Link className="btn secondary" href={exportUrl}>Export full filtered CSV</Link>}</div>
+        <div className="report-export-actions"><span className="muted-count">{filteredPageNote}</span>{exportAllowed ? <button type="button" className="btn secondary" disabled={exporting} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button> : <Link className="btn secondary" href={exportUrl}>Export full filtered CSV</Link>}</div>
       </div>
       {exportError && <p role="alert">{exportError}</p>}
       <p className="card-subtitle">Available source data: {periodStart} to {periodEnd}. Dates outside this range are not loaded into this report.</p>
