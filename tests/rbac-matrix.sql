@@ -360,5 +360,58 @@ select (
   \quit 1
 \endif
 
+-- Rejected exports must not produce audit events.
+\echo 'Verifying rejected export attempts cannot create audit events'
+select (
+  (select count(*) from public.audit_events where event_type='organisation.data.exported')=7
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: unexpected export audit count after invalid format'
+  \quit 1
+\endif
+
+-- A valid identity with no active organisation must be denied.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000103',false);
+update public.organisation_memberships
+set is_active=false
+where user_id='00000000-0000-0000-0000-000000000103';
+set role authenticated;
+select rbac_test.expect_error(
+  $select public.record_organisation_data_export('csv')$,
+  'ambiguous_organisation_context'
+);
+reset role;
+
+-- Multi-organisation memberships must not be silently assigned to one tenant.
+insert into public.organisation_memberships(organisation_id,user_id,role,is_active)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
+        '00000000-0000-0000-0000-000000000104','employee',true);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000104',false);
+set role authenticated;
+select rbac_test.expect_error(
+  $select public.record_organisation_data_export('csv')$,
+  'ambiguous_organisation_context'
+);
+reset role;
+
+-- No caller identity is rejected before membership lookup.
+select set_config('request.jwt.claim.sub','',false);
+set role authenticated;
+select rbac_test.expect_error(
+  $select public.record_organisation_data_export('csv')$,
+  'authentication_required'
+);
+reset role;
+
+select (
+  (select count(*) from public.audit_events where event_type='organisation.data.exported')=7
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: denied exports created audit events'
+  \quit 1
+\endif
+
 drop schema rbac_test cascade;
 \echo 'PASS: six-role synthetic RBAC and tenant-isolation matrix'
