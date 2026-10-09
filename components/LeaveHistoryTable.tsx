@@ -20,6 +20,8 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
   const filtered = useMemo(() => rows.filter((row) =>
     (status === "all" || row.status === status) &&
     (!start || row.startDate >= start) &&
@@ -29,7 +31,12 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
   const currentPage = Math.min(page, totalPages);
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const resetPage = () => setPage(1);
-  const downloadFilteredCsv = () => {
+  const downloadFilteredCsv = async () => {
+    setExporting(true);
+    setExportError("");
+    try {
+      const audit = await fetch("/api/reports/export-audit", { method: "POST", credentials: "same-origin", cache: "no-store" });
+      if (!audit.ok) throw new Error("Export authorisation or audit failed");
     const generatedAt = new Date().toISOString();
     const csv = reportCsv({
       reportTitle: "Leave Request History",
@@ -51,6 +58,11 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+    } catch {
+      setExportError("Export could not be authorised or audited. No file was generated.");
+    } finally {
+      setExporting(false);
+    }
   };
 
 
@@ -61,8 +73,9 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
           <h2 id="leave-history-report-heading">Leave request history</h2>
           <p className="card-subtitle">Requests starting in the current calendar year, within your authorised reporting scope. Approved bookings may be future leave, not leave already taken.</p>
         </div>
-        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span><button type="button" className="btn secondary" onClick={downloadFilteredCsv}>Export filtered CSV</button></div>
+        <div className="report-export-actions"><span className="muted-count">{filtered.length} of {rows.length} requests</span><button type="button" className="btn secondary" disabled={exporting} onClick={downloadFilteredCsv}>{exporting ? "Preparing export…" : "Export filtered CSV"}</button></div>
       </div>
+      {exportError && <p role="alert">{exportError}</p>}
       <div className="report-history-filters">
         <label>Status
           <select value={status} onChange={(event) => { setStatus(event.target.value); resetPage(); }}>
