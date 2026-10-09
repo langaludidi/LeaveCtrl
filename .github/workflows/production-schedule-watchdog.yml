@@ -1,0 +1,93 @@
+name: Production schedule watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Independent of the application monitor and database backup schedules.
+    - cron: "13,43 * * * *"
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-schedule-watchdog
+  cancel-in-progress: false
+
+jobs:
+  verify-scheduled-operations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      INCIDENT_TITLE: "[operations] LeaveCtrl scheduled backup or monitoring overdue"
+    steps:
+      - name: Verify recent successful backup and production monitor executions
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          now="$(date -u +%s)"
+          runs="$(gh api "repos/$REPO/actions/runs?per_page=100" --paginate --jq '.workflow_runs[] | [.name,.status,.conclusion,.created_at,.html_url] | @tsv' | head -n 500)"
+          backup="$(printf '%s\n' "$runs" | awk -F '\t' 'tolower($1) ~ /backup/ && $2 == "completed" && $3 == "success" {print; exit}')"
+          monitor="$(printf '%s\n' "$runs" | awk -F '\t' '$1 == "Production monitor" && $2 == "completed" && $3 == "success" {print; exit}')"
+          backup_age=999999
+          monitor_age=999999
+          if [ -n "$backup" ]; then
+            backup_time="$(printf '%s' "$backup" | cut -f4)"
+            backup_age="$((now - $(date -u -d "$backup_time" +%s)))"
+          fi
+          if [ -n "$monitor" ]; then
+            monitor_time="$(printf '%s' "$monitor" | cut -f4)"
+            monitor_age="$((now - $(date -u -d "$monitor_time" +%s)))"
+          fi
+          # A missed backup must not be masked by a successful health check.
+          backup_ok=false
+          monitor_ok=false
+          [ "$backup_age" -le 28800 ] && backup_ok=true
+          [ "$monitor_age" -le 2700 ] && monitor_ok=true
+          echo "backup_ok=$backup_ok" >> "$GITHUB_OUTPUT"
+          echo "monitor_ok=$monitor_ok" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Production schedule assurance"
+            echo "- Last successful backup age (seconds): $backup_age; threshold: 28800"
+            echo "- Last successful monitor age (seconds): $monitor_age; threshold: 2700"
+            echo "- Backup healthy: $backup_ok"
+            echo "- Monitor healthy: $monitor_ok"
+            echo "- Check time UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$backup_ok" != true ] || [ "$monitor_ok" != true ]; then
+            echo "::error::Scheduled operations overdue: backup=$backup_ok monitor=$monitor_ok"
+            exit 1
+          fi
+
+      - name: Create or update incident for missed executions
+        if: failure() && steps.verify.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
+          body="Scheduled operations watchdog detected missing or overdue successful executions.
+          - Backup within 8 hours: ${{ steps.verify.outputs.backup_ok }}
+          - Production monitor within 45 minutes: ${{ steps.verify.outputs.monitor_ok }}
+          - Watchdog run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          This is a scheduling/recovery assurance incident, even when the application health endpoint is healthy."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$INCIDENT_TITLE" --body "$body"
+          fi
+
+      - name: Close recovered scheduling incident
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          open_issues="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[].number')"
+          for issue in $open_issues; do
+            gh issue comment "$issue" --body "Successful backup and monitoring execution recency are both within their configured limits. Watchdog run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue close "$issue" --reason completed
+          done
