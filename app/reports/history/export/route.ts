@@ -30,7 +30,9 @@ export async function GET(request: Request) {
     const managerByEmployee = new Map((conditions ?? []).map((row) => [row.employee_id, row.manager_employee_id]));
     const scopedEmployees = (employees ?? []).filter((person) => adminScope ||
       (managerScope ? person.id === employee?.id || (person.employment_status === "active" && (managerByEmployee.get(person.id) ?? person.manager_employee_id) === employee?.id) : person.id === employee?.id));
-    const ids = scopedEmployees.map((person) => person.id);
+    const employeeName = (params.get("employee") ?? "").trim().toLocaleLowerCase();
+    if (employeeName.length > 120) return new Response("Employee filter too long", { status: 400 });
+    const ids = scopedEmployees.filter((person) => !employeeName || `${person.first_name} ${person.last_name}`.toLocaleLowerCase().includes(employeeName)).map((person) => person.id);
     const employeeMap = new Map(scopedEmployees.map((person) => [person.id, `${person.first_name} ${person.last_name}`]));
     const typeMap = new Map((leaveTypes ?? []).map((type) => [type.id, type.name]));
     const status = params.get("status") ?? "";
@@ -38,8 +40,6 @@ export async function GET(request: Request) {
     if (status && !allowedStatuses.some((value) => value === status)) return new Response("Invalid status", { status: 400 });
     const leaveType = params.get("leaveType") ?? "";
     if (leaveType && !(leaveTypes ?? []).some((type) => type.id === leaveType)) return new Response("Invalid leave type", { status: 400 });
-    const employeeName = (params.get("employee") ?? "").trim().toLocaleLowerCase();
-    if (employeeName.length > 120) return new Response("Employee filter too long", { status: 400 });
     const from = params.get("from") || yearStart;
     const to = params.get("to") || yearEnd;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || !Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(to)) || from < yearStart || to > yearEnd || from > to) {
@@ -77,8 +77,7 @@ export async function GET(request: Request) {
       }
     }
     if (rows.length !== expectedRows) return new Response("Incomplete export data; retry or narrow the filters", { status: 503 });
-    const output = rows.filter((row) => !employeeName || (employeeMap.get(row.employee_id) ?? "").toLocaleLowerCase().includes(employeeName))
-      .map((row) => [employeeMap.get(row.employee_id) ?? "Employee", typeMap.get(row.leave_type_id) ?? "Leave", row.start_date, row.end_date, Number(row.quantity ?? 0), row.status]);
+    const output = rows.map((row) => [employeeMap.get(row.employee_id) ?? "Employee", typeMap.get(row.leave_type_id) ?? "Leave", row.start_date, row.end_date, Number(row.quantity ?? 0), row.status]);
     const { error: auditError } = await supabase.rpc("record_organisation_data_export", { p_format: "csv" });
     if (auditError) return new Response("Unable to record export audit event", { status: 500 });
     const generatedAt = new Date().toISOString();
