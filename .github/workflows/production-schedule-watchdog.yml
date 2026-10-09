@@ -39,12 +39,13 @@ jobs:
             count="$(printf '%s' "$page_json" | jq '.workflow_runs | length')"
             [ "$count" -lt 100 ] && break
           done
+          # Check the precise backup workflow identity; do not count restore tests.
           backup_run_id="$(jq -sr '[.[] | select(.name=="Production database backup" and .conclusion=="success" and .head_branch=="main")] | sort_by(.created_at) | reverse | .[0].id // empty' "$runs_file")"
           backup_time="$(jq -sr --argjson id "${backup_run_id:-0}" '[.[] | select(.id==$id)] | .[0].created_at // empty' "$runs_file")"
           monitor_time="$(jq -sr '[.[] | select(.name=="Production monitor" and .conclusion=="success" and .head_branch=="main")] | sort_by(.created_at) | reverse | .[0].created_at // empty' "$runs_file")"
           backup_age=999999
           backup_verified=false
-          if [ -n "$backup_run_id" ]; then
+          if [ -n "$backup_run_id" ] && [ -n "$backup_time" ]; then
 
             backup_age="$((now - $(date -u -d "$backup_time" +%s)))"
             artifact_json="$(gh api "repos/$REPO/actions/runs/$backup_run_id/artifacts?per_page=100")"
@@ -65,7 +66,7 @@ jobs:
           monitor_ok=false
           [ "$backup_age" -le 50400 ] && [ "$backup_verified" = true ] && backup_ok=true
           [ "$monitor_age" -le 2700 ] && monitor_ok=true
-          echo "backup_ok=$backup_ok" >> "$GITHUB_OUTPUT"
+          echo "backup_ok=$backup_ok" >> "$GITHUB_OUTPUT"\n          echo "backup_artifact_verified=$backup_verified" >> "$GITHUB_OUTPUT"
           echo "monitor_ok=$monitor_ok" >> "$GITHUB_OUTPUT"
           {
             echo "### Production schedule assurance"
@@ -87,7 +88,7 @@ jobs:
           set -euo pipefail
           existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
           body="Scheduled operations watchdog detected missing or overdue successful executions.
-          - Backup within 8 hours: ${{ steps.verify.outputs.backup_ok }}
+          - Verified backup within 14 hours: ${{ steps.verify.outputs.backup_ok }}
           - Production monitor within 45 minutes: ${{ steps.verify.outputs.monitor_ok }}
           - Watchdog run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           - Checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
