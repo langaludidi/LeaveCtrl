@@ -23,7 +23,7 @@ export default function OnboardingPage() {
       p_first_name: String(form.get("firstName") ?? "").trim(),
       p_last_name: String(form.get("lastName") ?? "").trim(),
       p_email: String(form.get("email") ?? "").trim().toLowerCase(),
-      p_start_date: alsoEmployee ? String(form.get("startDate") ?? "") : null,
+      p_start_date: alsoEmployee ? String(form.get("startDate") ?? "") : undefined,
     });
 
     if (rpcError) {
