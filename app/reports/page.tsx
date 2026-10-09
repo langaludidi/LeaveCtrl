@@ -143,6 +143,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     if (adminScope) return true;
     if (person.id === employee?.id) return true;
     if (!managerScope) return false;
+    // Former employees require HR/organisation-level reporting access.
+    if (!(allEmployees ?? []).some((active) => active.id === person.id)) return false;
     const condition = conditionByEmployee.get(person.id);
     return (condition?.manager_employee_id ?? person.manager_employee_id) === employee?.id;
   });
