@@ -2,7 +2,7 @@ import { loadAnnualLeaveLiability } from "@/lib/report-liability";
 import Link from "next/link";
 import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 import { reportCatalogue } from "@/lib/report-catalogue";
 import { BrandLogo } from "@/components/BrandLogo";
 import { PrintReportButton } from "@/components/PrintReportButton";
@@ -291,7 +291,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       : "My leave";
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
+    <AppShell displayName={displayName} roles={roles} hasEmployee={Boolean(employee)}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">LIVE LEDGER REPORTING</p>

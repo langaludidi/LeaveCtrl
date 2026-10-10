@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, ChevronRight, Clock3, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { RoleAccessSummary } from "@/components/RoleAccessSummary";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { StatusPill } from "@/components/StatusPill";
 import { ToilDecisionButtons } from "@/components/ToilRequestActions";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
@@ -105,8 +106,9 @@ export default async function HomePage() {
   const approvalCount = approvals.length + toilApprovals.length;
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} requestCount={approvalCount}>
+    <AppShell displayName={displayName} roles={roles} requestCount={approvalCount}>
       <section className="page-head split"><div><p className="eyebrow">WORKFORCE AVAILABILITY</p><h1>Welcome back, {employee.first_name}</h1><p>Your balances, requests, TOIL and approval work are reading from the governed LeaveCtrl ledgers.</p></div><Link href="/book-leave" className="btn primary"><CalendarDays size={18}/> Book Leave</Link></section>
+      <RoleAccessSummary roles={roles} />
       <section className="summary-grid">
         <SummaryCard href="/my-leave" tone="teal" icon={<CalendarDays size={20}/>} label="Annual Leave Available" value={compactNumber(annualBalance)} unit="days" sub={availableToil > 0 ? `${compactNumber(availableToil)}h TOIL also available` : annual ? "current ledger balance" : "setup required"}/>
         <SummaryCard href="/requests" tone="amber" icon={<Clock3 size={20}/>} label="My Pending Requests" value={String(pendingMine)} unit={pendingMine === 1 ? "request" : "requests"} sub={canApprove && approvalCount ? `${approvalCount} approval item${approvalCount === 1 ? "" : "s"} for you` : "no approval work"}/>

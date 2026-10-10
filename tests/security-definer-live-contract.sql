@@ -9,7 +9,7 @@ select (
   where n.nspname='public'
     and p.prosecdef
     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
-)=45 as ok \gset
+)=48 as ok \gset
 \if :ok
 \else
   \echo 'FAIL: authenticated SECURITY DEFINER surface count changed and requires review'

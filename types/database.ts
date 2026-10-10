@@ -554,6 +554,7 @@ export type Database = {
       }
       employee_invitations: {
         Row: {
+          assigned_roles: Database["public"]["Enums"]["member_role"][]
           accepted_at: string | null
           created_at: string
           created_by: string | null
@@ -573,6 +574,7 @@ export type Database = {
           work_schedule_id: string | null
         }
         Insert: {
+          assigned_roles?: Database["public"]["Enums"]["member_role"][]
           accepted_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -592,6 +594,7 @@ export type Database = {
           work_schedule_id?: string | null
         }
         Update: {
+          assigned_roles?: Database["public"]["Enums"]["member_role"][]
           accepted_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -2466,6 +2469,18 @@ export type Database = {
       }
     }
     Functions: {
+      set_employee_access_roles: {
+        Args: { p_employee_id: string; p_roles: Database["public"]["Enums"]["member_role"][]; p_expected_roles: Database["public"]["Enums"]["member_role"][]; p_reason: string }
+        Returns: Json
+      }
+      get_my_invitation_context: {
+        Args: { p_token: string }
+        Returns: { organisation_name: string; assigned_roles: Database["public"]["Enums"]["member_role"][] }[]
+      }
+      add_employee_with_access_roles: {
+        Args: { p_email: string; p_first_name: string; p_last_name: string; p_start_date: string; p_roles?: Database["public"]["Enums"]["member_role"][]; p_employee_number?: string; p_department_id?: string; p_manager_employee_id?: string; p_work_schedule_id?: string; p_prepare_invitation?: boolean; p_existing_employee_id?: string }
+        Returns: Json
+      }
       add_employee_record: {
         Args: {
           p_department_id?: string

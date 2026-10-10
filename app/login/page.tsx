@@ -48,8 +48,8 @@ export default async function LoginPage({
           <p>
             {signingUp
               ? invitationSignup
-                ? "Create one secure LeaveCtrl identity, verify your email, then continue with the organisation that invited you."
-                : "Set up leave and workforce availability for your organisation. You will verify your email before organisation setup begins."
+                ? "Create one secure LeaveCtrl identity, verify your email, then accept the roles assigned by the organisation that invited you."
+                : "Set up leave and workforce availability for your organisation. You become its Organisation Admin. You can also add yourself as an employee during setup. Joining an existing organisation? Use its invitation link."
               : "Sign in to manage your leave, your team and the work that needs your attention."}
           </p>
         </div>

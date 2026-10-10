@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function WelcomeCompleteButton() {
+export function WelcomeCompleteButton({ destination = { href: "/my-leave", label: "View my leave" } }: { destination?: { href: string; label: string } }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -23,7 +23,7 @@ export function WelcomeCompleteButton() {
       return;
     }
 
-    router.replace("/my-leave");
+    router.replace(destination.href);
     router.refresh();
   }
 
@@ -36,7 +36,7 @@ export function WelcomeCompleteButton() {
         onClick={continueToMyLeave}
         disabled={saving}
       >
-        {saving ? "Opening My Leave…" : <><CheckCircle2 size={17} aria-hidden="true" /> Continue to My Leave</>}
+        {saving ? "Opening your workspace…" : <><CheckCircle2 size={17} aria-hidden="true" /> {destination.label}</>}
       </button>
     </div>
   );

@@ -4,7 +4,7 @@ import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
 import { StatusPill } from "@/components/StatusPill";
 import { ToilDecisionButtons, ToilLifecycleButton } from "@/components/ToilRequestActions";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", {
@@ -133,7 +133,7 @@ export default async function RequestsPage({
   return (
     <AppShell
       displayName={displayName}
-      role={roleLabel(roles)}
+      roles={roles}
       requestCount={approvals.length + toilApprovals.length}
     >
       <section className="page-head">

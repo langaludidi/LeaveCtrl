@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ClipboardList, Search } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat("en-ZA", {
@@ -84,7 +84,7 @@ export default async function AuditPage({
   ).sort();
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
+    <AppShell displayName={displayName} roles={roles} hasEmployee={Boolean(employee)}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">GOVERNANCE</p>

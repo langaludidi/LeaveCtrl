@@ -21,8 +21,8 @@ test("welcome presents useful context rather than a recurring splash", async () 
   assert.match(source, /Work schedule/);
   assert.match(source, /Approval route/);
   assert.match(source, /Your current leave position/);
-  assert.match(source, /returning visits open directly on My Leave/);
-  assert.match(source, /welcome_completed_at[\s\S]*redirect\("\/my-leave"\)/);
+  assert.match(source, /RoleAccessSummary roles=\{roles\}/);
+  assert.match(source, /welcome_completed_at[\s\S]*redirect\(roleLanding\(roles\)\.href\)/);
 });
 
 test("welcome completion is persisted and existing users are backfilled", async () => {
@@ -40,5 +40,5 @@ test("welcome completion is persisted and existing users are backfilled", async 
   assert.match(migration, /complete_employee_welcome/);
   assert.match(backfill, /where user_id is not null/i);
   assert.match(button, /rpc\("complete_employee_welcome"\)/);
-  assert.match(button, /router\.replace\("\/my-leave"\)/);
+  assert.match(button, /router\.replace\(destination\.href\)/);
 });

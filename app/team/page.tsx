@@ -1,15 +1,18 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AddEmployeeForm } from "@/components/AddEmployeeForm";
+import { ExistingEmployeeInvitation } from "@/components/ExistingEmployeeInvitation";
+import { EmployeeRoleManagement } from "@/components/EmployeeRoleManagement";
+import { roleLabels, type AccessRole } from "@/lib/role-access";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
 import { OvertimeControls } from "@/components/OvertimeControls";
 import { EmployeeExitControl } from "@/components/EmployeeExitControl";
 import { EmployeeCsvImport } from "@/components/EmployeeCsvImport";
 import { WorkforceChangeControls } from "@/components/WorkforceChangeControls";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 export default async function TeamPage() {
-  const { supabase, employee, accessState, displayName, roles } =
+  const { supabase, employee, accessState, user, displayName, roles } =
     await getCurrentContext({ requireEmployee: false, allowOrganisationOnboardingIncomplete: true });
 
   const canAdminPeople = roles.includes("org_admin") || roles.includes("hr_admin");
@@ -32,7 +35,7 @@ export default async function TeamPage() {
   ] = await Promise.all([
     supabase
       .from("employees")
-      .select("id, user_id, first_name, last_name, email, employee_number, department_id, manager_employee_id, employment_status")
+      .select("id, user_id, first_name, last_name, email, start_date, employee_number, department_id, manager_employee_id, employment_status")
       .eq("organisation_id", accessState.organisation_id)
       .order("first_name"),
     supabase
@@ -92,18 +95,27 @@ export default async function TeamPage() {
       .eq("organisation_id", accessState.organisation_id),
   ]);
 
-  let activeInvitations: { employee_id: string | null }[] = [];
+  let activeInvitations: { employee_id: string | null; assigned_roles: AccessRole[]; grant_manager_role: boolean }[] = [];
   if (canAdminPeople) {
     const now = new Date().toISOString();
     const { data } = await supabase
       .from("employee_invitations")
-      .select("employee_id")
+      .select("employee_id, assigned_roles, grant_manager_role")
       .eq("organisation_id", accessState.organisation_id)
       .is("accepted_at", null)
       .gt("expires_at", now);
 
     activeInvitations = data ?? [];
   }
+
+  const { data: memberships, error: membershipError } = canAdminPeople
+    ? await supabase.from("organisation_memberships").select("user_id, role").eq("organisation_id", accessState.organisation_id).eq("is_active", true)
+    : { data: [], error: null };
+  const rolesForPerson = (person: { id: string; user_id: string | null }): AccessRole[] => {
+    if (person.user_id) return (memberships ?? []).filter((item) => item.user_id === person.user_id).map((item) => item.role);
+    const invitations = activeInvitations.filter((item) => item.employee_id === person.id);
+    return [...new Set(invitations.flatMap((item) => [...item.assigned_roles, ...(item.grant_manager_role ? ["manager" as const] : [])]))];
+  };
 
   const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
   const annualBalanceMap = new Map(
@@ -178,7 +190,7 @@ export default async function TeamPage() {
   };
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
+    <AppShell displayName={displayName} roles={roles} hasEmployee={Boolean(employee)}>
       <section className="page-head">
         <h1>Team</h1>
         <p>
@@ -187,10 +199,13 @@ export default async function TeamPage() {
         </p>
       </section>
 
+      {canAdminPeople ? <section className="card role-access-summary"><h2>Invite people and assign responsibilities</h2><p>Use Add employee &amp; invite to send access. Use Manager assignment to set reporting lines. Organisation Admins can assign all six access roles.</p><div className="invite-result-actions"><a href="#invite-person" className="btn primary">Add employee &amp; invite</a><a href="#invite-existing" className="btn secondary">Invite existing employee</a>{roles.includes("org_admin") ? <a href="#manage-access" className="btn secondary">Manage roles &amp; access</a> : null}</div></section> : null}
+
       {canAdminPeople ? (
         <>
           <section className="people-admin-grid">
             <AddEmployeeForm
+              canAssignPrivilegedRoles={roles.includes("org_admin")}
               departments={departments ?? []}
               schedules={(schedules ?? []).map((schedule) => ({
                 id: schedule.id,
@@ -203,6 +218,10 @@ export default async function TeamPage() {
             />
             <ManagerAssignment people={assignmentPeople} />
           </section>
+
+          <ExistingEmployeeInvitation privileged={roles.includes("org_admin")} people={activePeople.filter((person) => !person.user_id && !pendingAccess.has(person.id)).map((person) => ({ id: person.id, name: `${person.first_name} ${person.last_name}`, email: person.email, firstName: person.first_name, lastName: person.last_name, startDate: person.start_date }))} />
+
+          {roles.includes("org_admin") ? membershipError ? <p role="alert">Current access could not be loaded. Refresh before editing roles.</p> : <EmployeeRoleManagement people={activePeople.filter((person) => person.user_id !== user.id && rolesForPerson(person).length > 0).map((person) => ({ id: person.id, name: `${person.first_name} ${person.last_name}`, roles: rolesForPerson(person), pending: !person.user_id }))} /> : null}
 
           <EmployeeCsvImport
             departments={departments ?? []}
@@ -324,6 +343,7 @@ export default async function TeamPage() {
                         <span className={`access-pill ${person.employment_status !== "active" ? "neutral" : person.user_id ? "active" : pendingAccess.has(person.id) ? "pending" : "neutral"}`}>
                           {access}
                         </span>
+                        <span className="table-secondary">{roleLabels(rolesForPerson(person)) || "No access roles yet"}</span>
                       </td>
                     ) : null}
                     <td><span className="neutral-pill">{person.employment_status}</span></td>

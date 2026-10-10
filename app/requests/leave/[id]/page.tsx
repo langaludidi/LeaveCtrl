@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
 import { StatusPill } from "@/components/StatusPill";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
@@ -38,7 +38,7 @@ export default async function LeaveRequestReviewPage({ params }: { params: Promi
   const pendingDecision = !isOwner && isDecisionRole && ["pending_approval", "cancellation_requested"].includes(request.status);
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} roles={roles}>
       <section className="page-head split"><div><Link href="/requests" className="back-link"><ArrowLeft size={13}/> Back to requests</Link><p className="eyebrow">REQUEST REVIEW</p><h1>{person ? `${person.first_name} ${person.last_name}` : "Leave request"}</h1><p>{leaveType?.name ?? "Leave"} · {formatDate(request.start_date)}{request.end_date !== request.start_date ? ` – ${formatDate(request.end_date)}` : ""}</p></div><StatusPill status={request.status}/></section>
 
       <section className="review-summary-grid">

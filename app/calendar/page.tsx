@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function dateKey(date: Date) {
   return [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, "0"), String(date.getUTCDate()).padStart(2, "0")].join("-");
@@ -81,7 +81,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       return departmentA.localeCompare(departmentB) || `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
     });
 
-  return <AppShell displayName={displayName} role={roleLabel(roles)}>
+  return <AppShell displayName={displayName} roles={roles}>
     <section className="page-head split"><div><p className="eyebrow">WORKFORCE AVAILABILITY</p><h1>Company Calendar</h1><p>A privacy-aware four-week view of approved absence{canApprove ? ", actionable pending requests" : ""} and public holidays.</p></div>
       <div className="calendar-legend calendar-legend-wrap">
         <span className="calendar-legend-item"><i className="legend-swatch leave-teal"/> Away</span>

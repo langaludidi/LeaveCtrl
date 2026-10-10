@@ -131,11 +131,4 @@ export async function getCurrentContext(options?: CurrentContextOptions) {
   };
 }
 
-export function roleLabel(roles: string[]) {
-  if (roles.includes("org_admin")) return "Organisation Admin";
-  if (roles.includes("hr_admin")) return "HR Admin";
-  if (roles.includes("manager")) return "Manager";
-  if (roles.includes("reporter")) return "Reporter";
-  if (roles.includes("auditor")) return "Auditor";
-  return "Employee";
-}
+export { roleLabels as roleLabel } from "./role-access";

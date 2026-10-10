@@ -783,3 +783,21 @@ textarea:focus-visible{
 @media print{
   .report-history-filters,.report-history-pagination{display:none!important}
 }
+
+.role-access-summary { padding: 24px; margin-bottom: 24px; }
+.role-access-summary > p { margin: 12px 0 20px; }
+.role-access-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
+.role-access-item { border: 1px solid var(--border, #dce3e9); border-radius: 12px; padding: 18px; }
+.role-access-item h3 { margin: 0 0 10px; }
+.role-access-item p { margin: 0 0 16px; line-height: 1.5; }
+.profile-roles { display: block; max-width: 280px; font-size: 12px; line-height: 1.5; color: inherit; white-space: normal; }
+.role-options { border: 1px solid var(--border, #dce3e9); border-radius: 12px; padding: 16px; }
+.role-options legend { font-weight: 600; padding: 0 6px; }
+.role-options .checkbox-row { margin: 12px 0; }
+.role-options small { display: block; }
+
+.access-context { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 12px 16px; margin-bottom: 20px; border: 1px solid var(--border, #dce3e9); border-radius: 10px; background: #fff; font-size: 12px; }
+.access-context > span:first-child { color: var(--muted, #5c6878); }
+.access-context > span:last-child { margin-left: auto; color: var(--teal-800, #14635e); font-weight: 600; }
+.access-context strong { min-width: 0; overflow-wrap: anywhere; }
+.profile-roles:focus-visible, .access-context:focus-visible { outline: 3px solid var(--teal, #169c92); outline-offset: 3px; }

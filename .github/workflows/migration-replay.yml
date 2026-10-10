@@ -5,12 +5,16 @@ on:
   pull_request:
     paths:
       - "supabase/migrations/**"
+      - "tests/rbac-matrix.sql"
+      - "tests/security-definer-live-contract.sql"
       - ".github/workflows/migration-replay.yml"
   push:
     branches:
       - main
     paths:
       - "supabase/migrations/**"
+      - "tests/rbac-matrix.sql"
+      - "tests/security-definer-live-contract.sql"
       - ".github/workflows/migration-replay.yml"
 
 permissions:

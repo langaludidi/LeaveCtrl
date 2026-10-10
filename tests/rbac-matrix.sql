@@ -412,5 +412,72 @@ select (
   \quit 1
 \endif
 
+-- Role discovery and governed role updates run against the complete migrated schema.
+\echo 'Verifying governed invitation and active role assignment'
+reset role;
+do $$
+declare v_uid uuid;
+begin
+  foreach v_uid in array array[
+    '00000000-0000-0000-0000-000000000101'::uuid,
+    '00000000-0000-0000-0000-000000000102'::uuid,
+    '00000000-0000-0000-0000-000000000105'::uuid,
+    '00000000-0000-0000-0000-000000000107'::uuid,
+    '00000000-0000-0000-0000-000000000108'::uuid
+  ] loop
+    perform set_config('request.jwt.claim.sub',v_uid::text,false);
+    perform rbac_test.expect_error(
+      $q$select public.set_employee_access_roles('00000000-0000-0000-0000-000000000304',array['employee','org_admin']::public.member_role[],array['employee']::public.member_role[],'Unauthorised fixture')$q$,
+      'not_authorised');
+  end loop;
+end;
+$$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000105',false);
+select rbac_test.expect_error(
+  $$select public.add_employee_with_access_roles('privileged@example.test','Denied','Person',current_date,array['employee','org_admin']::public.member_role[])$$,
+  'organisation_admin_required');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000106',false);
+select rbac_test.expect_error(
+  $$select public.set_employee_access_roles('00000000-0000-0000-0000-000000000401',array['employee','auditor']::public.member_role[],array['employee']::public.member_role[],'Cross tenant')$$,
+  'not_authorised');
+select rbac_test.expect_error(
+  $$select public.set_employee_access_roles('00000000-0000-0000-0000-000000000306',array['employee']::public.member_role[],array['org_admin']::public.member_role[],'Self edit')$$,
+  'self_role_change_not_allowed');
+select public.set_employee_access_roles('00000000-0000-0000-0000-000000000304',array['employee','reporter','auditor']::public.member_role[],array['employee']::public.member_role[],'Reviewed fixture responsibilities');
+select rbac_test.expect_error(
+  $$select public.set_employee_access_roles('00000000-0000-0000-0000-000000000304',array['employee']::public.member_role[],array['employee']::public.member_role[],'Stale fixture')$$,
+  'roles_changed_refresh_required');
+
+insert into auth.users(id,aud,role,email,email_confirmed_at,confirmation_sent_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
+values('00000000-0000-0000-0000-000000000109','authenticated','authenticated','invited-roles@example.test',now(),now(),'{}','{"role":"org_admin"}',now(),now());
+-- This result contains only a synthetic fixture token in a disposable database.
+create table rbac_test.invitation as select public.add_employee_with_access_roles(
+  'invited-roles@example.test','Role','Fixture',current_date,
+  array['employee','manager','hr_admin','reporter','auditor']::public.member_role[]
+) as result;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000101',false);
+select (select count(*) from public.get_my_invitation_context((select result->>'invitation_token' from rbac_test.invitation)))=0 as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: invitation context disclosed to a different identity'
+  \quit 1
+\endif
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000109',false);
+select public.claim_employee_invitation((select result->>'invitation_token' from rbac_test.invitation));
+select (
+  (select array_agg(role order by role) from public.organisation_memberships where user_id='00000000-0000-0000-0000-000000000109' and is_active)
+    =array['employee','manager','hr_admin','reporter','auditor']::public.member_role[]
+  and not exists(select 1 from public.organisation_memberships where user_id='00000000-0000-0000-0000-000000000109' and role='org_admin')
+  and exists(select 1 from public.audit_events where event_type='employee.access_claimed' and payload->>'role_source'='trusted_invitation')
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: trusted invitation role assignment or caller metadata boundary'
+  \quit 1
+\endif
+select rbac_test.expect_error(
+  format('select public.claim_employee_invitation(%L)',(select result->>'invitation_token' from rbac_test.invitation)),
+  'invitation_invalid_or_expired');
+
 drop schema rbac_test cascade;
 \echo 'PASS: six-role synthetic RBAC and tenant-isolation matrix'
