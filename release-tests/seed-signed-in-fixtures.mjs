@@ -18,7 +18,7 @@ for (const role of [...roles, 'other_tenant']) {
     method:'POST', headers, body:JSON.stringify({email,password}),
   });
   if (!response.ok) throw new Error(`Native signup failed: ${response.status}`);
-  const signup = await response.json();
+  await response.json();
   let message;
   for (let attempt=0; attempt<20; attempt++) {
     const inbox = await (await fetch('http://127.0.0.1:54324/api/v1/messages')).json();
@@ -37,8 +37,8 @@ for (const role of [...roles, 'other_tenant']) {
   });
   if (!login.ok) throw new Error('Confirmed identity cannot sign in');
   const session = await login.json();
-  if (!session.user.email_confirmed_at || !session.user.confirmation_sent_at) throw new Error('Email challenge evidence missing');
-  people.push({role,email,password,userId:signup.user.id,employeeId:randomUUID(),accessToken:session.access_token});
+  if (session.user.email !== email || !session.user.email_confirmed_at || !session.user.confirmation_sent_at) throw new Error('Email challenge evidence missing');
+  people.push({role,email,password,userId:session.user.id,employeeId:randomUUID(),accessToken:session.access_token});
 }
 const sqlString = value => "'"+value.replaceAll("'","''")+"'";
 let sql = `insert into public.organisations(id,name,onboarding_completed_at) values ('${organisation}','Acceptance organisation',now()),('${otherOrganisation}','Other acceptance tenant',now());\n`;
