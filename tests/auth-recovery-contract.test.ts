@@ -33,8 +33,10 @@ test("production email redirects use the single server-side LeaveCtrl URL source
 test("password reset landing page updates the authenticated user's password", async () => {
   const resetPage = await readFile("app/reset-password/page.tsx", "utf8");
 
-  assert.match(resetPage, /auth\.updateUser\(\{ password \}\)/);
-  assert.match(resetPage, /auth\.signOut\(\{ scope: "global" \}\)/);
+  assert.match(resetPage, /updateRecoveryPassword\(form\)/);
+  const actions = await readFile("app/auth/actions.ts", "utf8");
+  assert.match(actions, /auth\.updateUser\(\{ password \}\)/);
+  assert.match(actions, /auth\.signOut\(\{ scope: "global" \}\)/);
   assert.match(resetPage, /Password%20updated/);
 });
 
@@ -91,6 +93,22 @@ test("passwords are treated as opaque secrets rather than trimmed text", async (
   );
   assert.equal(
     (actions.match(/readSecret\(formData, "password"\)/g) ?? []).length,
-    2
+    3
   );
+});
+
+
+test("server signup and recovery reject unchecked passwords before auth mutation", async () => {
+  const actions = await readFile("app/auth/actions.ts", "utf8");
+  for (const [start, end, mutation] of [
+    ["export async function signUp", "export async function requestPasswordReset", "supabase.auth.signUp"],
+    ["export async function updateRecoveryPassword", null, "supabase.auth.updateUser"],
+  ]) {
+    const from = actions.indexOf(start!);
+    const body = actions.slice(from, end ? actions.indexOf(end, from) : undefined);
+    assert.ok(body.indexOf("await checkBreachedPassword(password)") < body.indexOf(mutation!));
+    assert.match(body, /if \(!breachCheck.valid\)/);
+  }
+  const reset = await readFile("app/reset-password/page.tsx", "utf8");
+  assert.doesNotMatch(reset, /auth\.updateUser|createClient/);
 });

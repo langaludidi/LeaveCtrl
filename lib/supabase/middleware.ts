@@ -6,11 +6,12 @@ import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 import { loadAccessStates } from "@/lib/access-state";
 import { accessGateRedirect } from "@/lib/access-gate";
 import { safeInternalPath } from "@/lib/safe-internal-path";
+import { bypassesSessionAuthentication } from "@/lib/machine-access";
 
 export async function updateSession(request: NextRequest) {
-  // Only this exact machine endpoint is anonymous; its route verifies the raw
-  // Paystack signature. Other billing APIs still require a verified user.
-  if(request.nextUrl.pathname==="/api/billing/webhook" || request.nextUrl.pathname==="/subscribe") return NextResponse.next({request});
+  // Webhook and cron handlers enforce signatures/secrets rather than browser
+  // sessions. Match exact paths so neighbouring APIs keep their session gate.
+  if (bypassesSessionAuthentication(request.nextUrl.pathname)) return NextResponse.next({request});
   const { url, key } = getSupabasePublicConfig();
 
   let response = NextResponse.next({ request });

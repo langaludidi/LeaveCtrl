@@ -1,8 +1,13 @@
 # LeaveCtrl V1 — Release Checklist
 
 **Status:** Release-candidate hardening  
-**Current engineering estimate:** ~95% complete  
+**Current evidence:** [10 October 2026 assurance record](release-assurance/2026-10-10.md)
 **Rule:** A checked item means evidence exists. It does not mean the entire product is production-signed-off.
+
+The deployment and email-provider entries below retain historical evidence.
+Use the dated assurance record for the current production SHA, canonical app
+domain, backup proof and unresolved release gates. Historical unchecked entries
+are not fresh provider findings.
 
 ## Security and data isolation
 
@@ -121,3 +126,33 @@
 ## Go-live gate
 
 Production sign-off requires the P0 deployment reconciliation gate above, all other unchecked release items, and controlled human UAT to pass without an unresolved P0/P1 issue.
+
+## 9 October 2026 audit-remediation candidate
+
+Branch: `release/audit-fixes-2026-10-09`, based on production/main
+`f61096d46fe862c80c3ed8bad26bcbdcb7de9115`. The items below describe the
+review candidate, not production acceptance. Earlier deployment/email entries
+above are historical and must be reconciled against current provider evidence.
+
+- [x] Annual liability uses only net annual reservations charged to the current entitlement; pending requests and future approved days are independent of reporting-year filters.
+- [x] Screen and CSV use the same liability calculation and reject failed source reads.
+- [x] Liability source reads paginate and bound ID batches; mixed leave types, partial days, cancellation and entitlement/year boundaries have regression protection.
+- [x] Exact backup-cron path reaches its bearer authorization without a browser session; missing/invalid secrets fail closed.
+- [x] Email-verification behavior has direct tests, including accidental auto-confirm rejection.
+- [x] Signup displays all password requirements and links to privacy/terms information. Those links do not represent adoption of the current draft legal pages.
+- [x] README application and authentication callback domains match `app.leavectrl.co.za`.
+- [x] PR #67 reconciled and stacked on onboarding PR #65 (`2b1f2d06b54d565552f6f05e139954436a4e45d3`); combined reporting preserves historical exports, role auditing and optional founder employment. Both remain draft pending review and acceptance.
+- [ ] Confirm current CI and preview result for the exact candidate commit, then approve its release through the existing process.
+- [x] Legal documents approved by the product owner on 9 October 2026. Publication of the approved versions remains to be verified.
+- [x] Free application-level breached-password checks prepared for signup and server-side recovery: padded hash-prefix lookup, no password/hash logging, timeout and provider failures block mutation.
+- [ ] Accept and verify the compensating password control: native Supabase protection remains disabled on Free; direct Auth API requests bypass the application check. The product owner declined a plan upgrade.
+- [ ] Activate an independent freshness checker and notification/heartbeat destination; GitHub incident checks alone cannot detect their own scheduling outage promptly.
+- [ ] Complete signed-in employee, manager and HR/admin UAT: email confirmation/recovery, setup, invitation, submission, approval/cancellation, mixed-type financial reporting and CSV parity.
+- [ ] Verify tenant/role boundaries and representative mobile/keyboard/accessibility journeys against the accepted candidate.
+- [ ] After approved deployment, verify exact release SHA, invalid cron token rejection and a controlled successful encrypted backup/restore check. Do not confuse the successful GitHub logical restore rehearsal with acceptance of the Vercel Blob backup.
+- [ ] Reconcile historical checklist entries with fresh evidence and close all remaining P0/P1 release blockers before sign-off.
+
+Current production evidence from the audit: app health matches the base SHA;
+GitHub logical backup run `37973478336` succeeded on 9 October; logical restore
+rehearsal run `37781164715` succeeded on 8 October. These facts do not certify
+email delivery, authentication recovery or the full release.

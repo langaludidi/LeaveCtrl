@@ -12,6 +12,7 @@ import {
   isPreviewEmailAuthEnabled,
   resolveAppBaseUrl,
 } from "@/lib/app-base-url";
+import { checkBreachedPassword } from "@/lib/breached-password";
 import { validatePassword } from "@/lib/password-policy";
 
 const EMAIL_AUTH_ORIGIN_BLOCKED =
@@ -174,6 +175,11 @@ export async function signUp(formData: FormData) {
     );
   }
 
+  const breachCheck = await checkBreachedPassword(password);
+  if (!breachCheck.valid) {
+    redirect(`/login?mode=signup&error=${encodeURIComponent(breachCheck.message)}&next=${encodeURIComponent(next)}`);
+  }
+
   // A stale or pre-existing browser session must never be allowed to make a
   // failed/new registration appear authenticated as that prior account.
   const supabase = await clearExistingBrowserSession();
@@ -310,4 +316,25 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/** Recovery-session update; the browser cannot skip the application password checks. */
+export async function updateRecoveryPassword(formData: FormData) {
+  const password = readSecret(formData, "password");
+  const confirmation = readSecret(formData, "confirmPassword");
+  const policy = validatePassword(password);
+  if (!policy.valid) return { error: policy.message };
+  if (password !== confirmation) return { error: "The passwords do not match." };
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !hasVerifiedEmailOwnership(user)) {
+    return { error: "Request a new password reset link and try again." };
+  }
+  const breachCheck = await checkBreachedPassword(password);
+  if (!breachCheck.valid) return { error: breachCheck.message };
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: "We could not update your password. Request a new reset link and try again." };
+  const { error: signOutError } = await supabase.auth.signOut({ scope: "global" });
+  if (signOutError) return { error: "Your password changed, but session revocation failed. Sign out and contact support before continuing." };
+  return { error: null };
 }

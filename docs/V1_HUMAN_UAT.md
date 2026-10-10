@@ -6,7 +6,7 @@
 
 Use the authoritative production project:
 
-- Application: `https://www.leavectrl.co.za` (use only after the P0 deployment reconciliation verifies the exact approved commit on this domain)
+- Application: `https://app.leavectrl.co.za` (verify the exact candidate deployment before recording production acceptance)
 - Git branch: `main`
 - Supabase project: LeaveCtrl / Leave Hub
 

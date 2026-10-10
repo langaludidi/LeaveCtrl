@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, ChevronRight, Clock3, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { RoleAccessSummary } from "@/components/RoleAccessSummary";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { StatusPill } from "@/components/StatusPill";
 import { ToilDecisionButtons } from "@/components/ToilRequestActions";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
@@ -105,8 +106,9 @@ export default async function HomePage() {
   const approvalCount = approvals.length + toilApprovals.length;
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} requestCount={approvalCount}>
+    <AppShell displayName={displayName} roles={roles} requestCount={approvalCount}>
       <section className="page-head split"><div><p className="eyebrow">WORKFORCE AVAILABILITY</p><h1>Welcome back, {employee.first_name}</h1><p>Your balances, requests, TOIL and approval work are reading from the governed LeaveCtrl ledgers.</p></div><Link href="/book-leave" className="btn primary"><CalendarDays size={18}/> Book Leave</Link></section>
+      <RoleAccessSummary roles={roles} />
       <section className="summary-grid">
         <SummaryCard href="/my-leave" tone="teal" icon={<CalendarDays size={20}/>} label="Annual Leave Available" value={compactNumber(annualBalance)} unit="days" sub={availableToil > 0 ? `${compactNumber(availableToil)}h TOIL also available` : annual ? "current ledger balance" : "setup required"}/>
         <SummaryCard href="/requests" tone="amber" icon={<Clock3 size={20}/>} label="My Pending Requests" value={String(pendingMine)} unit={pendingMine === 1 ? "request" : "requests"} sub={canApprove && approvalCount ? `${approvalCount} approval item${approvalCount === 1 ? "" : "s"} for you` : "no approval work"}/>
@@ -114,7 +116,7 @@ export default async function HomePage() {
         <SummaryCard href="/requests" tone="red" icon={<AlertTriangle size={20}/>} label="Coverage Alerts" value={String(coverageAlerts)} unit={coverageAlerts === 1 ? "alert" : "alerts"} sub={coverageAlerts ? "minimum-staffing warnings awaiting approval" : "no active staffing warnings"}/>
       </section>
       <section className="two-col">
-        <div className="card data-card"><div className="card-title"><h2>My Leave & TOIL</h2><Link href="/requests">View all</Link></div><div className="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Status</th></tr></thead><tbody>
+        <div className="card data-card"><div className="card-title"><h2>My Leave & TOIL</h2><Link href="/requests">View all</Link></div><div className="table-scroll" tabIndex={0} role="region" aria-label="Leave and availability records"><table><thead><tr><th>Date</th><th>Type</th><th>Duration</th><th>Status</th></tr></thead><tbody>
           {(myRequests ?? []).map((request) => <tr key={`leave:${request.id}`}><td>{formatDate(request.start_date)}{request.end_date !== request.start_date ? ` – ${formatDate(request.end_date)}` : ""}</td><td>{typeMap.get(request.leave_type_id) ?? "Leave"}</td><td>{compactNumber(Number(request.quantity))} {Number(request.quantity) === 1 ? "day" : "days"}</td><td><StatusPill status={request.status}/></td></tr>)}
           {(myToilRequests ?? []).map((request) => <tr key={`toil:${request.id}`}><td>{formatDate(request.leave_date)}</td><td>TOIL</td><td>{compactNumber(Number(request.hours))} hours</td><td><StatusPill status={request.status}/></td></tr>)}
           {!myRequests?.length && !myToilRequests?.length ? <tr><td colSpan={4} className="empty-table-cell">No requests yet. Your first submitted leave or TOIL request will appear here.</td></tr> : null}
@@ -124,7 +126,7 @@ export default async function HomePage() {
           {!combinedApprovals.length ? <div className="empty-work-state"><strong>You&apos;re up to date</strong><span>Actionable leave and TOIL work will remain here until it is resolved.</span></div> : null}
         </div></div> : <div className="card approvals-card"><div className="card-title"><h2>My Work</h2><Link href="/requests">View requests</Link></div><div className="empty-work-state"><strong>No approval responsibilities</strong><span>Your own leave and TOIL requests are tracked in My Leave &amp; TOIL.</span></div></div>}
       </section>
-      <section className="card availability-card"><div className="availability-head"><div><h2>Upcoming approved absence</h2><p>A privacy-aware projection of approved leave and TOIL visible to your role.</p></div><Link href="/calendar" className="btn secondary">Open calendar</Link></div><div className="table-scroll"><table><thead><tr><th>Employee</th><th>Team</th><th>Absence</th><th>Date</th><th>Duration</th></tr></thead><tbody>
+      <section className="card availability-card"><div className="availability-head"><div><h2>Upcoming approved absence</h2><p>A privacy-aware projection of approved leave and TOIL visible to your role.</p></div><Link href="/calendar" className="btn secondary">Open calendar</Link></div><div className="table-scroll" tabIndex={0} role="region" aria-label="Leave and availability records"><table><thead><tr><th>Employee</th><th>Team</th><th>Absence</th><th>Date</th><th>Duration</th></tr></thead><tbody>
         {upcomingAbsences.map((absence) => { const person = employeeMap.get(absence.employeeId); const departmentId = currentDepartmentMap.get(absence.employeeId) ?? person?.department_id ?? null; return <tr key={absence.id}><td>{person ? `${person.first_name} ${person.last_name}` : "Employee"}</td><td>{departmentId ? departmentMap.get(departmentId) ?? "—" : "—"}</td><td>{absence.type}</td><td>{formatDate(absence.start)}{absence.end !== absence.start ? ` – ${formatDate(absence.end)}` : ""}</td><td>{absence.duration}</td></tr>; })}
         {!upcomingAbsences.length ? <tr><td colSpan={5} className="empty-table-cell">No approved upcoming absence is visible yet.</td></tr> : null}
       </tbody></table></div></section>

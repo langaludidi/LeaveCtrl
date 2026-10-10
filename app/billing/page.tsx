@@ -11,7 +11,6 @@ import {
   BillingControls,
   ReconcilePayment,
 } from "@/components/BillingControls";
-import { roleLabel } from "@/lib/current-context";
 import type { SupabaseClient } from "@supabase/supabase-js";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & subscription" };
@@ -67,7 +66,7 @@ export default async function BillingPage({
     return (
       <AppShell
         displayName={user.email ?? "LeaveCtrl User"}
-        role={roleLabel(state.roles)}
+        roles={state.roles}
         hasEmployee={Boolean(state.employee_id)}
       >
         <section className="card billing-choice">
@@ -121,7 +120,7 @@ export default async function BillingPage({
   return (
     <AppShell
       displayName={user.email ?? "LeaveCtrl User"}
-      role={roleLabel(state.roles)}
+      roles={state.roles}
     >
       <header className="page-head">
         <p className="eyebrow">ORGANISATION SUBSCRIPTION</p>
@@ -206,7 +205,7 @@ export default async function BillingPage({
           {paymentError ? (
             <p role="alert">Payment history could not be loaded.</p>
           ) : (
-            <div className="table-scroll billing-payments-scroll">
+            <div className="table-scroll billing-payments-scroll" tabIndex={0} role="region" aria-label="Payment history">
               <table
                 className="mobile-data-table billing-payments-table"
                 aria-label="Verified payments for this organisation"

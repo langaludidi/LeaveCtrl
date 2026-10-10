@@ -35,6 +35,13 @@ export function accessGateRedirect(
 
   const state = states[0];
 
+  if (isPath(pathname, "/access/roles")) return null;
+
+  if (!state.employee_id && isOrganisationSetupOperator(state)) {
+    return ["/setup", "/team", "/billing", "/audit", "/reports"].some((path) => isPath(pathname, path))
+      ? null : "/setup";
+  }
+
   if (!state.employee_id) {
     return isPath(pathname, "/access/membership-incomplete")
       ? null

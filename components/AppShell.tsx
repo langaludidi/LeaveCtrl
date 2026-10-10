@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
+import { RoleBadges } from "@/components/RoleBadges";
+import { roleCapabilities, roleLanding } from "@/lib/role-access";
 import { BillingBanner } from "@/components/BillingBanner";
 
 function initials(name: string) {
@@ -37,13 +39,13 @@ function initials(name: string) {
 export function AppShell({
   children,
   displayName = "LeaveCtrl User",
-  role = "Employee",
+  roles = ["employee"],
   requestCount = 0,
   hasEmployee = true,
 }: {
   children: React.ReactNode;
   displayName?: string;
-  role?: string;
+  roles?: readonly string[];
   requestCount?: number;
   hasEmployee?: boolean;
 }) {
@@ -87,22 +89,19 @@ export function AppShell({
     setMobileNavOpen(false);
   }, [pathname]);
 
-  const canManagePeople = ["Organisation Admin", "HR Admin", "Manager"].includes(role);
-  const canReport = ["Organisation Admin", "HR Admin", "Manager", "Reporter", "Auditor"].includes(role);
-  const canAdmin = ["Organisation Admin", "HR Admin"].includes(role);
-  const canAudit = ["Organisation Admin", "HR Admin", "Auditor"].includes(role);
-
+  const access = roleCapabilities(roles, hasEmployee);
   const nav = [
-    { href: "/", label: "Home", icon: Home, visible: role !== "Employee" && hasEmployee },
-    { href: "/my-leave", label: "My Leave", icon: CalendarDays, visible: hasEmployee },
-    { href: "/book-leave", label: "Book Leave", icon: CalendarPlus, visible: hasEmployee },
-    { href: "/calendar", label: "Calendar", icon: CalendarDays, visible: hasEmployee },
-    { href: "/requests", label: "Requests", icon: FileText, visible: hasEmployee },
-    { href: "/team", label: "Team", icon: Users, visible: canManagePeople && (hasEmployee || canAdmin) },
-    { href: "/reports", label: "Reports", icon: BarChart3, visible: canReport && (hasEmployee || canAdmin) },
-    { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: canAudit },
-    { href: "/setup", label: "Administration", icon: Settings, visible: canAdmin },
-    { href: "/billing", label: "Billing & subscription", icon: CreditCard, visible: role === "Organisation Admin" },
+    { href: "/access/roles", label: "My roles & access", icon: Users, visible: true },
+    { href: "/", label: "Home", icon: Home, visible: access.home },
+    { href: "/my-leave", label: "My Leave", icon: CalendarDays, visible: access.personal },
+    { href: "/book-leave", label: "Book Leave", icon: CalendarPlus, visible: access.personal },
+    { href: "/calendar", label: "Calendar", icon: CalendarDays, visible: access.personal },
+    { href: "/requests", label: roles.some((role) => ["org_admin", "hr_admin", "manager"].includes(role)) ? "Requests & approvals" : "Requests", icon: FileText, visible: access.personal },
+    { href: "/team", label: "Team", icon: Users, visible: access.team },
+    { href: "/reports", label: "Reports", icon: BarChart3, visible: access.reports },
+    { href: "/audit", label: "Audit Log", icon: ClipboardList, visible: access.audit },
+    { href: "/setup", label: "Administration", icon: Settings, visible: access.administration },
+    { href: "/billing", label: "Billing & subscription", icon: CreditCard, visible: access.billing },
   ].filter((item) => item.visible);
 
   async function signOut() {
@@ -115,7 +114,7 @@ export function AppShell({
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
-        <Link href={!hasEmployee ? "/setup" : role === "Employee" ? "/my-leave" : "/"} className="brand" aria-label="LeaveCtrl home">
+        <Link href={roleLanding(roles, hasEmployee).href} className="brand" aria-label="LeaveCtrl home">
           <BrandLogo className="shell-brand-logo" />
         </Link>
 
@@ -177,7 +176,7 @@ export function AppShell({
               <div className="avatar">{initials(displayName)}</div>
               <div>
                 <strong>{displayName}</strong>
-                <span>{role}</span>
+                <Link href="/access/roles" className="profile-roles"><RoleBadges roles={roles} /></Link>
               </div>
             </div>
             <button type="button" onClick={signOut}>
@@ -210,7 +209,7 @@ export function AppShell({
           </div>
 
           <div className="top-actions">
-            {pathname !== "/book-leave" ? (
+            {hasEmployee && pathname !== "/book-leave" ? (
               <Link href="/book-leave" className="topbar-book-link">
                 <CalendarPlus size={16} />
                 Book leave
@@ -235,7 +234,7 @@ export function AppShell({
               <div className="avatar">{initials(displayName)}</div>
               <div>
                 <strong>{displayName}</strong>
-                <span>{role}</span>
+                <Link href="/access/roles" className="profile-roles"><RoleBadges roles={roles} /></Link>
               </div>
             </div>
 
@@ -251,7 +250,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="page-wrap"><BillingBanner />{children}</main>
+        <main className="page-wrap"><Link href="/access/roles" className="access-context"><span>Your roles</span><RoleBadges roles={roles} /><span>View access →</span></Link><BillingBanner />{children}</main>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { loadAnnualLeaveLiability } from "@/lib/report-liability";
 import { dateInTimeZone, getCurrentContext } from "@/lib/current-context";
 import { reportCsv, reportReference } from "@/lib/report-export";
 
@@ -31,7 +32,7 @@ export async function GET() {
 
   const [{ data: balances, error: balancesError }, { data: requests, error: requestsError }, { data: toilBalances, error: toilError }, remunerationResult, liabilityRateResult] = employeeIds.length
     ? await Promise.all([
-        supabase.from("leave_balances").select("employee_id, available_balance").in("employee_id", employeeIds).eq("leave_type_id", annualType?.id ?? "00000000-0000-0000-0000-000000000000"),
+        supabase.from("leave_balances").select("employee_id, entitlement_id, available_balance").in("employee_id", employeeIds).eq("leave_type_id", annualType?.id ?? "00000000-0000-0000-0000-000000000000"),
         supabase.from("leave_requests").select("id, employee_id, quantity, status, start_date").in("employee_id", employeeIds).gte("start_date", yearStart).lte("start_date", today),
         supabase.from("toil_balances").select("employee_id, available_hours").in("employee_id", employeeIds),
         canViewLiability ? supabase.from("employee_remuneration_history").select("employee_id, gross_amount, pay_frequency, currency_code, effective_from, effective_to").in("employee_id", employeeIds).lte("effective_from", today).order("effective_from", { ascending: false }) : Promise.resolve({ data: [] }),
@@ -40,43 +41,25 @@ export async function GET() {
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   if (balancesError || requestsError || toilError || ("error" in remunerationResult && remunerationResult.error) || ("error" in liabilityRateResult && liabilityRateResult.error)) return new Response("Report source data unavailable", { status: 500 });
-  // Liability requires approved leave scheduled after the reporting date, even
-  // when its request starts in a future calendar period.
-  const futureApprovedResult = canViewLiability && employeeIds.length
-    ? await supabase.from("leave_requests")
-        .select("id, employee_id, quantity, status, start_date")
-        .in("employee_id", employeeIds)
-        .gt("start_date", today)
-        .in("status", ["approved", "cancellation_requested"])
-    : { data: [] };
-  if ("error" in futureApprovedResult && futureApprovedResult.error) return new Response("Future approved leave unavailable", { status: 500 });
-  const liabilityRequests = [...(requests ?? []), ...(futureApprovedResult.data ?? [])];
-  const requestIds = liabilityRequests.map((request) => request.id);
-  const futureDaysResult = requestIds.length && canViewLiability
-    ? await supabase.from("leave_request_days").select("request_id, leave_date, chargeable_quantity").in("request_id", requestIds).gt("leave_date", today)
-    : { data: [] };
-
-  const futureRequestDays = futureDaysResult.data;
-  if ("error" in futureDaysResult && futureDaysResult.error) return new Response("Report source data unavailable", { status: 500 });
+  let liabilityDaysMap = new Map<string, number>();
+  if (canViewLiability) {
+    try {
+      liabilityDaysMap = await loadAnnualLeaveLiability(supabase, balances ?? [], annualType?.id, today);
+    } catch {
+      return new Response("Report source data unavailable", { status: 503 });
+    }
+  }
   const departmentMap = new Map((departments ?? []).map((department) => [department.id, department.name]));
   const currentDepartmentMap = new Map((currentConditions ?? []).map((row) => [row.employee_id, row.department_id]));
   const balanceMap = new Map((balances ?? []).map((row) => [row.employee_id, Number(row.available_balance ?? 0)]));
   const toilMap = new Map((toilBalances ?? []).map((row) => [row.employee_id, Number(row.available_hours ?? 0)]));
-  const requestMap = new Map(liabilityRequests.map((request) => [request.id, request]));
   const approvedMap = new Map<string, number>();
   const pendingMap = new Map<string, number>();
-  const futureApprovedMap = new Map<string, number>();
 
   for (const request of requests ?? []) {
     if (["approved", "cancellation_requested"].includes(request.status)) approvedMap.set(request.employee_id, (approvedMap.get(request.employee_id) ?? 0) + Number(request.quantity));
     if (request.status === "pending_approval") pendingMap.set(request.employee_id, (pendingMap.get(request.employee_id) ?? 0) + Number(request.quantity));
   }
-  for (const day of futureRequestDays ?? []) {
-    const request = requestMap.get(day.request_id);
-    if (!request || !["approved", "cancellation_requested"].includes(request.status)) continue;
-    futureApprovedMap.set(request.employee_id, (futureApprovedMap.get(request.employee_id) ?? 0) + Number(day.chargeable_quantity ?? 0));
-  }
-
   const remunerationMap = new Map<string, NonNullable<typeof remunerationResult.data>[number]>();
   for (const row of remunerationResult.data ?? []) if (!remunerationMap.has(row.employee_id) && (!row.effective_to || row.effective_to >= today)) remunerationMap.set(row.employee_id, row);
   const liabilityRateMap = new Map((liabilityRateResult.data ?? []).map((row) => [row.employee_id, row]));
@@ -86,7 +69,7 @@ export async function GET() {
     const departmentId = currentDepartmentMap.get(person.id) ?? person.department_id;
     const balance = balanceMap.get(person.id) ?? 0;
     const pending = pendingMap.get(person.id) ?? 0;
-    const liabilityDays = Math.max(0, balance + pending + (futureApprovedMap.get(person.id) ?? 0));
+    const liabilityDays = liabilityDaysMap.get(person.id) ?? 0;
     const remuneration = remunerationMap.get(person.id);
     const rate = liabilityRateMap.get(person.id);
     const effectiveRate = rate ? Number(rate.effective_daily_rate ?? 0) : 0;

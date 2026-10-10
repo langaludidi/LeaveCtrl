@@ -48,8 +48,8 @@ export default async function LoginPage({
           <p>
             {signingUp
               ? invitationSignup
-                ? "Create one secure LeaveCtrl identity, verify your email, then continue with the organisation that invited you."
-                : "Set up leave and workforce availability for your organisation. You will verify your email before organisation setup begins."
+                ? "Create one secure LeaveCtrl identity, verify your email, then accept the roles assigned by the organisation that invited you."
+                : "Set up leave and workforce availability for your organisation. You become its Organisation Admin. You can also add yourself as an employee during setup. Joining an existing organisation? Use its invitation link."
               : "Sign in to manage your leave, your team and the work that needs your attention."}
           </p>
         </div>
@@ -92,16 +92,26 @@ export default async function LoginPage({
               type="password"
               minLength={signingUp ? 12 : undefined}
               autoComplete={signingUp ? "new-password" : "current-password"}
+              aria-describedby={signingUp ? "signup-password-policy" : undefined}
               required
             />
           </label>
 
           <AuthCaptcha siteKey={captchaSiteKey} label="Sign-in security check" />
 
+          {signingUp && <p id="signup-password-policy" className="auth-captcha-note">
+            Use at least 12 characters, including uppercase and lowercase letters, a number and a symbol.
+          </p>}
+
           <button className="btn primary auth-submit" type="submit">
             {signingUp ? "Create account" : "Sign in"}
           </button>
         </form>
+
+        {signingUp && <p className="auth-switch">
+          Read our <a href="https://leavectrl.co.za/privacy">privacy information</a> and{" "}
+          <a href="https://leavectrl.co.za/terms">terms information</a> before creating an account.
+        </p>}
 
         <p className="auth-switch">
           {signingUp ? "Already have an account?" : "New to LeaveCtrl?"}{" "}

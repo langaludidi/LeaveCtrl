@@ -1,7 +1,8 @@
+import { loadAnnualLeaveLiability } from "@/lib/report-liability";
 import Link from "next/link";
 import { CalendarDays, Coins, Download, FileClock, LockKeyhole, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 import { reportCatalogue } from "@/lib/report-catalogue";
 import { BrandLogo } from "@/components/BrandLogo";
 import { PrintReportButton } from "@/components/PrintReportButton";
@@ -100,7 +101,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     ? await Promise.all([
         supabase
           .from("leave_balances")
-          .select("employee_id, leave_type_id, available_balance")
+          .select("employee_id, entitlement_id, leave_type_id, available_balance")
           .in("employee_id", employeeIds),
         supabase
           .from("leave_requests")
@@ -167,28 +168,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         .range((historyPage - 1) * historyPageSize, historyPage * historyPageSize - 1)
     : { data: [], error: null, count: 0 };
 
-  // Liability requires approved leave scheduled after the reporting date, even
-  // when its request starts in a future calendar period.
-  const futureApprovedResult = canViewLiability && employeeIds.length
-    ? await supabase.from("leave_requests")
-        .select("id, employee_id, quantity, status, start_date")
-        .in("employee_id", employeeIds)
-        .gt("start_date", businessDate)
-        .in("status", ["approved", "cancellation_requested"])
-    : { data: [] };
-  if ("error" in futureApprovedResult && futureApprovedResult.error) throw new Error("Future approved leave unavailable");
-  const liabilityRequests = [...(requests ?? []), ...(futureApprovedResult.data ?? [])];
-  const requestIds = liabilityRequests.map((request) => request.id);
-  const futureDaysResult = requestIds.length && canViewLiability
-    ? await supabase
-        .from("leave_request_days")
-        .select("request_id, leave_date, chargeable_quantity")
-        .in("request_id", requestIds)
-        .gt("leave_date", today)
-    : { data: [] };
-
-  const futureRequestDays = futureDaysResult.data;
-  if ("error" in futureDaysResult && futureDaysResult.error) throw new Error("Reporting request days unavailable");
   if (historyError || historyEmployeesError || historyTypesError) throw new Error("Historical reporting unavailable");
 
   const annualType = (leaveTypes ?? []).find((type) => type.code === "ANNUAL");
@@ -217,7 +196,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const approvedStatuses = new Set(["approved", "cancellation_requested"]);
   const approvedByEmployee = new Map<string, number>();
   const pendingByEmployee = new Map<string, number>();
-  const requestMap = new Map(liabilityRequests.map((request) => [request.id, request]));
 
   for (const request of requests ?? []) {
     if (approvedStatuses.has(request.status)) {
@@ -232,17 +210,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         (pendingByEmployee.get(request.employee_id) ?? 0) + Number(request.quantity)
       );
     }
-  }
-
-  const futureApprovedByEmployee = new Map<string, number>();
-  for (const day of futureRequestDays ?? []) {
-    const request = requestMap.get(day.request_id);
-    if (!request || !approvedStatuses.has(request.status)) continue;
-    futureApprovedByEmployee.set(
-      request.employee_id,
-      (futureApprovedByEmployee.get(request.employee_id) ?? 0) +
-        Number(day.chargeable_quantity ?? 0)
-    );
   }
 
   const remunerationMap = new Map<
@@ -283,18 +250,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     ])
   );
 
-  const liabilityDaysMap = new Map<string, number>();
+  const liabilityDaysMap = canViewLiability
+    ? await loadAnnualLeaveLiability(supabase, (balances ?? []).filter((row) => row.leave_type_id === annualType?.id), annualType?.id, today)
+    : new Map<string, number>();
   const liabilityAmountMap = new Map<string, number>();
   let totalLiability = 0;
 
   for (const person of scopedEmployees ?? []) {
-    const liabilityDays = Math.max(
-      0,
-      (annualBalanceMap.get(person.id) ?? 0) +
-        (pendingByEmployee.get(person.id) ?? 0) +
-        (futureApprovedByEmployee.get(person.id) ?? 0)
-    );
-    liabilityDaysMap.set(person.id, liabilityDays);
+    const liabilityDays = liabilityDaysMap.get(person.id) ?? 0;
 
     const rate = liabilityRateMap.get(person.id);
     if (rate) {
@@ -328,7 +291,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       : "My leave";
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
+    <AppShell displayName={displayName} roles={roles} hasEmployee={Boolean(employee)}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">LIVE LEDGER REPORTING</p>
@@ -387,7 +350,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </div>
           <span className="muted-count">18 reports</span>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Report data">
           <table className="mobile-data-table">
             <thead><tr><th>Report</th><th>Category</th><th>Readiness</th><th>Requirements</th></tr></thead>
             <tbody>
@@ -465,7 +428,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <h2>Leave position by employee</h2>
           <span className="muted-count">{scopeLabel}</span>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Report data">
           <table className="mobile-data-table report-position-table">
             <thead>
               <tr>
@@ -511,7 +474,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </div>
             <span className="verified-pill"><LockKeyhole size={14}/> Confidential</span>
           </div>
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Report data">
             <table className="mobile-data-table liability-mobile-table">
               <thead>
                 <tr>

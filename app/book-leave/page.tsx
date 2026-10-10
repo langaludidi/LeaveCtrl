@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { BookLeaveForm } from "@/components/BookLeaveForm";
 import { ToilRequestForm } from "@/components/ToilRequestForm";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 export default async function BookLeavePage() {
   const { supabase, employee, displayName, roles, businessDate } = await getCurrentContext();
@@ -55,7 +55,7 @@ export default async function BookLeavePage() {
   const availableToilHours = Number(toilBalance?.available_hours ?? 0);
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} roles={roles}>
       <section className="page-head">
         <Link className="back-link" href="/my-leave">← Back to My Leave</Link>
         <h1>Book Leave</h1>

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusPill } from "@/components/StatusPill";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function dateFromKey(value: string) {
   return new Date(`${value}T12:00:00Z`);
@@ -457,7 +457,7 @@ export default async function MyLeavePage() {
   }).format(today);
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} roles={roles}>
       <section className="page-head my-leave-page-head">
         <div>
           <p className="eyebrow">MY LEAVE</p>

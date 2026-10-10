@@ -119,7 +119,7 @@ export function LeaveHistoryTable({ rows, organisationName, periodStart, periodE
         </label>
         <button type="button" className="btn secondary" onClick={() => { setStatus("all"); setLeaveType("all"); setEmployeeFilter(""); setStart(periodStart); setEnd(periodEnd); resetPage(); }}>Clear filters</button>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label="Leave history">
         <table className="mobile-data-table">
           <thead><tr><th>Employee</th><th>Leave type</th><th>Start</th><th>End</th><th>Days requested</th><th>Status</th></tr></thead>
           <tbody>

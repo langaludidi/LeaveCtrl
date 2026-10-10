@@ -27,17 +27,19 @@ npm run dev
 Authoritative repository: `langaludidi/LeaveCtrl`  
 Production branch: `main`  
 Canonical Vercel production project: `leave-ctrl`  
-Canonical customer domain: `https://www.leavectrl.co.za`
+Canonical application domain: `https://app.leavectrl.co.za`
+
+Public website: `https://leavectrl.co.za`
 
 A duplicate Vercel project, `leave-ctrl-2eqn`, remains under controlled P0 reconciliation and must not be treated as an independent production path.
 
-A READY preview or duplicate-project deployment is not production evidence. Production is current only when the exact approved `main` SHA is verified on `www.leavectrl.co.za`.
+A READY preview or duplicate-project deployment is not production evidence. Production is current only when the exact approved `main` SHA is verified on `app.leavectrl.co.za`.
 
 ## Authentication contract
 
 Production authentication email journeys are pinned to:
 
-`https://www.leavectrl.co.za/auth/callback`
+`https://app.leavectrl.co.za/auth/callback`
 
 Ordinary Vercel preview deployments cannot initiate authentication email flows. Preview email authentication can only be enabled deliberately through the dedicated preview-auth flag and must remain on the same preview origin so PKCE state is preserved.
 

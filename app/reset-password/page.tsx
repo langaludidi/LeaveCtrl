@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { updateRecoveryPassword } from "@/app/auth/actions";
 import { validatePassword } from "@/lib/password-policy";
 
 export default function ResetPasswordPage() {
@@ -32,17 +32,19 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-
-    if (updateError) {
-      setError("We could not update your password. Request a new reset link and try again.");
+    try {
+      const result = await updateRecoveryPassword(form);
+      if (result.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
+    } catch {
+      setError("We could not verify your password change. Please try again.");
       setSaving(false);
       return;
     }
 
-    // Revoke refresh sessions across devices after a recovery password change.
-    await supabase.auth.signOut({ scope: "global" });
     router.push("/login?message=Password%20updated.%20Sign%20in%20with%20your%20new%20password.");
     router.refresh();
   }
@@ -58,7 +60,7 @@ export default function ResetPasswordPage() {
           <p>Use a password you do not use elsewhere. After updating it, sign in again.</p>
         </div>
 
-        {error ? <div className="auth-alert error">{error}</div> : null}
+        {error ? <div className="auth-alert error" role="alert">{error}</div> : null}
 
         <form className="auth-form" onSubmit={submit}>
           <label>

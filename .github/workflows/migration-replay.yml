@@ -5,12 +5,18 @@ on:
   pull_request:
     paths:
       - "supabase/migrations/**"
+      - "tests/rbac-matrix.sql"
+      - "tests/security-definer-live-contract.sql"
+      - "tests/release-freshness-database.sql"
       - ".github/workflows/migration-replay.yml"
   push:
     branches:
       - main
     paths:
       - "supabase/migrations/**"
+      - "tests/rbac-matrix.sql"
+      - "tests/security-definer-live-contract.sql"
+      - "tests/release-freshness-database.sql"
       - ".github/workflows/migration-replay.yml"
 
 permissions:
@@ -30,7 +36,7 @@ jobs:
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0
 
       - name: Initialise local Supabase config
         run: supabase init --force
@@ -78,6 +84,12 @@ jobs:
           db_container="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)"
           test -n "$db_container"
           docker exec -i "$db_container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/rbac-matrix.sql
+
+      - name: Verify independent scheduling watchdog boundaries
+        run: |
+          db_container="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)"
+          test -n "$db_container"
+          docker exec -i "$db_container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < tests/release-freshness-database.sql
 
       - name: Stop local stack
         if: always()

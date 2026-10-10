@@ -87,3 +87,15 @@ test("manager remains an employee identity with additive manager capability", ()
 test("completed membership and onboarding permit normal application routing", () => {
   assert.equal(accessGateRedirect("/my-leave", [state()]), null);
 });
+
+test("administrator-only founder can complete setup without gaining employee access", () => {
+  const founder = state({ employee_id: null, roles: ["org_admin"], organisation_onboarding_completed_at: null });
+  assert.equal(accessGateRedirect("/setup", [founder]), null);
+  assert.equal(accessGateRedirect("/team", [founder]), null);
+  assert.equal(accessGateRedirect("/my-leave", [founder]), "/setup");
+});
+test("role explanations are available before welcome or organisation setup", () => {
+  assert.equal(accessGateRedirect("/access/roles", [state({ employee_welcome_completed_at: null })]), null);
+  assert.equal(accessGateRedirect("/access/roles", [state({ organisation_onboarding_completed_at: null })]), null);
+  assert.equal(accessGateRedirect("/access/roles", []), "/access/no-membership");
+});

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { hasVerifiedEmailOwnership } from "@/lib/auth-verification";
 import { loadAccessStates } from "@/lib/access-state";
+import { RoleAccessSummary } from "@/components/RoleAccessSummary";
 import { claimInvitation } from "./actions";
 
 export default async function JoinPage({
@@ -44,17 +45,22 @@ export default async function JoinPage({
     redirect("/");
   }
 
+  const { data: invitation, error: invitationError } = await supabase.rpc("get_my_invitation_context", { p_token: token }).maybeSingle();
+  if (invitationError || !invitation) return <main className="join-page"><section className="join-card"><h1>Invitation unavailable</h1><p>This invitation may have expired or belong to another email address. Sign in with the invited email or ask your administrator for a new link.</p></section></main>;
+
   return (
     <main className="join-page">
       <section className="join-card">
         <div className="auth-brand"><span>Leave</span>Ctrl</div>
         <p className="eyebrow">ORGANISATION INVITATION</p>
-        <h1>Join your organisation</h1>
+        <h1>Join {invitation.organisation_name}</h1>
         <p>
           Your verified LeaveCtrl identity is ready. Accepting this invitation
           will connect you only to the organisation, employee profile and
           capabilities assigned by the invitation.
         </p>
+
+        <RoleAccessSummary roles={invitation.assigned_roles} showActions={false} />
 
         {params.error ? <div className="auth-alert error" role="alert">{params.error}</div> : null}
 

@@ -5,6 +5,9 @@ import { Check, Copy, Mail, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+import { RoleOptions } from "@/components/RoleOptions";
+import { type AccessRole } from "@/lib/role-access";
+
 type AddEmployeeResult = {
   employee_id?: string;
   invitation_token?: string | null;
@@ -16,12 +19,16 @@ export function AddEmployeeForm({
   departments,
   schedules,
   managers,
+  canAssignPrivilegedRoles = false,
 }: {
   departments: Option[];
   schedules: Option[];
   managers: Option[];
+  canAssignPrivilegedRoles?: boolean;
 }) {
   const router = useRouter();
+  const [roles, setRoles] = useState<AccessRole[]>(["employee"]);
+  const [prepareAccess, setPrepareAccess] = useState(true);
   const [link, setLink] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteDelivery, setInviteDelivery] = useState<"sent" | "fallback" | "">("");
@@ -32,6 +39,7 @@ export function AddEmployeeForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError("");
     setNotice("");
@@ -39,7 +47,8 @@ export function AddEmployeeForm({
     setInviteDelivery("");
     setCopied(false);
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     const openingBalance = String(form.get("openingAnnualBalance") ?? "").trim();
     const remuneration = String(form.get("remuneration") ?? "").trim();
@@ -47,7 +56,7 @@ export function AddEmployeeForm({
     const prepareAccess = form.get("prepareAccess") === "on";
     const supabase = createClient();
 
-    const { data, error: rpcError } = await supabase.rpc("add_employee_record", {
+    const { data, error: rpcError } = await supabase.rpc("add_employee_with_access_roles", {
       p_email: email,
       p_first_name: String(form.get("firstName") ?? "").trim(),
       p_last_name: String(form.get("lastName") ?? "").trim(),
@@ -56,7 +65,7 @@ export function AddEmployeeForm({
       p_department_id: String(form.get("department") ?? "") || undefined,
       p_manager_employee_id: String(form.get("manager") ?? "") || undefined,
       p_work_schedule_id: String(form.get("schedule") ?? "") || undefined,
-      p_grant_manager_role: form.get("managerRole") === "on",
+      p_roles: prepareAccess ? roles : ["employee"],
       p_prepare_invitation: prepareAccess,
     });
 
@@ -138,7 +147,8 @@ export function AddEmployeeForm({
     }
 
     setSaving(false);
-    event.currentTarget.reset();
+    formElement.reset();
+    setRoles(["employee"]); setPrepareAccess(true);
     router.refresh();
   }
 
@@ -158,19 +168,19 @@ export function AddEmployeeForm({
   }
 
   return (
-    <section className="card invite-card">
+    <section className="card invite-card" id="invite-person">
       <div className="card-title">
         <div>
-          <h2>Add employee</h2>
+          <h2>Add employee &amp; invite</h2>
           <p className="card-subtitle">
-            Add the person once. LeaveCtrl provisions policy and can send access automatically.
+            Create an employee record, choose their access roles and send an activation invitation.
           </p>
         </div>
         <span className="summary-icon"><UserPlus size={19}/></span>
       </div>
 
-      {error ? <div className="auth-alert error">{error}</div> : null}
-      {notice ? <div className="auth-alert success">{notice}</div> : null}
+      {error ? <div className="auth-alert error" role="alert">{error}</div> : null}
+      {notice ? <div className="auth-alert success" role="status">{notice}</div> : null}
 
       <form onSubmit={submit} className="invite-form">
         <div className="auth-name-row">
@@ -253,23 +263,17 @@ export function AddEmployeeForm({
         </div>
 
         <label className="checkbox-row">
-          <input name="prepareAccess" type="checkbox" defaultChecked />
+          <input name="prepareAccess" type="checkbox" checked={prepareAccess} onChange={(event) => setPrepareAccess(event.target.checked)} />
           <span>
-            <strong>Send system access now</strong>
+            <strong>Send activation invitation now</strong>
             <small>LeaveCtrl will email an activation link. The employee record exists even before activation.</small>
           </span>
         </label>
 
-        <label className="checkbox-row">
-          <input name="managerRole" type="checkbox" />
-          <span>
-            <strong>Grant manager role on activation</strong>
-            <small>Managers can approve only for employees assigned to them.</small>
-          </span>
-        </label>
+        {prepareAccess ? <RoleOptions roles={roles} onChange={setRoles} privileged={canAssignPrivilegedRoles} disabled={saving} /> : <p>Access roles can be assigned after you prepare an invitation. This creates the employee record only.</p>}
 
         <button className="btn primary" type="submit" disabled={saving}>
-          <UserPlus size={17}/>{saving ? "Adding employee…" : "Add employee"}
+          <UserPlus size={17}/>{saving ? "Adding employee…" : prepareAccess ? "Add employee & send invitation" : "Add employee record"}
         </button>
       </form>
 

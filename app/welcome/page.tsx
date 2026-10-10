@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { CalendarDays, Clock3, ShieldCheck, Users } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { WelcomeCompleteButton } from "@/components/WelcomeCompleteButton";
+import { RoleAccessSummary } from "@/components/RoleAccessSummary";
+import { roleLanding } from "@/lib/role-access";
 import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
@@ -19,7 +21,7 @@ function compact(value: number) {
 }
 
 export default async function WelcomePage() {
-  const { supabase, employee, organisation, businessDate } =
+  const { supabase, employee, organisation, businessDate, roles } =
     await getCurrentContext({ allowEmployeeWelcomeIncomplete: true });
   if (!employee || !organisation) return null;
 
@@ -69,7 +71,7 @@ export default async function WelcomePage() {
       .maybeSingle(),
   ]);
 
-  if (welcomeState?.welcome_completed_at) redirect("/my-leave");
+  if (welcomeState?.welcome_completed_at) redirect(roleLanding(roles).href);
 
   const scheduleId = currentCondition?.work_schedule_id ?? null;
   const managerId =
@@ -141,6 +143,8 @@ export default async function WelcomePage() {
           </p>
         </div>
 
+        <RoleAccessSummary roles={roles} showActions={false} />
+
         <div className="welcome-context-grid">
           <section className="welcome-context-card">
             <span className="welcome-context-icon"><ShieldCheck size={18} aria-hidden="true" /></span>
@@ -198,9 +202,9 @@ export default async function WelcomePage() {
         <div className="welcome-finish">
           <div>
             <strong>Simple on the surface. Governed underneath.</strong>
-            <span>After this, returning visits open directly on My Leave.</span>
+            <span>Your roles stay visible under My roles &amp; access.</span>
           </div>
-          <WelcomeCompleteButton />
+          <WelcomeCompleteButton destination={roleLanding(roles)} />
         </div>
       </section>
     </main>

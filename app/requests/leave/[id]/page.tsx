@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
 import { StatusPill } from "@/components/StatusPill";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
@@ -38,7 +38,7 @@ export default async function LeaveRequestReviewPage({ params }: { params: Promi
   const pendingDecision = !isOwner && isDecisionRole && ["pending_approval", "cancellation_requested"].includes(request.status);
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} roles={roles}>
       <section className="page-head split"><div><Link href="/requests" className="back-link"><ArrowLeft size={13}/> Back to requests</Link><p className="eyebrow">REQUEST REVIEW</p><h1>{person ? `${person.first_name} ${person.last_name}` : "Leave request"}</h1><p>{leaveType?.name ?? "Leave"} · {formatDate(request.start_date)}{request.end_date !== request.start_date ? ` – ${formatDate(request.end_date)}` : ""}</p></div><StatusPill status={request.status}/></section>
 
       <section className="review-summary-grid">
@@ -52,7 +52,7 @@ export default async function LeaveRequestReviewPage({ params }: { params: Promi
         <section className="card review-card"><div className="card-title"><div><h2>Request details</h2><p className="card-subtitle">The exact working days and deductions recorded by LeaveCtrl.</p></div><CalendarDays size={18}/></div>
           <div className="review-meta"><div><span>Employee</span><strong>{person ? `${person.first_name} ${person.last_name}` : "Employee"}</strong></div><div><span>Email</span><strong>{person?.email ?? "—"}</strong></div><div><span>Employee no.</span><strong>{person?.employee_number ?? "—"}</strong></div><div><span>Submitted</span><strong>{request.submitted_at ? new Intl.DateTimeFormat("en-ZA",{dateStyle:"medium",timeStyle:"short"}).format(new Date(request.submitted_at)) : "—"}</strong></div></div>
           {request.note ? <div className="request-note"><span>Employee note</span><p>{request.note}</p></div> : null}
-          <div className="table-scroll"><table><thead><tr><th>Date</th><th>Scheduled hours</th><th>Leave charge</th><th>Reason</th></tr></thead><tbody>{(days ?? []).map((day) => <tr key={day.leave_date}><td>{formatDate(day.leave_date)}</td><td>{compact(Number(day.scheduled_hours ?? 0))} h</td><td>{compact(Number(day.chargeable_quantity ?? 0))} d</td><td className="capitalize-cell">{day.exclusion_reason ? day.exclusion_reason.replaceAll("_", " ") : "Working day"}</td></tr>)}</tbody></table></div>
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Leave charge details"><table><thead><tr><th>Date</th><th>Scheduled hours</th><th>Leave charge</th><th>Reason</th></tr></thead><tbody>{(days ?? []).map((day) => <tr key={day.leave_date}><td>{formatDate(day.leave_date)}</td><td>{compact(Number(day.scheduled_hours ?? 0))} h</td><td>{compact(Number(day.chargeable_quantity ?? 0))} d</td><td className="capitalize-cell">{day.exclusion_reason ? day.exclusion_reason.replaceAll("_", " ") : "Working day"}</td></tr>)}</tbody></table></div>
         </section>
         <section className="card review-card"><div className="card-title"><div><h2>Operational checks</h2><p className="card-subtitle">Coverage and availability evidence preserved from submission.</p></div><ShieldCheck size={18}/></div>
           {(warnings ?? []).length ? <div className="review-warning-list">{(warnings ?? []).map((warning,index) => <div key={`${warning.warning_code}:${index}`} className="review-warning"><AlertTriangle size={16}/><div><strong>{warning.warning_code.replaceAll("_", " ")}</strong><span>{warning.message}</span></div></div>)}</div> : null}

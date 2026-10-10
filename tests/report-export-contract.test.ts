@@ -92,7 +92,7 @@ test("balance and liability CSV fail closed for source failures and all role exp
   assert.match(source, /balancesError \|\| requestsError \|\| toilError/);
   assert.match(source, /"error" in remunerationResult/);
   assert.match(source, /"error" in liabilityRateResult/);
-  assert.match(source, /"error" in futureDaysResult/);
+  assert.match(source, /await loadAnnualLeaveLiability\(/);
   assert.match(source, /\.gte\("start_date", yearStart\)\.lte\("start_date", today\)/);
   assert.doesNotMatch(source, /shouldAuditOrganisationExport/);
   assert.match(source, /rpc\("record_organisation_data_export", \{ p_format: "csv" \}\)/);
@@ -125,7 +125,7 @@ test("reports dashboard fails closed rather than presenting partial financial fi
   assert.match(source, /balancesError \|\| requestsError \|\| toilError/);
   assert.match(source, /"error" in remunerationResult/);
   assert.match(source, /"error" in liabilityRateResult/);
-  assert.match(source, /"error" in futureDaysResult/);
+  assert.match(source, /await loadAnnualLeaveLiability\(/);
   assert.match(source, /historyError \|\| historyEmployeesError \|\| historyTypesError/);
 });
 
@@ -135,13 +135,12 @@ test("confidential history downloads disable MIME sniffing and caching", () => {
   assert.match(source, /"Cache-Control": "no-store"/);
 });
 
-test("liability reporting includes future-start approved requests in dashboard and export", () => {
-  for (const path of ["../app/reports/page.tsx", "../app/reports/export/route.ts"]) {
-    const source = readFileSync(new URL(path, import.meta.url), "utf8");
-    assert.match(source, /const futureApprovedResult = canViewLiability/);
-    assert.match(source, /\.gt\("start_date", (businessDate|today)\)/);
-    assert.match(source, /const liabilityRequests = \[\.\.\.\(requests \?\? \[\]\), \.\.\.\(futureApprovedResult\.data \?\? \[\]\)\]/);
-    assert.match(source, /const requestIds = liabilityRequests\.map/);
-    assert.match(source, /new Map\(liabilityRequests\.map/);
+test("dashboard and CSV share entitlement-scoped annual liability independently of activity filters", () => {
+  for (const path of ["app/reports/page.tsx", "app/reports/export/route.ts"]) {
+    const source = readFileSync(path, "utf8");
+    assert.match(source, /await loadAnnualLeaveLiability\(/);
+    assert.match(source, /entitlement_id/);
+    assert.doesNotMatch(source, /futureApprovedResult|futureApprovedMap|futureApprovedByEmployee/);
   }
+  assert.match(readFileSync("app/reports/export/route.ts", "utf8"), /status: 503/);
 });

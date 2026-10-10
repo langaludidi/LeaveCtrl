@@ -1,7 +1,7 @@
 import { Bell } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { NotificationList } from "@/components/NotificationList";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 export default async function NotificationsPage() {
   const { supabase, user, employee, displayName, roles } = await getCurrentContext();
@@ -18,7 +18,7 @@ export default async function NotificationsPage() {
     .limit(80);
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)}>
+    <AppShell displayName={displayName} roles={roles}>
       <section className="page-head split">
         <div>
           <p className="eyebrow">COMMUNICATIONS</p>

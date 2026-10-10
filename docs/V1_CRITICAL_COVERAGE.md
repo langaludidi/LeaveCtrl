@@ -16,6 +16,8 @@ The enforced Node coverage scope is:
 - `lib/csv-export.ts`
 - `lib/employee-csv.ts`
 - `lib/password-policy.ts`
+- `lib/leave-liability.ts`
+- `lib/machine-access.ts`
 - `lib/safe-internal-path.ts`
 
 CI fails unless this scope achieves at least:
@@ -29,3 +31,5 @@ The lower branch threshold recognises defensive error branches while preserving 
 `tests/critical-coverage-scope.test.ts` imports every scoped module so a file cannot silently disappear from the coverage report simply because no test references it.
 
 Any new V1-critical deterministic business/security module must be added to both this document and the CI coverage include list.
+
+Breached-password lookup coverage protects rejection, privacy and fail-closed provider errors; it does not prove Supabase-native enforcement or acceptance testing.

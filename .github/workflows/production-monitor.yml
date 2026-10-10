@@ -13,6 +13,7 @@ on:
       - "app/api/health/route.ts"
 
 permissions:
+  actions: read
   contents: read
   issues: write
 
@@ -108,14 +109,25 @@ jobs:
           fi
           exit 1
 
+      - uses: actions/setup-node@v4
+        if: always()
+        with:
+          node-version: 22
+
+      - name: Verify scheduled monitoring and backup freshness
+        id: freshness
+        if: always()
+        run: node scripts/check-production-freshness.mjs
+
       - name: Open or update incident
-        if: failure() && steps.probe.outcome == 'failure'
+        if: always() && (steps.probe.outcome == 'failure' || steps.freshness.outcome == 'failure')
         shell: bash
         run: |
           set -euo pipefail
           existing="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[0].number // empty')"
-          body="Automated production monitoring detected a sustained failure.
+          body="Automated production monitoring detected a health or operational freshness failure.
 
+          - Workflow/artifact freshness check: ${{ steps.freshness.outcome }}
           - Exact release converged: ${{ steps.probe.outputs.release_ok }}
           - Health endpoint HTTP: ${{ steps.probe.outputs.health_status }}
           - Login HTTP: ${{ steps.probe.outputs.login_status }}
@@ -134,13 +146,13 @@ jobs:
           fi
 
       - name: Close recovered incident
-        if: success()
+        if: success() && steps.freshness.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
           open_issues="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number --jq '.[].number')"
           for issue in $open_issues; do
-            gh issue comment "$issue" --body "Automated production monitoring has recovered. Exact-release convergence (when applicable), health, login and required security-header probes are passing."
+            gh issue comment "$issue" --body "Automated production monitoring and workflow/artifact freshness have recovered. Exact-release convergence (when applicable), health, login and required security-header probes are passing."
             gh issue close "$issue" --reason completed
           done
 

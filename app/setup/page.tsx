@@ -7,7 +7,7 @@ import { OrganisationControls } from "@/components/OrganisationControls";
 import { LeavePolicyControls } from "@/components/LeavePolicyControls";
 import { AvailabilityControls } from "@/components/AvailabilityControls";
 import { OrganisationOnboardingCompleteButton } from "@/components/OrganisationOnboardingCompleteButton";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatHolidayDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", {
@@ -208,7 +208,7 @@ export default async function SetupPage() {
   const readinessComplete = readinessChecks.filter((check) => check.done).length;
 
   return (
-    <AppShell displayName={displayName} role={roleLabel(roles)} hasEmployee={Boolean(employee)}>
+    <AppShell displayName={displayName} roles={roles} hasEmployee={Boolean(employee)}>
       <section className="page-head setup-head">
         {employee ? <Link className="back-link" href="/">← Back to Home</Link> : null}
         <div className="split">

@@ -4,7 +4,7 @@ import { DecisionButtons } from "@/components/DecisionButtons";
 import { RequestLifecycleAction } from "@/components/RequestLifecycleAction";
 import { StatusPill } from "@/components/StatusPill";
 import { ToilDecisionButtons, ToilLifecycleButton } from "@/components/ToilRequestActions";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-ZA", {
@@ -133,7 +133,7 @@ export default async function RequestsPage({
   return (
     <AppShell
       displayName={displayName}
-      role={roleLabel(roles)}
+      roles={roles}
       requestCount={approvals.length + toilApprovals.length}
     >
       <section className="page-head">
@@ -155,7 +155,7 @@ export default async function RequestsPage({
       <section className="two-col">
         <div className="card data-card">
           <div className="card-title"><h2>My requests</h2></div>
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Leave and TOIL requests">
             <table className="mobile-data-table request-history-table">
               <thead>
                 <tr>

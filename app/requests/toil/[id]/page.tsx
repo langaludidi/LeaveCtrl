@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { StatusPill } from "@/components/StatusPill";
 import { ToilDecisionButtons, ToilLifecycleButton } from "@/components/ToilRequestActions";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function formatDate(value: string) { return new Intl.DateTimeFormat("en-ZA", { day:"2-digit", month:"short", year:"numeric" }).format(new Date(`${value}T12:00:00`)); }
 function compact(value: number) { return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, ""); }
@@ -30,7 +30,7 @@ export default async function ToilRequestReviewPage({ params }: { params: Promis
   const isDecisionRole=roles.some(role=>["org_admin","hr_admin","manager"].includes(role));
   const pendingDecision=!isOwner&&isDecisionRole&&["pending_approval","cancellation_requested"].includes(request.status);
 
-  return <AppShell displayName={displayName} role={roleLabel(roles)}>
+  return <AppShell displayName={displayName} roles={roles}>
     <section className="page-head split"><div><Link href="/requests" className="back-link"><ArrowLeft size={13}/> Back to requests</Link><p className="eyebrow">TOIL REVIEW</p><h1>{person?`${person.first_name} ${person.last_name}`:"TOIL request"}</h1><p>Time off in lieu · {formatDate(request.leave_date)}</p></div><StatusPill status={request.status}/></section>
     <section className="review-summary-grid">
       <div className="card review-stat"><span>Requested</span><strong>{compact(Number(request.hours))} <small>hours</small></strong><small>Time off in lieu</small></div>

@@ -166,7 +166,7 @@ jobs:
             echo "- Data restore: PASS"
             echo "- Key row-count reconciliation: PASS"
             echo "- Production writes performed: NONE"
-            echo "- Auth password hashes remain outside this logical-backup scope by design."
+            echo "- The logical dump includes native Auth data, including password hashes; handle recovery files as credentials."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Stop disposable recovery target

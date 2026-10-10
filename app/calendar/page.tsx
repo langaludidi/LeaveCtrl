@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getCurrentContext, roleLabel } from "@/lib/current-context";
+import { getCurrentContext } from "@/lib/current-context";
 
 function dateKey(date: Date) {
   return [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, "0"), String(date.getUTCDate()).padStart(2, "0")].join("-");
@@ -81,7 +81,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       return departmentA.localeCompare(departmentB) || `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
     });
 
-  return <AppShell displayName={displayName} role={roleLabel(roles)}>
+  return <AppShell displayName={displayName} roles={roles}>
     <section className="page-head split"><div><p className="eyebrow">WORKFORCE AVAILABILITY</p><h1>Company Calendar</h1><p>A privacy-aware four-week view of approved absence{canApprove ? ", actionable pending requests" : ""} and public holidays.</p></div>
       <div className="calendar-legend calendar-legend-wrap">
         <span className="calendar-legend-item"><i className="legend-swatch leave-teal"/> Away</span>
@@ -94,7 +94,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
     <section className="card company-calendar-card">
       <div className="calendar-range-title"><div><strong>{formatRangeDate(days[0])} – {formatRangeDate(days[days.length - 1], true)}</strong><span>{visibleEmployees.length} active employees</span></div><div className="calendar-nav"><Link href={`/calendar?start=${previousStart}`} aria-label="Previous four weeks"><ChevronLeft size={16}/></Link><Link href="/calendar" className="today-link">Today</Link><Link href={`/calendar?start=${nextStart}`} aria-label="Next four weeks"><ChevronRight size={16}/></Link></div></div>
-      <div className="company-calendar-scroll"><div className="company-calendar-grid" style={{ gridTemplateColumns: `220px repeat(${days.length}, 42px)` }}>
+      <div className="company-calendar-scroll" tabIndex={0} role="region" aria-label="Workforce calendar"><div className="company-calendar-grid" style={{ gridTemplateColumns: `220px repeat(${days.length}, 42px)` }}>
         <div className="calendar-corner">Employee</div>
         {days.map((day) => { const key = dateKey(day); const holiday = holidayMap.get(key); const weekend = day.getUTCDay() === 0 || day.getUTCDay() === 6; const today = key === businessDate; return <div className={["calendar-day-head", weekend ? "weekend" : "", holiday ? "holiday" : "", today ? "today-column" : ""].filter(Boolean).join(" ")} key={key} title={holiday ?? undefined}><span>{new Intl.DateTimeFormat("en-ZA", { timeZone: "UTC", weekday: "short" }).format(day).slice(0, 2)}</span><strong>{day.getUTCDate()}</strong></div>; })}
         {visibleEmployees.map((person) => { const departmentId = person.department_id; return <div className="calendar-row-fragment" key={person.id}><div className="calendar-person"><strong>{person.first_name} {person.last_name}</strong><span>{departmentId ? departmentMap.get(departmentId) ?? "No department" : "No department"}</span></div>
