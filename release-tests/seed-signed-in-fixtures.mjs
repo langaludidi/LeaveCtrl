@@ -11,7 +11,7 @@ const roles = ['employee','manager','hr_admin','org_admin','reporter','auditor']
 const organisation = randomUUID();
 const otherOrganisation = randomUUID();
 const people = [];
-for (const role of [...roles, 'other_tenant']) {
+for (const role of [...roles, 'other_tenant','founder_admin','founder_employee','invitee']) {
   const email = `${role}-${randomBytes(4).toString('hex')}@example.test`;
   const password = `Release-${randomBytes(24).toString('hex')}!`;
   const response = await fetch(`${url}/auth/v1/signup`, {
@@ -42,7 +42,7 @@ for (const role of [...roles, 'other_tenant']) {
 }
 const sqlString = value => "'"+value.replaceAll("'","''")+"'";
 let sql = `insert into public.organisations(id,name,onboarding_completed_at) values ('${organisation}','Acceptance organisation',now()),('${otherOrganisation}','Other acceptance tenant',now());\n`;
-for (const person of people) {
+for (const person of people.filter(p=>roles.includes(p.role)||p.role==='other_tenant')) {
   const org = person.role==='other_tenant' ? otherOrganisation : organisation;
   const role = person.role==='other_tenant' ? 'employee' : person.role;
   sql += `insert into public.organisation_memberships(organisation_id,user_id,role,is_active) values ('${org}','${person.userId}','${role}',true);\n`;
@@ -58,12 +58,13 @@ async function administer(name, data) {
     body:JSON.stringify(data),
   });
   if (!response.ok) throw new Error(`Fixture configuration ${name} failed: ${await response.text()}`);
-  return response.json();
+  const body = await response.text();
+  return body ? JSON.parse(body) : null;
 }
 const today = new Date().toISOString().slice(0,10);
 const year = today.slice(0,4);
 const schedule = await administer('create_work_schedule',{p_name:'Acceptance weekdays'});
-for (const person of people.filter(p=>p.role!=='other_tenant')) {
+for (const person of people.filter(p=>roles.includes(p.role))) {
   await administer('assign_employee_schedule',{
     p_employee_id:person.employeeId,p_work_schedule_id:schedule,p_effective_from:`${year}-01-01`,
   });
@@ -79,5 +80,15 @@ await administer('set_employee_opening_balance',{
 await administer('assign_employee_manager',{
   p_employee_id:employee.employeeId,p_manager_employee_id:people.find(p=>p.role==='manager').employeeId,
 });
-writeFileSync(process.env.ACCEPTANCE_FIXTURES,JSON.stringify({organisation,otherOrganisation,people:people.filter(p=>p.role!=='other_tenant')}),{mode:0o600});
+const invitee = people.find(p=>p.role==='invitee');
+const invitation = await administer('add_employee_with_access_roles',{
+  p_email:invitee.email,p_first_name:'Invited',p_last_name:'Acceptance',p_start_date:today,
+  p_roles:['employee','reporter','auditor'],p_work_schedule_id:schedule,
+});
+if (!invitation.invitation_token) throw new Error('Native invitation token missing');
+writeFileSync(process.env.ACCEPTANCE_FIXTURES,JSON.stringify({
+  organisation,otherOrganisation,people:people.filter(p=>roles.includes(p.role)),
+  founders:people.filter(p=>p.role.startsWith('founder_')),
+  invitee:{...invitee,employeeId:invitation.employee_id,invitationToken:invitation.invitation_token},
+}),{mode:0o600});
 console.log('PASS: six native email-confirmed identities and isolated tenant fixtures');

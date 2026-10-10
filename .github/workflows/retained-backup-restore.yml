@@ -1,7 +1,8 @@
 name: Retained production backup restore
 on:
   workflow_dispatch:
-  pull_request:
+  push:
+    branches: [main]
     paths:
       - '.github/workflows/retained-backup-restore.yml'
       - 'scripts/backup-copy-fingerprint.py'
@@ -12,8 +13,9 @@ permissions:
   actions: read
 jobs:
   recovery:
-    # Repository-internal PRs only; no production secrets are exposed to fork code.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Logical archives contain production Auth/session data. Only reviewed main
+    # may execute the credential-bearing download and restore steps.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -32,7 +34,7 @@ jobs:
           echo "Retained source run: $run_id" >> "$GITHUB_STEP_SUMMARY"
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0
       - name: Start isolated native Supabase recovery target
         run: |
           mkdir -p "$RUNNER_TEMP/leavectrl-retained-recovery"

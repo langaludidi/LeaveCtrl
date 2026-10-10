@@ -115,3 +115,75 @@ test('employee and manager: book, approve, cancel and restore the ledger balance
     for (const context of contexts) await context.close();
   }
 });
+
+for (const founder of fixtures.founders) {
+  test(`${founder.role}: explicit employment choice and organisation setup`,async ({page,request})=>{
+    test.skip(test.info().project.name!=='chromium-1440');
+    await page.goto('/login');
+    await page.getByLabel('Email address',{exact:true}).fill(founder.email);
+    await page.getByLabel('Password',{exact:true}).fill(founder.password);
+    await page.getByRole('button',{name:'Sign in',exact:true}).click();
+    await expect(page).toHaveURL(/\/access\/no-membership/);
+    await expect(page.locator('h1')).toBeVisible();
+    await page.goto('/onboarding');
+    const employment = page.getByRole('checkbox',{name:'I am also an employee of this organisation'});
+    await expect(employment).not.toBeChecked();
+    await page.getByLabel('Organisation name',{exact:true}).fill(`Native ${founder.role}`);
+    await page.getByLabel('First name',{exact:true}).fill('Founder');
+    await page.getByLabel('Last name',{exact:true}).fill('Acceptance');
+    await page.getByLabel('Verified work email',{exact:true}).fill(founder.email);
+    const isEmployee = founder.role==='founder_employee';
+    if (isEmployee) {
+      await employment.check();
+      await page.getByLabel(/Employment start date/).fill(new Date().toISOString().slice(0,10));
+    }
+    await page.getByRole('button',{name:'Create organisation and continue',exact:true}).click();
+    await expect(page).toHaveURL(/\/setup$/);
+    await expect(page.getByRole('heading',{name:'Set up your organisation',exact:true})).toBeVisible();
+    const headers = {apikey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${founder.accessToken}`};
+    async function accessState() {
+      const response = await request.post(process.env.NEXT_PUBLIC_SUPABASE_URL+'/rest/v1/rpc/get_access_state_v1',{headers,data:{}});
+      expect(response.ok()).toBe(true);
+      return (await response.json())[0];
+    }
+    const before = await accessState();
+    expect(before.roles.sort()).toEqual(isEmployee?['employee','org_admin']:['org_admin']);
+    expect(Boolean(before.employee_id)).toBe(isEmployee);
+    const roster = await request.get(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/employees?select=id&organisation_id=eq.${before.organisation_id}`,{headers});
+    expect(roster.ok()).toBe(true);
+    expect(await roster.json()).toHaveLength(isEmployee?1:0);
+    const entitlements = await request.get(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/leave_entitlements?select=id&organisation_id=eq.${before.organisation_id}`,{headers});
+    expect(entitlements.ok()).toBe(true);
+    const entitlementRows = await entitlements.json();
+    if (isEmployee) expect(entitlementRows.length).toBeGreaterThan(0);
+    else expect(entitlementRows).toEqual([]);
+    await page.getByRole('button',{name:'Complete initial setup',exact:true}).click();
+    await expect.poll(async ()=>(await accessState()).organisation_onboarding_completed_at).toBeTruthy();
+    await expect(page.locator('main .access-context')).toBeVisible();
+    const accessibility = await new AxeBuilder({page}).analyze();
+    expect(accessibility.violations.filter(v=>['critical','serious'].includes(v.impact))).toEqual([]);
+  });
+}
+
+test('invitation: assigned roles are visible before acceptance and retained after welcome',async ({page})=>{
+  test.skip(test.info().project.name!=='chromium-1440');
+  const person = fixtures.invitee;
+  const next = '/join?token='+encodeURIComponent(person.invitationToken);
+  await page.goto('/login?next='+encodeURIComponent(next));
+  await page.getByLabel('Email address',{exact:true}).fill(person.email);
+  await page.getByLabel('Password',{exact:true}).fill(person.password);
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Join Acceptance organisation',exact:true})).toBeVisible();
+  for (const role of ['employee','reporter','auditor']) {
+    await expect(page.locator(`.role-access-summary [data-role="${role}"]`)).toBeVisible();
+  }
+  await page.getByRole('button',{name:'Accept invitation',exact:true}).click();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page.locator('h1')).toBeVisible();
+  for (const role of ['employee','reporter','auditor']) {
+    await expect(page.locator(`.role-access-summary [data-role="${role}"]`)).toBeVisible();
+  }
+  await page.locator('.welcome-continue').click();
+  await expect(page).toHaveURL(/\/audit$/);
+  await expect(page.getByRole('heading',{name:'Audit Log',exact:true})).toBeVisible();
+});

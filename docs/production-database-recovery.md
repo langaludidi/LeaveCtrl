@@ -52,6 +52,16 @@ At least monthly, test one backup against a disposable Supabase/PostgreSQL recov
 
 A backup is not considered proven recoverable until a restore test has passed.
 
+The retained-backup restore workflow downloads the actual latest successful
+artifact, verifies all three SQL checksums, restores it into isolated native
+Supabase, and compares every exported COPY table's row count. It runs only from
+reviewed `main` code through a scheduled run, a relevant main push, or a manual
+dispatch targeting main. Pull-request code must never download production
+archives. The archive includes native Auth password hashes and session data;
+protect downloads and never publish dump files or restore logs as artifacts.
+This is distinct from the encrypted Vercel Admin API snapshot, which excludes
+password hashes and requires password reset or reinvitation after recovery.
+
 ## Incident recovery
 
 If production data is lost or corrupted:
