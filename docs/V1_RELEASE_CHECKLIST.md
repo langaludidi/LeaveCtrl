@@ -1,8 +1,13 @@
 # LeaveCtrl V1 — Release Checklist
 
 **Status:** Release-candidate hardening  
-**Current engineering estimate:** ~95% complete  
+**Current evidence:** [10 October 2026 assurance record](release-assurance/2026-10-10.md)
 **Rule:** A checked item means evidence exists. It does not mean the entire product is production-signed-off.
+
+The deployment and email-provider entries below retain historical evidence.
+Use the dated assurance record for the current production SHA, canonical app
+domain, backup proof and unresolved release gates. Historical unchecked entries
+are not fresh provider findings.
 
 ## Security and data isolation
 

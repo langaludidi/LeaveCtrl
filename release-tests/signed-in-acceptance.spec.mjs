@@ -74,21 +74,29 @@ test('employee and manager: book, approve, cancel and restore the ledger balance
     await page.getByLabel('Password',{exact:true}).fill(person.password);
     await page.getByRole('button',{name:'Sign in',exact:true}).click();
     await expect(page).not.toHaveURL(/\/login|\/confirm-email/);
-    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('main .access-context')).toBeVisible();
     return page;
   }
   try {
     const employeePage = await signIn(employee);
     await employeePage.goto('http://127.0.0.1:3000/book-leave');
-    await employeePage.getByLabel('Leave type',{exact:true}).selectOption(opening[0].leave_type_id);
+    const leaveTypes = await employeePage.getByRole('combobox',{name:'Leave type',exact:true}).locator('option').evaluateAll(options=>options.map(o=>({id:o.value,name:o.textContent})));
+    expect(leaveTypes.some(o=>o.id===opening[0].leave_type_id),'Booking and balance must reference the same annual type').toBe(true);
+    await test.step('Choose the annual leave type',async()=>{
+      await employeePage.getByRole('combobox',{name:'Leave type',exact:true}).selectOption(opening[0].leave_type_id);
+    });
     const day = new Date();
     day.setUTCDate(day.getUTCDate()+3);
     while ([0,6].includes(day.getUTCDay())) day.setUTCDate(day.getUTCDate()+1);
     const date = day.toISOString().slice(0,10);
-    await employeePage.getByLabel('Start date',{exact:true}).fill(date);
-    await employeePage.getByLabel('End date',{exact:true}).fill(date);
-    await employeePage.getByRole('button',{name:'Check request',exact:true}).click();
-    await employeePage.getByRole('button',{name:'Submit request',exact:true}).click();
+    await test.step('Enter a future working date',async()=>{
+      await employeePage.getByLabel('Start date',{exact:true}).fill(date);
+      await employeePage.getByLabel('End date',{exact:true}).fill(date);
+    });
+    await test.step('Evaluate and submit through the booking screen',async()=>{
+      await employeePage.getByRole('button',{name:'Check request',exact:true}).click();
+      await employeePage.getByRole('button',{name:'Submit request',exact:true}).click();
+    });
     await expect(employeePage).toHaveURL(/\/requests\?submitted=1/);
     const rows = await read(`leave_requests?select=id,status,quantity&employee_id=eq.${employee.employeeId}`);
     expect(rows).toHaveLength(1);
@@ -112,7 +120,7 @@ test('employee and manager: book, approve, cancel and restore the ledger balance
     await expect.poll(status).toBe('cancelled');
     expect(Number((await read(balancePath))[0].available_balance)).toBe(openingBalance);
   } finally {
-    for (const context of contexts) await context.close();
+    for (const context of contexts) await context.close().catch(()=>{});
   }
 });
 
