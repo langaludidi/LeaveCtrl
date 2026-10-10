@@ -1,0 +1,75 @@
+name: Retained production backup restore
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/retained-backup-restore.yml'
+      - 'scripts/backup-copy-fingerprint.py'
+  schedule:
+    - cron: '47 1 * * 1'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recovery:
+    # Repository-internal PRs only; no production secrets are exposed to fork code.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select and download the latest successful retained backup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/database-backup.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].id')"
+          test "$run_id" != null
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name "leavectrl-db-backup-$run_id" --dir recovery-dump
+          (cd recovery-dump && sha256sum -c SHA256SUMS)
+          python3 scripts/backup-copy-fingerprint.py recovery-dump/data.sql > "$RUNNER_TEMP/expected-counts.json"
+          echo "Retained source run: $run_id" >> "$GITHUB_STEP_SUMMARY"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start isolated native Supabase recovery target
+        run: |
+          mkdir -p "$RUNNER_TEMP/leavectrl-retained-recovery"
+          cd "$RUNNER_TEMP/leavectrl-retained-recovery"
+          supabase init --force
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,mailpit,postgres-meta,supavisor
+      - name: Restore retained schema and data
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -1)"
+          test -n "$db_container"
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < recovery-dump/schema.sql
+          {
+            echo 'set session_replication_role = replica;'
+            cat recovery-dump/data.sql
+            echo
+            echo 'set session_replication_role = origin;'
+          } | docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 > "$RUNNER_TEMP/restore.log" 2>&1
+      - name: Verify every restored COPY table count
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          names=subprocess.check_output(['docker','ps','--format','{{.Names}}'],text=True).splitlines()
+          container=next(n for n in names if n.startswith('supabase_db_'))
+          counts=json.load(open(os.environ['RUNNER_TEMP']+'/expected-counts.json'))
+          for table,expected in counts.items():
+              schema,name=table.split('.')
+              identifier='"'+schema.replace('"','""')+'"."'+name.replace('"','""')+'"'
+              actual=int(subprocess.check_output(['docker','exec',container,'psql','-U','postgres','-d','postgres','-Atc','select count(*) from '+identifier],text=True).strip())
+              if actual!=expected: raise SystemExit('Restored count mismatch: '+table)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as summary:
+              summary.write(f'\nPASS: retained SQL checksums, isolated native restore and all {len(counts)} table counts, including auth identities. No production writes.\n')
+          PY
+      - name: Remove sensitive recovery files and disposable database
+        if: always()
+        run: |
+          rm -rf recovery-dump
+          rm -f "$RUNNER_TEMP/restore.log" "$RUNNER_TEMP/expected-counts.json"
+          cd "$RUNNER_TEMP/leavectrl-retained-recovery" 2>/dev/null || exit 0
+          supabase stop --no-backup || true

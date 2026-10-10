@@ -1,0 +1,65 @@
+name: Signed-in six-role acceptance
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: signed-in-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      ACCEPTANCE_FIXTURES: ${{ runner.temp }}/acceptance-identities.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+      - name: Configure disposable native email authentication
+        run: |
+          supabase init --force
+          python3 - <<'PY'
+          p='supabase/config.toml'
+          s=open(p).read().replace('enable_confirmations = false','enable_confirmations = true',1)
+          s=s.replace('email_sent = 2','email_sent = 100')
+          open(p,'w').write(s)
+          PY
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
+          supabase db reset --local --no-seed
+          supabase status -o json > "$RUNNER_TEMP/local-supabase.json"
+          node -e 'const fs=require("fs"); const s=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/local-supabase.json")); fs.appendFileSync(process.env.GITHUB_ENV,"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="+s.ANON_KEY+"\n")'
+      - name: Confirm six roles through native email challenges
+        run: node release-tests/seed-signed-in-fixtures.mjs
+      - name: Build the candidate against the isolated backend
+        run: npm run build
+      - name: Install pinned browser acceptance tools
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.56.1 @axe-core/playwright@4.10.2
+          npx playwright install --with-deps chromium webkit
+      - name: Verify signed-in role journeys, accessibility and tenant boundaries
+        run: npx playwright test --config release-tests/signed-in-playwright.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: signed-in-acceptance-${{ github.run_id }}
+          path: |
+            signed-in-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Remove disposable credentials and database
+        if: always()
+        run: |
+          rm -f "$ACCEPTANCE_FIXTURES" "$RUNNER_TEMP/local-supabase.json"
+          supabase stop --no-backup || true
