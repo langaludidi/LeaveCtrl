@@ -78,3 +78,16 @@ select not exists (
 \endif
 
 \echo 'PASS: authenticated SECURITY DEFINER surface contract'
+
+select not exists (
+  select 1 from pg_catalog.pg_proc p
+  join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='public' and p.prosecdef
+    and has_function_privilege('authenticated',p.oid,'EXECUTE')
+    and position('private.is_verified_email_identity(auth.uid())' in p.prosrc)=0
+) as ok \gset
+\if :ok
+\else
+  \echo 'FAIL: every authenticated privileged RPC needs native email-verification enforcement'
+  \quit 1
+\endif

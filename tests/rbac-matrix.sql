@@ -479,5 +479,14 @@ select rbac_test.expect_error(
   format('select public.claim_employee_invitation(%L)',(select result->>'invitation_token' from rbac_test.invitation)),
   'invitation_invalid_or_expired');
 
+-- Existing membership must not bypass loss of native email-verification evidence.
+reset role;
+update auth.users set email_confirmed_at=null where id='00000000-0000-0000-0000-000000000106';
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000106',false);
+set role authenticated;
+select rbac_test.expect_error($$select public.create_department('Unverified admin forbidden','UNVER')$$,'email_verification_required');
+select rbac_test.expect_error($$select public.get_workforce_directory()$$,'email_verification_required');
+select rbac_test.expect_error($$select public.get_billing_summary_v1('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1')$$,'email_verification_required');
+reset role;
 drop schema rbac_test cascade;
 \echo 'PASS: six-role synthetic RBAC and tenant-isolation matrix'
