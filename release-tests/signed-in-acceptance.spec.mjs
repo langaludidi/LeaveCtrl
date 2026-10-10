@@ -14,7 +14,9 @@ for (const person of fixtures.people) {
     await page.getByLabel('Password',{exact:true}).fill(person.password);
     await page.getByRole('button',{name:'Sign in',exact:true}).click();
     await expect(page).not.toHaveURL(/\/login|\/confirm-email|\/access\/unavailable/);
-    await page.goto('/access/roles');
+    // Follow the visible access link after the application's landing redirect.
+    // A manual goto while the server redirect is pending races WebKit navigation.
+    await page.locator('main .access-context').click();
     await expect(page.getByRole('heading',{name:'My roles & access',exact:true})).toBeVisible();
     const assigned = page.locator(`.role-access-summary`).first().locator(`[data-role="${person.role}"]`);
     await expect(assigned.getByRole('heading',{name:entries[person.role][0],exact:true})).toBeVisible();
@@ -43,3 +45,73 @@ for (const person of fixtures.people) {
     await page.screenshot({path:`test-results/${person.role}-${test.info().project.name}.png`,fullPage:true});
   });
 }
+
+test('employee and manager: book, approve, cancel and restore the ledger balance', async ({browser,request})=>{
+  // One project owns this shared fixture; the six-role matrix remains parallel.
+  test.skip(test.info().project.name!=='chromium-1440');
+  test.setTimeout(90_000);
+  const employee = fixtures.people.find(p=>p.role==='employee');
+  const manager = fixtures.people.find(p=>p.role==='manager');
+  const headers = {apikey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${employee.accessToken}`};
+  const rest = process.env.NEXT_PUBLIC_SUPABASE_URL+'/rest/v1/';
+  async function read(path) {
+    const response = await request.get(rest+path,{headers});
+    expect(response.ok()).toBe(true);
+    return response.json();
+  }
+  const balancePath = `leave_balances?select=leave_type_id,available_balance&employee_id=eq.${employee.employeeId}`;
+  const opening = await read(balancePath);
+  expect(opening).toHaveLength(1);
+  const openingBalance = Number(opening[0].available_balance);
+  expect(openingBalance).toBe(15);
+  const contexts = [];
+  async function signIn(person) {
+    const context = await browser.newContext();
+    contexts.push(context);
+    const page = await context.newPage();
+    await page.goto('http://127.0.0.1:3000/login');
+    await page.getByLabel('Email address',{exact:true}).fill(person.email);
+    await page.getByLabel('Password',{exact:true}).fill(person.password);
+    await page.getByRole('button',{name:'Sign in',exact:true}).click();
+    await expect(page).not.toHaveURL(/\/login|\/confirm-email/);
+    await expect(page.locator('h1')).toBeVisible();
+    return page;
+  }
+  try {
+    const employeePage = await signIn(employee);
+    await employeePage.goto('http://127.0.0.1:3000/book-leave');
+    await employeePage.getByLabel('Leave type',{exact:true}).selectOption(opening[0].leave_type_id);
+    const day = new Date();
+    day.setUTCDate(day.getUTCDate()+3);
+    while ([0,6].includes(day.getUTCDay())) day.setUTCDate(day.getUTCDate()+1);
+    const date = day.toISOString().slice(0,10);
+    await employeePage.getByLabel('Start date',{exact:true}).fill(date);
+    await employeePage.getByLabel('End date',{exact:true}).fill(date);
+    await employeePage.getByRole('button',{name:'Check request',exact:true}).click();
+    await employeePage.getByRole('button',{name:'Submit request',exact:true}).click();
+    await expect(employeePage).toHaveURL(/\/requests\?submitted=1/);
+    const rows = await read(`leave_requests?select=id,status,quantity&employee_id=eq.${employee.employeeId}`);
+    expect(rows).toHaveLength(1);
+    const leave = rows[0];
+    expect(leave.status).toBe('pending_approval');
+    expect(Number(leave.quantity)).toBe(1);
+    expect(Number((await read(balancePath))[0].available_balance)).toBe(openingBalance-1);
+    const status = async () => (await read(`leave_requests?select=status&id=eq.${leave.id}`))[0].status;
+    const detail = `http://127.0.0.1:3000/requests/leave/${leave.id}`;
+    const managerPage = await signIn(manager);
+    await managerPage.goto(detail);
+    await managerPage.getByRole('button',{name:'Approve request',exact:true}).click();
+    await expect.poll(status).toBe('approved');
+    expect(Number((await read(balancePath))[0].available_balance)).toBe(openingBalance-1);
+    await employeePage.goto(detail);
+    employeePage.once('dialog',dialog=>dialog.accept());
+    await employeePage.getByRole('button',{name:'Cancel leave',exact:true}).click();
+    await expect.poll(status).toBe('cancellation_requested');
+    await managerPage.goto(detail);
+    await managerPage.getByRole('button',{name:'Approve cancellation',exact:true}).click();
+    await expect.poll(status).toBe('cancelled');
+    expect(Number((await read(balancePath))[0].available_balance)).toBe(openingBalance);
+  } finally {
+    for (const context of contexts) await context.close();
+  }
+});

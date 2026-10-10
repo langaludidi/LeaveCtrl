@@ -51,5 +51,33 @@ for (const person of people) {
 const container = execFileSync('docker',['ps','--format','{{.Names}}'],{encoding:'utf8'}).trim().split('\n').find(name=>name.startsWith('supabase_db_'));
 if (!container) throw new Error('Disposable database missing');
 execFileSync('docker',['exec','-i',container,'psql','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],{input:sql,stdio:['pipe','ignore','inherit']});
+const administrator = people.find(p=>p.role==='org_admin');
+async function administer(name, data) {
+  const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
+    method:'POST',headers:{...headers,Authorization:`Bearer ${administrator.accessToken}`},
+    body:JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(`Fixture configuration ${name} failed: ${await response.text()}`);
+  return response.json();
+}
+const today = new Date().toISOString().slice(0,10);
+const year = today.slice(0,4);
+const schedule = await administer('create_work_schedule',{p_name:'Acceptance weekdays'});
+for (const person of people.filter(p=>p.role!=='other_tenant')) {
+  await administer('assign_employee_schedule',{
+    p_employee_id:person.employeeId,p_work_schedule_id:schedule,p_effective_from:`${year}-01-01`,
+  });
+}
+await administer('configure_initial_leave_policy',{
+  p_annual_days:15,p_cycle_start:`${year}-01-01`,p_cycle_end:`${year}-12-31`,
+});
+const employee = people.find(p=>p.role==='employee');
+await administer('set_employee_opening_balance',{
+  p_employee_id:employee.employeeId,p_leave_type_code:'ANNUAL',p_balance:15,
+  p_reason:'Disposable acceptance fixture opening balance',
+});
+await administer('assign_employee_manager',{
+  p_employee_id:employee.employeeId,p_manager_employee_id:people.find(p=>p.role==='manager').employeeId,
+});
 writeFileSync(process.env.ACCEPTANCE_FIXTURES,JSON.stringify({organisation,otherOrganisation,people:people.filter(p=>p.role!=='other_tenant')}),{mode:0o600});
 console.log('PASS: six native email-confirmed identities and isolated tenant fixtures');
