@@ -138,8 +138,10 @@ above are historical and must be reconciled against current provider evidence.
 - [x] README application and authentication callback domains match `app.leavectrl.co.za`.
 - [x] PR #67 reconciled and stacked on onboarding PR #65 (`2b1f2d06b54d565552f6f05e139954436a4e45d3`); combined reporting preserves historical exports, role auditing and optional founder employment. Both remain draft pending review and acceptance.
 - [ ] Confirm current CI and preview result for the exact candidate commit, then approve its release through the existing process.
-- [ ] Complete/adopt Privacy, service Terms and applicable PAIA documentation: Information Officer details, processing and retention facts, subprocessors/transfers, contracting entity, subscription/renewal/cancellation terms and effective dates.
-- [ ] Enable Supabase compromised-password protection if supported by the selected plan; verify password creation/reset behavior.
+- [x] Legal documents approved by the product owner on 9 October 2026. Publication of the approved versions remains to be verified.
+- [x] Free application-level breached-password checks prepared for signup and server-side recovery: padded hash-prefix lookup, no password/hash logging, timeout and provider failures block mutation.
+- [ ] Accept and verify the compensating password control: native Supabase protection remains disabled on Free; direct Auth API requests bypass the application check. The product owner declined a plan upgrade.
+- [ ] Activate an independent freshness checker and notification/heartbeat destination; GitHub incident checks alone cannot detect their own scheduling outage promptly.
 - [ ] Complete signed-in employee, manager and HR/admin UAT: email confirmation/recovery, setup, invitation, submission, approval/cancellation, mixed-type financial reporting and CSV parity.
 - [ ] Verify tenant/role boundaries and representative mobile/keyboard/accessibility journeys against the accepted candidate.
 - [ ] After approved deployment, verify exact release SHA, invalid cron token rejection and a controlled successful encrypted backup/restore check. Do not confuse the successful GitHub logical restore rehearsal with acceptance of the Vercel Blob backup.
