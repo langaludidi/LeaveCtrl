@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
-import { roleCapabilities, roleLabels, roleLanding } from "@/lib/role-access";
+import { RoleBadges } from "@/components/RoleBadges";
+import { roleCapabilities, roleLanding } from "@/lib/role-access";
 import { BillingBanner } from "@/components/BillingBanner";
 
 function initials(name: string) {
@@ -89,7 +90,6 @@ export function AppShell({
   }, [pathname]);
 
   const access = roleCapabilities(roles, hasEmployee);
-  const role = roleLabels(roles);
   const nav = [
     { href: "/access/roles", label: "My roles & access", icon: Users, visible: true },
     { href: "/", label: "Home", icon: Home, visible: access.home },
@@ -176,7 +176,7 @@ export function AppShell({
               <div className="avatar">{initials(displayName)}</div>
               <div>
                 <strong>{displayName}</strong>
-                <Link href="/access/roles" className="profile-roles">{role || "View access"}</Link>
+                <Link href="/access/roles" className="profile-roles"><RoleBadges roles={roles} /></Link>
               </div>
             </div>
             <button type="button" onClick={signOut}>
@@ -234,7 +234,7 @@ export function AppShell({
               <div className="avatar">{initials(displayName)}</div>
               <div>
                 <strong>{displayName}</strong>
-                <Link href="/access/roles" className="profile-roles">{role || "View access"}</Link>
+                <Link href="/access/roles" className="profile-roles"><RoleBadges roles={roles} /></Link>
               </div>
             </div>
 
@@ -250,7 +250,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="page-wrap"><Link href="/access/roles" className="access-context"><span>Your roles</span><strong>{role || "View access"}</strong><span>View access →</span></Link><BillingBanner />{children}</main>
+        <main className="page-wrap"><Link href="/access/roles" className="access-context"><span>Your roles</span><RoleBadges roles={roles} /><span>View access →</span></Link><BillingBanner />{children}</main>
       </div>
     </div>
   );

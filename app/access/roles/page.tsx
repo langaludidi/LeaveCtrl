@@ -10,6 +10,6 @@ export default async function RolesPage() {
     <section className="page-head"><h1>My roles & access</h1><p>{accessState.organisation_name} · Access assigned by your organisation</p></section>
     <RoleAccessSummary roles={roles} showActions={ready} />
     {!ready ? <p>Complete your organisation setup or welcome to open your role actions.</p> : null}
-    <section className="card role-access-summary"><h2>How the roles differ</h2><div className="role-access-grid">{roleCatalogue.map((item) => <article className="role-access-item" key={item.role}><h3>{item.label}</h3><p>{item.description}</p><small>{roles.includes(item.role) ? "Assigned to you" : "Not assigned to you"}</small></article>)}</div></section>
+    <section className="card role-access-summary"><h2>How the roles differ</h2><div className="role-access-grid">{roleCatalogue.map((item) => <article className="role-access-item" data-role={item.role} key={item.role}><h3>{item.label}</h3><p>{item.description}</p><small>{roles.includes(item.role) ? "Assigned to you" : "Not assigned to you"}</small></article>)}</div></section>
   </AppShell>;
 }

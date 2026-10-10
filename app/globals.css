@@ -801,3 +801,25 @@ textarea:focus-visible{
 .access-context > span:last-child { margin-left: auto; color: var(--teal-800, #14635e); font-weight: 600; }
 .access-context strong { min-width: 0; overflow-wrap: anywhere; }
 .profile-roles:focus-visible, .access-context:focus-visible { outline: 3px solid var(--teal, #169c92); outline-offset: 3px; }
+
+/* Consistent role colours supplement the visible role names. */
+[data-role="employee"] { --role-ink: #115e59; --role-tint: #edf9f5; --role-border: #a7d9cb; }
+[data-role="manager"] { --role-ink: #1e40af; --role-tint: #eff5ff; --role-border: #b6ccf5; }
+[data-role="hr_admin"] { --role-ink: #6b21a8; --role-tint: #f7f0fc; --role-border: #dac0ec; }
+[data-role="org_admin"] { --role-ink: #92400e; --role-tint: #fff7e8; --role-border: #eacb92; }
+[data-role="reporter"] { --role-ink: #155e75; --role-tint: #eef9fc; --role-border: #afd5e2; }
+[data-role="auditor"] { --role-ink: #9f1239; --role-tint: #fff1f5; --role-border: #efbacb; }
+.role-badges { display: inline-flex; flex-wrap: wrap; gap: 5px; min-width: 0; max-width: 100%; vertical-align: middle; }
+.role-badge { display: inline-block; padding: 4px 8px; border: 1px solid var(--role-border); border-radius: 999px; background: var(--role-tint); color: var(--role-ink); font-size: 11px; font-weight: 650; line-height: 1.35; }
+.role-access-item[data-role] { background: var(--role-tint); border-color: var(--role-border); border-top: 3px solid var(--role-ink); }
+.role-access-item[data-role] h3 { color: var(--role-ink); }
+.role-options .role-option { padding: 12px; border: 1px solid var(--role-border); border-radius: 10px; background: var(--role-tint); }
+.role-option strong { color: var(--role-ink); }
+.role-option input { accent-color: var(--role-ink); }
+.profile-roles { max-width: 300px; }
+.mobile-account-menu .role-badge { color: var(--role-ink); }
+.access-context > .role-badges { flex: 1; }
+
+.profile-roles .role-badge { padding: 2px 6px; font-size: 10px; }
+.profile-roles .role-badge { color: var(--role-ink); }
+.role-option small { color: #475569; }

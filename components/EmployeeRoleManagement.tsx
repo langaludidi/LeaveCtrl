@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { RoleBadges } from "@/components/RoleBadges";
 import { RoleOptions } from "@/components/RoleOptions";
 import { roleLabels, type AccessRole } from "@/lib/role-access";
 
@@ -46,7 +47,7 @@ export function EmployeeRoleManagement({ people }: { people: Person[] }) {
         const next = people.find((item) => item.id === event.target.value);
         setSelected(event.target.value); setRoles(next?.roles ?? ["employee"]); setError(""); setMessage("");
       }}><option value="">Choose a person</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name} · {person.pending ? "Invitation pending" : "Active access"}</option>)}</select></label>
-      {person ? <><p>Current roles: <strong>{roleLabels(person.roles)}</strong></p>
+      {person ? <><p>Current roles: <RoleBadges roles={person.roles} /></p>
         <RoleOptions roles={roles} onChange={setRoles} privileged disabled={saving} />
         <label>Reason for this change<input name="reason" required maxLength={500} disabled={saving} /></label>
         <button type="submit" className="btn primary" disabled={saving}>{saving ? "Saving access…" : "Save access roles"}</button></> : null}

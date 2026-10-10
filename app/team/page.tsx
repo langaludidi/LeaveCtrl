@@ -3,7 +3,8 @@ import { AppShell } from "@/components/AppShell";
 import { AddEmployeeForm } from "@/components/AddEmployeeForm";
 import { ExistingEmployeeInvitation } from "@/components/ExistingEmployeeInvitation";
 import { EmployeeRoleManagement } from "@/components/EmployeeRoleManagement";
-import { roleLabels, type AccessRole } from "@/lib/role-access";
+import { RoleBadges } from "@/components/RoleBadges";
+import { type AccessRole } from "@/lib/role-access";
 import { ManagerAssignment } from "@/components/ManagerAssignment";
 import { OvertimeControls } from "@/components/OvertimeControls";
 import { EmployeeExitControl } from "@/components/EmployeeExitControl";
@@ -343,7 +344,7 @@ export default async function TeamPage() {
                         <span className={`access-pill ${person.employment_status !== "active" ? "neutral" : person.user_id ? "active" : pendingAccess.has(person.id) ? "pending" : "neutral"}`}>
                           {access}
                         </span>
-                        <span className="table-secondary">{roleLabels(rolesForPerson(person)) || "No access roles yet"}</span>
+                        <span className="table-secondary">{rolesForPerson(person).length ? <RoleBadges roles={rolesForPerson(person)} /> : "No access roles yet"}</span>
                       </td>
                     ) : null}
                     <td><span className="neutral-pill">{person.employment_status}</span></td>

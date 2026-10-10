@@ -6,7 +6,7 @@ export function RoleAccessSummary({ roles, showActions = true }: { roles: readon
     <h2 id="your-roles-heading">Your roles & access</h2>
     <p>You can hold several roles. Your access combines all assigned roles; you do not need to switch roles.</p>
     <div className="role-access-grid">
-      {assignedRoleDetails(roles).map((item) => <article key={item.role} className="role-access-item">
+      {assignedRoleDetails(roles).map((item) => <article key={item.role} className="role-access-item" data-role={item.role}>
         <h3>{item.label}</h3><p>{item.description}</p>
         {showActions ? <Link className="btn secondary" href={item.href}>{item.action}</Link> : null}
       </article>)}
