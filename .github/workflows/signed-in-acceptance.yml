@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 30
     env:
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-      ACCEPTANCE_FIXTURES: ${{ runner.temp }}/acceptance-identities.json
+      ACCEPTANCE_FIXTURES: /tmp/leavectrl-acceptance-identities.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
