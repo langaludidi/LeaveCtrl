@@ -22,6 +22,14 @@ for (const person of fixtures.people) {
     await expect(page).toHaveURL(new RegExp(entries[person.role][1]+'(?:\\?|$)'));
     await expect(page.locator('h1')).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    const navigation = await page.evaluate(()=>{
+      const n=performance.getEntriesByType('navigation')[0];
+      return {domContentLoadedMs:n.domContentLoadedEventEnd,transferBytes:n.transferSize};
+    });
+    // Candidate budgets on the isolated runner; production network metrics are separate.
+    expect(navigation.domContentLoadedMs).toBeLessThan(5000);
+    expect(navigation.transferBytes).toBeLessThan(1_000_000);
+    await test.info().attach('candidate-navigation-budget',{body:JSON.stringify(navigation),contentType:'application/json'});
     const accessibility = await new AxeBuilder({page}).analyze();
     expect(accessibility.violations.filter(v=>['critical','serious'].includes(v.impact))).toEqual([]);
     const headers = {apikey:process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${person.accessToken}`};

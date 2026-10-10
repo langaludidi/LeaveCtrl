@@ -33,6 +33,7 @@ jobs:
           p='supabase/config.toml'
           s=open(p).read().replace('enable_confirmations = false','enable_confirmations = true',1)
           s=s.replace('email_sent = 2','email_sent = 100')
+          s=s.replace('sign_in_sign_ups = 30','sign_in_sign_ups = 200')
           open(p,'w').write(s)
           PY
           supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
