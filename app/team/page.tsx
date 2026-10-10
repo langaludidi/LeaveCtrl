@@ -285,7 +285,7 @@ export default async function TeamPage() {
           <span className="muted-count">{visiblePeople.length} employees</span>
         </div>
 
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Scrollable employee records">
           <table>
             <thead>
               <tr>

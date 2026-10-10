@@ -103,11 +103,12 @@ export default async function AuditPage({
             <Search size={16}/>
             <input
               name="q"
+              aria-label="Search audit events"
               defaultValue={params.q ?? ""}
               placeholder="Search event type, e.g. leave.request"
             />
           </label>
-          <select name="entity" defaultValue={params.entity ?? ""}>
+          <select aria-label="Filter audit entity" name="entity" defaultValue={params.entity ?? ""}>
             <option value="">All entities</option>
             {entityTypes.map((entityType) => (
               <option key={entityType} value={entityType}>{entityType}</option>

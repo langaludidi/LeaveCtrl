@@ -382,7 +382,7 @@ export function OvertimeControls({
           <h2>Recent overtime</h2>
           <span className="muted-count">{recentEvents.length} recent entries</span>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Overtime history">
           <table>
             <thead>
               <tr>

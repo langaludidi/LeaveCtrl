@@ -45,7 +45,7 @@ export default async function BillingControl() {
       <BillingOperatorControls />
       <section className="card billing-history">
         <h2>Customer accounts</h2>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Billing operations">
           <table>
             <thead>
               <tr>
@@ -70,7 +70,7 @@ export default async function BillingControl() {
       </section>
       <section className="card billing-history">
         <h2>Provider event queue</h2>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Billing operations">
           <table>
             <thead>
               <tr>

@@ -155,7 +155,7 @@ export default async function RequestsPage({
       <section className="two-col">
         <div className="card data-card">
           <div className="card-title"><h2>My requests</h2></div>
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Leave and TOIL requests">
             <table className="mobile-data-table request-history-table">
               <thead>
                 <tr>

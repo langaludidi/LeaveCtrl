@@ -479,6 +479,19 @@ select rbac_test.expect_error(
   format('select public.claim_employee_invitation(%L)',(select result->>'invitation_token' from rbac_test.invitation)),
   'invitation_invalid_or_expired');
 
+-- The Reporter financial view must remain usable without reopening its service-only RPC.
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000107',false);
+set role authenticated;
+select employee_id,effective_daily_rate from public.employee_leave_liability_rates;
+select private.reporting_liability_scheduled_days('00000000-0000-0000-0000-000000000301',current_date-30,current_date);
+select rbac_test.expect_error($$select private.reporting_liability_scheduled_days('00000000-0000-0000-0000-000000000401',current_date-30,current_date)$$,'not_authorised');
+select rbac_test.expect_error($$select private.reporting_liability_scheduled_days('00000000-0000-0000-0000-000000000301',current_date-500,current_date)$$,'invalid_liability_date_range');
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000108',false);
+set role authenticated;
+select rbac_test.expect_error($$select private.reporting_liability_scheduled_days('00000000-0000-0000-0000-000000000301',current_date-30,current_date)$$,'not_authorised');
+reset role;
 -- Existing membership must not bypass loss of native email-verification evidence.
 reset role;
 update auth.users set email_confirmed_at=null where id='00000000-0000-0000-0000-000000000106';

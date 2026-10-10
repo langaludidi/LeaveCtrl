@@ -205,7 +205,7 @@ export default async function BillingPage({
           {paymentError ? (
             <p role="alert">Payment history could not be loaded.</p>
           ) : (
-            <div className="table-scroll billing-payments-scroll">
+            <div className="table-scroll billing-payments-scroll" tabIndex={0} role="region" aria-label="Payment history">
               <table
                 className="mobile-data-table billing-payments-table"
                 aria-label="Verified payments for this organisation"

@@ -350,7 +350,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </div>
           <span className="muted-count">18 reports</span>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Report data">
           <table className="mobile-data-table">
             <thead><tr><th>Report</th><th>Category</th><th>Readiness</th><th>Requirements</th></tr></thead>
             <tbody>
@@ -428,7 +428,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <h2>Leave position by employee</h2>
           <span className="muted-count">{scopeLabel}</span>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Report data">
           <table className="mobile-data-table report-position-table">
             <thead>
               <tr>
@@ -474,7 +474,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </div>
             <span className="verified-pill"><LockKeyhole size={14}/> Confidential</span>
           </div>
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label="Report data">
             <table className="mobile-data-table liability-mobile-table">
               <thead>
                 <tr>

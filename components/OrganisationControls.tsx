@@ -184,7 +184,7 @@ export function OrganisationControls({
           <h2>Employee assignments</h2>
           <span className="muted-count">{people.length} people</span>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Organisation records">
           <table className="mobile-data-table assignment-table">
             <thead>
               <tr>

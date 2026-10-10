@@ -531,7 +531,7 @@ export function EmployeeCsvImport({
             </span>
           </div>
 
-          <div className="table-scroll csv-preview">
+          <div className="table-scroll csv-preview" tabIndex={0} role="region" aria-label="Employee import preview">
             <table>
               <thead>
                 <tr>
